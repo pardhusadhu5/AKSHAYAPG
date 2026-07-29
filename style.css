@@ -2841,3 +2841,330 @@ textarea.form-input {
   .lightbox-arrow-right { right: 10px; }
   .lightbox-close { top: 15px; right: 15px; }
 }
+
+/* ==========================================
+   MOBILE & TABLET RESPONSIVENESS OVERRIDES
+   ========================================== */
+
+/* Tablet Breakpoint (768px–1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .container {
+    padding: 0 20px !important;
+  }
+  .facilities-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 16px !important;
+  }
+  .gallery-grid {
+    columns: 3 !important;
+    column-gap: 16px !important;
+  }
+  .rooms-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 24px !important;
+  }
+  .hero-title {
+    font-size: 3rem !important;
+  }
+}
+
+/* Mobile Breakpoint (320px–767px) */
+@media (max-width: 767px) {
+  /* Containers & Padding */
+  .container {
+    padding: 0 16px !important;
+  }
+  .section-padding {
+    padding: 32px 0 !important;
+  }
+  .section-header {
+    margin-bottom: 24px !important;
+  }
+  .section-badge {
+    padding: 4px 12px !important;
+    font-size: 0.75rem !important;
+    margin-bottom: 10px !important;
+  }
+  .section-title {
+    font-size: 1.8rem !important;
+    margin-bottom: 8px !important;
+    letter-spacing: -0.5px !important;
+  }
+  .section-subtitle {
+    font-size: 0.95rem !important;
+  }
+
+  /* Header adjustments */
+  .header {
+    height: 60px !important;
+  }
+  .header.scrolled {
+    height: 60px !important;
+    background: rgba(255, 255, 255, 0.9) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    box-shadow: 0 2px 10px rgba(0, 77, 71, 0.05) !important;
+  }
+  .logo {
+    font-size: 1.3rem !important;
+  }
+  .logo-icon {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 0.95rem !important;
+  }
+  .nav-btn {
+    display: none !important; /* Hide header CTA to prevent overlap */
+  }
+  .menu-toggle {
+    margin-right: 4px !important;
+  }
+
+  /* Hero Section adjustments */
+  .hero {
+    min-height: auto !important;
+    padding-top: 80px !important;
+    padding-bottom: 32px !important;
+  }
+  .hero-content {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+    text-align: center !important;
+  }
+  .hero-text {
+    align-items: center !important;
+  }
+  .hero-title {
+    font-size: 2.2rem !important;
+    margin-bottom: 8px !important;
+  }
+  .hero-subtitle {
+    font-size: 1.1rem !important;
+    margin-bottom: 12px !important;
+  }
+  .hero-desc {
+    font-size: 0.95rem !important;
+    margin-bottom: 20px !important;
+    max-width: 100% !important;
+  }
+
+  /* Trust Badge centering */
+  .trust-badge {
+    margin: 0 auto 16px auto !important;
+    align-self: center !important;
+    padding: 6px 12px !important;
+    font-size: 0.8rem !important;
+  }
+
+  /* Hero Call-To-Action buttons stack */
+  .hero-btns {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+  .hero-btns .btn {
+    width: 100% !important;
+    margin: 0 !important;
+    height: 46px !important;
+    font-size: 0.9rem !important;
+    border-radius: 10px !important; /* Premium rounded */
+    padding: 10px 20px !important;
+  }
+
+  /* Hero image responsive sizing */
+  .hero-image-wrapper {
+    max-width: 100% !important;
+    margin: 0 auto !important;
+    transform: none !important;
+    box-shadow: var(--shadow-md) !important;
+  }
+  .hero-image-wrapper img {
+    height: 240px !important;
+  }
+
+  /* Floating action widgets lift */
+  .floating-actions {
+    bottom: 95px !important; /* Move upward to avoid overlapping */
+    right: 16px !important;
+  }
+
+  /* Parents choice & about grids */
+  .parents-grid, .about-grid {
+    grid-template-columns: 1fr !important;
+    gap: 30px !important;
+  }
+  .about-images {
+    height: 320px !important;
+    margin-bottom: 16px !important;
+  }
+  .about-content {
+    text-align: center !important;
+  }
+  .about-bullets {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    text-align: left !important;
+  }
+  .about-content .btn {
+    width: 100% !important;
+  }
+
+  /* Facility Cards (Exactly 2 per row) */
+  .facilities-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+  }
+  .facility-card {
+    padding: 16px !important;
+    align-items: center !important;
+    text-align: center !important;
+  }
+  .fc-icon {
+    width: 38px !important;
+    height: 38px !important;
+    font-size: 1.1rem !important;
+    margin-bottom: 12px !important;
+    align-self: center !important;
+  }
+  .facility-card h4 {
+    font-size: 0.9rem !important;
+    margin-bottom: 4px !important;
+  }
+  .facility-card p {
+    font-size: 0.78rem !important;
+  }
+
+  /* Room Cards responsiveness & pricing */
+  .rooms-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+  .room-card {
+    max-width: 420px !important;
+    margin: 0 auto !important;
+  }
+  .room-img-container {
+    height: 180px !important; /* Reduced image height */
+  }
+  .room-details {
+    padding: 16px !important;
+  }
+  .room-title {
+    font-size: 1.2rem !important;
+  }
+  .room-rent {
+    font-size: 1.45rem !important;
+  }
+
+  /* 360 virtual tour card sizing */
+  .vt-grid {
+    grid-template-columns: 1fr !important;
+    gap: 24px !important;
+  }
+  .vt-viewer {
+    height: 260px !important;
+  }
+
+  /* Food Menu (Horizontal scrolling on mobile) */
+  .food-menu-content.active {
+    display: flex !important;
+    overflow-x: auto !important;
+    scroll-snap-type: x mandatory !important;
+    -webkit-overflow-scrolling: touch !important;
+    gap: 14px !important;
+    padding: 8px 4px 20px 4px !important;
+    width: calc(100% + 32px) !important;
+    margin-left: -16px !important;
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+  .food-card {
+    flex: 0 0 260px !important;
+    scroll-snap-align: start !important;
+    padding: 20px !important;
+  }
+  .food-card h3 {
+    font-size: 1.15rem !important;
+  }
+
+  /* Gallery (Exactly 2 columns) */
+  .gallery-grid {
+    columns: 2 !important;
+    column-gap: 12px !important;
+  }
+  .gallery-item {
+    margin-bottom: 12px !important;
+  }
+
+  /* Nearby places grid */
+  .nearby-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+  .nearby-card {
+    padding: 14px 16px !important;
+  }
+
+  /* FAQ section */
+  .faq-wrapper {
+    gap: 10px !important;
+  }
+  .faq-header {
+    padding: 16px 20px !important;
+  }
+  .faq-header h4 {
+    font-size: 0.95rem !important;
+  }
+
+  /* Contact location and map layout */
+  .contact-grid {
+    grid-template-columns: 1fr !important;
+    gap: 30px !important;
+  }
+  .contact-form-wrapper {
+    padding: 24px 20px !important;
+  }
+  .contact-map-container {
+    height: 200px !important; /* Smaller size for mobile screens */
+  }
+
+  /* Footer centering and compact layout */
+  .footer {
+    padding: 40px 0 20px 0 !important;
+    text-align: center !important;
+  }
+  .footer-top {
+    grid-template-columns: 1fr !important;
+    gap: 28px !important;
+    margin-bottom: 40px !important;
+  }
+  .footer-brand {
+    align-items: center !important;
+  }
+  .footer-brand p {
+    margin: 8px auto 16px auto !important;
+  }
+  .footer-socials {
+    justify-content: center !important;
+  }
+  .footer-col h4 {
+    margin-bottom: 14px !important;
+    padding-bottom: 4px !important;
+  }
+  .footer-col h4::after {
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+  }
+  .footer-bottom {
+    flex-direction: column !important;
+    gap: 12px !important;
+    padding-top: 20px !important;
+  }
+
+  /* Responsive image scaling */
+  img {
+    border-radius: var(--radius-md) !important;
+  }
+}
+
