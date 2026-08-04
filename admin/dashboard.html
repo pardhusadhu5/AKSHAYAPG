@@ -131,6 +131,7 @@
       transition: margin-left var(--transition-normal);
       display: flex;
       flex-direction: column;
+      min-width: 0;
     }
     
     /* Top Header */
@@ -243,10 +244,13 @@
     /* Lists Containers */
     .list-container-card {
       background: white;
-      border-radius: var(--radius-md);
-      padding: 28px;
-      box-shadow: var(--shadow-md);
-      border: 1px solid rgba(0, 77, 71, 0.04);
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      border: 1px solid #E5E7EB;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
     }
     .lcc-header {
       display: flex;
@@ -400,6 +404,10 @@
       }
     }
     @media (max-width: 768px) {
+      .list-container-card {
+        padding: 20px !important;
+        border-radius: 12px !important;
+      }
       .mobile-header {
         display: flex;
       }
@@ -601,17 +609,6 @@
     #studentsPanel {
       max-width: 100% !important;
       box-sizing: border-box !important;
-    }
-    
-    #studentsPanel .students-dir-card {
-      background: white !important;
-      border: 1px solid #E5E7EB !important;
-      border-radius: 16px !important;
-      padding: 32px !important;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
-      width: 100% !important;
-      box-sizing: border-box !important;
-      margin-bottom: 24px;
     }
 
     #studentsPanel .filters-grid {
@@ -1090,7 +1087,7 @@
 
     <!-- 2. STUDENTS PANEL -->
     <div class="panel-view" id="studentsPanel">
-      <div class="students-dir-card">
+      <div class="list-container-card">
         <div class="lcc-header">
           <h3>Registered Students Directory</h3>
         </div>
