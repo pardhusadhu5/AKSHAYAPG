@@ -781,6 +781,17 @@
   </main>
 
   <script>
+    (function() {
+      const originalFetch = window.fetch;
+      const API_BASE = (window.location.protocol === 'file:') ? 'http://localhost:8080' : '';
+      window.fetch = function(input, init) {
+        if (typeof input === 'string' && input.startsWith('/api/')) {
+          input = API_BASE + input;
+        }
+        return originalFetch(input, init);
+      };
+    })();
+
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
     // Elements
