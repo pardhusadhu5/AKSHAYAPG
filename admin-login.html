@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Admin Login | Dolphin PG Hostel</title>
-  <meta name="description" content="Access the Dolphin PG Hostel administrative console. Manage admissions, track occupancy, verify payments, and handle support requests.">
+  <title>Admin Login | Akshaya Deluxe Boys Hostel</title>
+  <meta name="description" content="Access the Akshaya Deluxe Boys Hostel administrative console. Manage admissions, track occupancy, verify payments, and handle support requests.">
   <link rel="stylesheet" href="style.css">
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
@@ -74,8 +74,8 @@
   <header class="header scrolled" style="position: fixed; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); box-shadow: var(--shadow-sm);">
     <div class="container nav-container">
       <a href="index.html" class="logo">
-        <div class="logo-icon"><i data-lucide="anchor"></i></div>
-        Dolphin<span>PG</span>
+        <div class="logo-icon"><i data-lucide="home"></i></div>
+        Akshaya<span>Deluxe</span>
       </a>
       <nav class="nav-menu" id="navMenu">
         <a href="index.html#home" class="nav-link">Home</a>
@@ -106,24 +106,21 @@
       <div class="auth-card glass-card">
         <div class="auth-header">
           <h2>Admin Console</h2>
-          <p>Sign in to manage Dolphin PG admissions & staff</p>
+          <p>Sign in to manage Akshaya Deluxe admissions & staff</p>
         </div>
         
         <form id="adminLoginForm">
           <div class="form-group">
             <label class="form-label" for="adminEmail">Admin Email ID</label>
-            <input type="email" id="adminEmail" class="form-input" placeholder="e.g. admin@dolphinpghostel.com" required>
+            <input type="email" id="adminEmail" class="form-input" placeholder="e.g. joelramireddy@gmail.com" required>
           </div>
           
-          <div class="form-group">
-            <label class="form-label" for="adminSecret">Secret Security Key</label>
-            <input type="password" id="adminSecret" class="form-input" placeholder="Enter key code" required>
-          </div>
-          
-          <div class="form-group" style="margin-bottom: 30px;">
+          <div class="form-group" style="margin-bottom: 20px;">
             <label class="form-label" for="adminPass">Password</label>
             <input type="password" id="adminPass" class="form-input" placeholder="••••••••" required>
           </div>
+          
+          <a href="forgot-password.html" class="forgot-link" style="display: block; text-align: right; font-size: 0.85rem; color: var(--primary-brand); margin-top: -12px; margin-bottom: 24px; font-weight: 500; text-decoration: none;">Forgot Password?</a>
           
           <button type="submit" class="btn btn-primary" style="width: 100%;">Access Admin Dashboard</button>
         </form>
@@ -138,19 +135,52 @@
   <!-- Footer -->
   <footer class="footer" style="padding: 40px 0 20px 0;">
     <div class="container footer-bottom" style="border-top: none; padding-top: 0; flex-direction: column; text-align: center; gap: 12px;">
-      <p>Copyright &copy; 2026 Dolphin PG Hostel. All Rights Reserved.</p>
+      <p>Copyright &copy; 2026 Akshaya Deluxe Boys Hostel. All Rights Reserved.</p>
     </div>
   </footer>
 
   <script src="script.js"></script>
   <script>
-    // Handle Admin Login Simulation
     const form = document.getElementById('adminLoginForm');
     if (form) {
-      form.addEventListener('submit', (e) => {
+      form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        alert("Success! Accessing Admin Dashboard Console...");
-        window.location.href = "index.html";
+        const email = document.getElementById('adminEmail').value;
+        const password = document.getElementById('adminPass').value;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerText;
+
+        try {
+          submitBtn.disabled = true;
+          submitBtn.innerText = 'Signing In...';
+
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, password })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            
+            if (data.user.role === 'admin' || data.user.role === 'manager') {
+              window.location.href = 'admin/dashboard.html';
+            } else {
+              window.location.href = 'index.html';
+            }
+          } else {
+            alert(data.message || 'Login failed. Invalid credentials.');
+          }
+        } catch (err) {
+          console.error('Error:', err);
+          alert('Failed to connect to the server.');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerText = originalText;
+        }
       });
     }
   </script>

@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Student Dashboard | Akshaya Deluxe Boys Hostel</title>
+  
+  <link rel="stylesheet" href="../style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Client-Side Route Guard (Student verification) -->
+  <script>
+    (function() {
+      const token = localStorage.getItem('token');
+      const user = JSON.parse(localStorage.getItem('user') || 'null');
+      
+      if (!token || !user || user.role !== 'student') {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.replace('../student-login.html');
+      }
+    })();
+  </script>
+
+  <style>
+    :root {
+      --sidebar-width: 260px;
+    }
+    body {
+      background-color: var(--primary-ultra-light);
+      display: flex;
+      min-height: 100vh;
+      color: var(--dark-slate-light);
+    }
+    
+    /* Sidebar Layout */
+    .sidebar {
+      width: var(--sidebar-width);
+      background: var(--primary-deep);
+      color: white;
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+      box-shadow: 4px 0 20px rgba(0, 77, 71, 0.15);
+      transition: transform var(--transition-normal);
+    }
+    .sidebar-brand {
+      padding: 24px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .sidebar-brand .logo-icon {
+      background: var(--primary-brand);
+      box-shadow: none;
+    }
+    .sidebar-brand h3 {
+      color: white;
+      font-size: 1.15rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    .sidebar-brand h3 span {
+      color: var(--accent-gold);
+    }
+    
+    .sidebar-menu {
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex-grow: 1;
+      overflow-y: auto;
+    }
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      color: rgba(255, 255, 255, 0.7);
+      font-weight: 500;
+      font-size: 0.95rem;
+      transition: var(--transition-fast);
+      cursor: pointer;
+    }
+    .menu-item:hover, .menu-item.active {
+      color: white;
+      background: rgba(255, 255, 255, 0.08);
+    }
+    .menu-item.active {
+      border-left: 4px solid var(--accent-gold);
+      color: var(--accent-gold);
+      font-weight: 600;
+    }
+    .sidebar-footer {
+      padding: 20px 24px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .btn-logout {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #fda4af;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      background: none;
+      border: none;
+      width: 100%;
+      text-align: left;
+    }
+    .btn-logout:hover {
+      color: #ef4444;
+      text-decoration: underline;
+    }
+
+    /* Main Area Layout */
+    .main-content {
+      margin-left: var(--sidebar-width);
+      flex-grow: 1;
+      padding: 40px;
+      min-height: 100vh;
+      transition: margin-left var(--transition-normal);
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Top Header */
+    .dashboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 36px;
+    }
+    .dh-title h2 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--dark-slate);
+      margin-bottom: 4px;
+    }
+    .dh-title p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+    .user-profile-badge {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: white;
+      padding: 8px 16px;
+      border-radius: var(--radius-full);
+      box-shadow: var(--shadow-sm);
+      border: 1px solid rgba(0, 77, 71, 0.04);
+    }
+    .upb-avatar-img {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--primary-brand);
+    }
+    .upb-info h4 {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--dark-slate);
+    }
+    .upb-info span {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Panels Configuration */
+    .panel-view {
+      display: none;
+    }
+    .panel-view.active {
+      display: block;
+      animation: fadeIn 0.4s ease;
+    }
+
+    /* Stat Cards Widget Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 24px;
+      margin-bottom: 36px;
+    }
+    .stat-widget {
+      background: white;
+      border-radius: var(--radius-md);
+      padding: 24px;
+      box-shadow: var(--shadow-md);
+      border: 1px solid rgba(0, 77, 71, 0.04);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .sw-info h4 {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-bottom: 8px;
+    }
+    .sw-info h3 {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--dark-slate);
+    }
+    .sw-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+    }
+    .sw-blue { background: #eff6ff; color: #3b82f6; }
+    .sw-green { background: #ecfdf5; color: #10b981; }
+    .sw-gold { background: var(--accent-gold-light); color: var(--accent-gold-dark); }
+    .sw-red { background: #fef2f2; color: #ef4444; }
+
+    /* Dashboard Layout Cards */
+    .profile-layout-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 2fr;
+      gap: 28px;
+      margin-bottom: 28px;
+    }
+    
+    .card-container {
+      background: white;
+      border-radius: var(--radius-md);
+      padding: 28px;
+      box-shadow: var(--shadow-md);
+      border: 1px solid rgba(0, 77, 71, 0.04);
+    }
+    .card-container h3 {
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--dark-slate);
+      margin-bottom: 20px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+      padding-bottom: 10px;
+    }
+    
+    .profile-card-details {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+    .profile-image-container {
+      position: relative;
+      margin-bottom: 20px;
+    }
+    .profile-avatar-large {
+      width: 140px;
+      height: 140px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 4px solid var(--primary-light);
+      box-shadow: var(--shadow-md);
+    }
+    
+    .info-list {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.95rem;
+      border-bottom: 1px dashed rgba(0, 0, 0, 0.04);
+      padding-bottom: 8px;
+    }
+    .info-item:last-child {
+      border-bottom: none;
+    }
+    .info-label {
+      font-weight: 600;
+      color: var(--dark-slate);
+    }
+    .info-value {
+      color: var(--text-muted);
+    }
+
+    /* Table UI */
+    .table-responsive {
+      overflow-x: auto;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(0, 77, 71, 0.06);
+    }
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    .data-table th, .data-table td {
+      padding: 16px 20px;
+      font-size: 0.9rem;
+    }
+    .data-table th {
+      background: var(--primary-light);
+      color: var(--primary-deep);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+    }
+    .data-table tr {
+      border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    }
+
+    /* Mobile Header */
+    .mobile-header {
+      display: none;
+      background: var(--primary-deep);
+      color: white;
+      padding: 16px 20px;
+      align-items: center;
+      justify-content: space-between;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 1000;
+    }
+    .mobile-menu-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+
+    @media (max-width: 900px) {
+      .profile-layout-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    @media (max-width: 768px) {
+      .mobile-header {
+        display: flex;
+      }
+      .sidebar {
+        transform: translateX(-100%);
+        top: 60px;
+      }
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      .main-content {
+        margin-left: 0;
+        padding: 80px 16px 40px 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Mobile Header -->
+  <div class="mobile-header">
+    <div class="logo" style="color: white; font-family: var(--font-headings); font-weight: 800; display: flex; align-items: center; gap: 8px;">
+      <div class="logo-icon" style="width: 24px; height: 24px; font-size: 0.8rem; background: var(--primary-brand); display: flex; align-items: center; justify-content: center; border-radius: 4px;"><i data-lucide="home"></i></div>
+      Akshaya <span>Deluxe</span>
+    </div>
+    <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle Menu">
+      <i data-lucide="menu"></i>
+    </button>
+  </div>
+
+  <!-- Sidebar Layout -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="logo-icon"><i data-lucide="home"></i></div>
+      <h3>Akshaya <span>Deluxe</span></h3>
+    </div>
+    
+    <nav class="sidebar-menu">
+      <div class="menu-item active" data-panel="dashboardPanel">
+        <i data-lucide="user"></i>
+        <span>My Stay Profile</span>
+      </div>
+      <div class="menu-item" data-panel="paymentsPanel">
+        <i data-lucide="indian-rupee"></i>
+        <span>Payments & Dues</span>
+      </div>
+      <div class="menu-item" data-panel="announcementsPanel">
+        <i data-lucide="bell"></i>
+        <span>Announcements</span>
+      </div>
+      <div class="menu-item" data-panel="complaintsPanel">
+        <i data-lucide="message-square"></i>
+        <span>Complaints Desk</span>
+      </div>
+      <div class="menu-item" data-panel="documentsPanel">
+        <i data-lucide="file-text"></i>
+        <span>My Documents</span>
+      </div>
+      <div class="menu-item" data-panel="settingsPanel">
+        <i data-lucide="settings"></i>
+        <span>Profile Settings</span>
+      </div>
+    </nav>
+    
+    <div class="sidebar-footer">
+      <button class="btn-logout" id="logoutBtn">
+        <i data-lucide="log-out"></i>
+        <span>Logout</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Area -->
+  <main class="main-content">
+    <header class="dashboard-header">
+      <div class="dh-title">
+        <h2 id="panelTitle">My Stay Profile</h2>
+        <p id="panelSubtitle">Manage your admissions details and current room assignment.</p>
+      </div>
+      
+      <div class="user-profile-badge">
+        <img src="" alt="avatar" class="upb-avatar-img" id="headerAvatar">
+        <div class="upb-info">
+          <h4 id="profileName">Loading...</h4>
+          <span id="profileRole">Student</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 1. MY PROFILE STAY PANEL -->
+    <div class="panel-view active" id="dashboardPanel">
+      <!-- Short Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-widget">
+          <div class="sw-info">
+            <h4>My Room assignment</h4>
+            <h3 id="roomBadge">Room --</h3>
+          </div>
+          <div class="sw-icon sw-blue"><i data-lucide="door-open"></i></div>
+        </div>
+        <div class="stat-widget">
+          <div class="sw-info">
+            <h4>Bed Spot</h4>
+            <h3 id="bedBadge">Bed --</h3>
+          </div>
+          <div class="sw-icon sw-gold"><i data-lucide="bed"></i></div>
+        </div>
+        <div class="stat-widget">
+          <div class="sw-info">
+            <h4>Rent (Monthly)</h4>
+            <h3 id="rentBadge">₹0</h3>
+          </div>
+          <div class="sw-icon sw-green"><i data-lucide="indian-rupee"></i></div>
+        </div>
+        <div class="stat-widget">
+          <div class="sw-info">
+            <h4>Dues Status</h4>
+            <h3 id="duesBadge" class="status-badge" style="display:inline-block; font-size:1.1rem; padding: 4px 10px; margin-top: 4px;">Paid</h3>
+          </div>
+          <div class="sw-icon sw-blue"><i data-lucide="check-circle"></i></div>
+        </div>
+      </div>
+
+      <div class="profile-layout-grid">
+        <!-- Profile Picture & Fast Details -->
+        <div class="card-container profile-card-details">
+          <div class="profile-image-container">
+            <img src="" alt="Student Avatar" class="profile-avatar-large" id="profileAvatarLarge">
+          </div>
+          <h3 id="detailsName" style="border:none; margin-bottom: 4px; padding-bottom: 0;">Student Name</h3>
+          <p id="detailsCollege" style="color:var(--text-muted); font-size:0.9rem; margin-bottom: 24px;">College Name</p>
+          
+          <div class="info-list">
+            <div class="info-item">
+              <span class="info-label">Join Date</span>
+              <span class="info-value" id="detailsJoinDate">YYYY-MM-DD</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Account Status</span>
+              <span class="info-value" id="detailsStatus">Active</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Personal Info Directory -->
+        <div class="card-container">
+          <h3>Personal & College Details</h3>
+          <div class="info-list">
+            <div class="info-item">
+              <span class="info-label">Mobile Number</span>
+              <span class="info-value" id="detailsPhone">98852 97517</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Aadhaar Number</span>
+              <span class="info-value" id="detailsAadhaar">---- ---- ----</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">College Name</span>
+              <span class="info-value" id="detailsCollegeFull">Aurora College</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Year of Study</span>
+              <span class="info-value" id="detailsYear">3rd Year</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Parent Name</span>
+              <span class="info-value" id="detailsParentName">Parent Name</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Parent Mobile</span>
+              <span class="info-value" id="detailsParentPhone">90001 23457</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Hostel Unit</span>
+              <span class="info-value">Akshaya Deluxe Boys Hostel (Opp Aurora College)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 2. PAYMENTS & DUES PANEL -->
+    <div class="panel-view" id="paymentsPanel">
+      <div class="card-container" style="margin-bottom: 28px;">
+        <h3>Rent Dues Summary</h3>
+        <p style="margin-bottom: 16px;">Payments are processed monthly. If your status shows Unpaid, please coordinate with owner Murali (98852 97517) to settle your dues.</p>
+        <div class="info-list" style="max-width: 440px; margin-bottom: 20px;">
+          <div class="info-item">
+            <span class="info-label">Deposit Paid</span>
+            <span class="info-value" id="rentDeposit">₹8,500</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Current Month Status</span>
+            <span class="info-value"><span id="duesBadge2" class="status-badge active">Paid</span></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card-container">
+        <h3>Rent Payment History</h3>
+        <div class="table-responsive">
+          <table class="data-table" id="paymentsTable">
+            <thead>
+              <tr>
+                <th>Billing Cycle</th>
+                <th>Paid On</th>
+                <th>Amount Settle</th>
+                <th>Transaction ID</th>
+                <th>Method</th>
+                <th>Receipt Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Dummy ledger data -->
+              <tr>
+                <td>August 2026</td>
+                <td>2026-08-01</td>
+                <td>₹8,500</td>
+                <td>TXN9835728</td>
+                <td>UPI (PhonePe)</td>
+                <td><span class="status-badge active">Generated</span></td>
+              </tr>
+              <tr>
+                <td>July 2026</td>
+                <td>2026-07-02</td>
+                <td>₹8,500</td>
+                <td>TXN9726194</td>
+                <td>UPI (GPay)</td>
+                <td><span class="status-badge active">Generated</span></td>
+              </tr>
+              <tr>
+                <td>June 2026 (Deposit)</td>
+                <td>2026-06-15</td>
+                <td>₹8,500</td>
+                <td>TXN9611294</td>
+                <td>Cash Payment</td>
+                <td><span class="status-badge active">Generated</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. ANNOUNCEMENTS PANEL -->
+    <div class="panel-view" id="announcementsPanel">
+      <div class="card-container">
+        <h3>Hostel Board Announcements</h3>
+        
+        <div class="activity-list" style="margin-top:20px;">
+          <div class="activity-item">
+            <div class="act-dot maintenance" style="background:#ef4444;"></div>
+            <div class="act-info">
+              <p>🍳 Sunday Special Biryani Timing Updated</p>
+              <span style="display:block; margin: 4px 0; font-size:0.85rem; color:var(--dark-slate-light);">Sunday Chicken Biryani lunch will be served from 12:30 PM to 2:30 PM. Please arrive on time in the dining block.</span>
+              <span style="font-size:0.75rem; color:var(--text-muted);">Posted: 2 days ago</span>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="act-dot payment" style="background:#3b82f6;"></div>
+            <div class="act-info">
+              <p>💧 Water Supply Pipeline Repair</p>
+              <span style="display:block; margin: 4px 0; font-size:0.85rem; color:var(--dark-slate-light);">Maintenance checks for Block B water storage are scheduled tomorrow from 10:00 AM to 11:30 AM. Kindly plan water usage accordingly.</span>
+              <span style="font-size:0.75rem; color:var(--text-muted);">Posted: 5 days ago</span>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="act-dot admission" style="background:#10b981;"></div>
+            <div class="act-info">
+              <p>📶 High-speed WiFi Upgraded</p>
+              <span style="display:block; margin: 4px 0; font-size:0.85rem; color:var(--dark-slate-light);">The local hostel broadband connection has been upgraded to a 200Mbps fiber line. Connect using the credentials printed near Block C lobbies.</span>
+              <span style="font-size:0.75rem; color:var(--text-muted);">Posted: 1 week ago</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. COMPLAINTS TICKETING DESK PANEL -->
+    <div class="panel-view" id="complaintsPanel">
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:24px; align-items:start;">
+        <!-- Raise Ticket Card -->
+        <div class="card-container">
+          <h3>Raise Maintenance Ticket</h3>
+          <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">Submit repair requests for dining hall, electricity, plumbing, or internet problems.</p>
+          <form id="complaintForm">
+            <div class="form-group" style="margin-bottom:16px;">
+              <label class="form-label" for="complaintCategory">Issue Category</label>
+              <select id="complaintCategory" class="form-input" required>
+                <option value="Electricity">Electricity & Fan</option>
+                <option value="Plumbing">Water & Plumbing</option>
+                <option value="Internet">High-speed Internet/Wi-Fi</option>
+                <option value="Food">Mess & Food issues</option>
+                <option value="Others">Others</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:20px;">
+              <label class="form-label" for="complaintDesc">Detailed Description</label>
+              <textarea id="complaintDesc" class="form-input" style="height:120px; resize:none;" placeholder="Describe the problem, specifying room details if needed..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;">Submit Complaint</button>
+          </form>
+        </div>
+
+        <!-- Raised Tickets List Card -->
+        <div class="card-container">
+          <h3>My Maintenance Tickets</h3>
+          <div class="table-responsive">
+            <table class="data-table" id="studentComplaintsTable">
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Description</th>
+                  <th>Submitted</th>
+                  <th>Status</th>
+                  <th>Admin Reply</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Populated dynamically -->
+                <tr><td colspan="5" style="text-align:center;">No tickets raised yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. STUDENT DOCUMENTS PANEL -->
+    <div class="panel-view" id="documentsPanel">
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:24px; align-items:start;">
+        <!-- Upload Document Card -->
+        <div class="card-container">
+          <h3>Upload Identity Proofs</h3>
+          <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:16px;">Upload scanned image copy or PDF of Aadhaar card, college fee cards, or consent letters.</p>
+          <form id="documentUploadForm">
+            <div class="form-group" style="margin-bottom:16px;">
+              <label class="form-label" for="docNameInput">Document Label Name</label>
+              <input type="text" id="docNameInput" class="form-input" placeholder="e.g. Aadhaar Card, College ID" required>
+            </div>
+            <div class="form-group" style="margin-bottom:20px;">
+              <label class="form-label" for="docFileInput">Choose Document File</label>
+              <input type="file" id="docFileInput" class="form-input" accept="image/*,application/pdf" required style="padding:8px;">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;">Upload Document</button>
+          </form>
+        </div>
+
+        <!-- Uploaded Documents Directory Card -->
+        <div class="card-container">
+          <h3>My Uploaded Documents</h3>
+          <div class="table-responsive">
+            <table class="data-table" id="studentDocumentsTable">
+              <thead>
+                <tr>
+                  <th>Label Name</th>
+                  <th>File Type</th>
+                  <th>Uploaded Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Populated dynamically -->
+                <tr><td colspan="4" style="text-align:center;">No documents uploaded.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 6. PROFILE SETTINGS PANEL -->
+    <div class="panel-view" id="settingsPanel">
+      <div class="profile-layout-grid">
+        <!-- Profile Picture Update Card -->
+        <div class="card-container">
+          <h3>Change Profile Photo</h3>
+          <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom: 20px;">Upload a high-quality JPG or PNG portrait to change your dashboard avatar.</p>
+          
+          <form id="avatarForm">
+            <div class="form-group" style="margin-bottom: 20px;">
+              <input type="file" id="updatePhotoInput" class="form-input" accept="image/*" required style="padding: 10px;">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;">Upload Photo</button>
+          </form>
+        </div>
+
+        <!-- Change Password Card -->
+        <div class="card-container">
+          <h3>Change Password</h3>
+          
+          <form id="passwordForm">
+            <div class="form-group" style="margin-bottom: 16px;">
+              <label class="form-label" for="currentPass">Current Password</label>
+              <input type="password" id="currentPass" class="form-input" placeholder="••••••••" required>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 16px;">
+              <label class="form-label" for="newPass">New Password</label>
+              <input type="password" id="newPass" class="form-input" placeholder="••••••••" required>
+            </div>
+            
+            <div class="form-group" style="margin-bottom: 20px;">
+              <label class="form-label" for="confirmNewPass">Confirm New Password</label>
+              <input type="password" id="confirmNewPass" class="form-input" placeholder="••••••••" required>
+            </div>
+            
+            <button type="submit" class="btn btn-secondary" style="width: 100%;">Update Password</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- Immutable Profile Fields Notice -->
+      <div class="card-container">
+        <h3>Primary Registration Data (Non-Editable)</h3>
+        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 20px;">
+          For security auditing and safety guidelines, your primary mobile credentials and Aadhaar ID numbers cannot be changed directly. To request an update, please coordinate with hostel administration.
+        </p>
+        <div class="form-grid">
+          <div class="form-group">
+            <label class="form-label">Registered Mobile Number</label>
+            <input type="text" id="immutablePhone" class="form-input" disabled style="background:#f1f5f9; cursor:not-allowed;">
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Registered Aadhaar Number</label>
+            <input type="text" id="immutableAadhaar" class="form-input" disabled style="background:#f1f5f9; cursor:not-allowed;">
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    // Elements
+    const sidebar = document.getElementById('sidebar');
+    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    
+    const panelTitle = document.getElementById('panelTitle');
+    const panelSubtitle = document.getElementById('panelSubtitle');
+    const menuItems = document.querySelectorAll('.menu-item');
+    const panels = document.querySelectorAll('.panel-view');
+
+    const panelMeta = {
+      dashboardPanel: { title: 'My Stay Profile', sub: 'Manage your admissions details and current room assignment.' },
+      paymentsPanel: { title: 'Payments & Rent Dues', sub: 'Track your payments history, deposits, and monthly invoices.' },
+      announcementsPanel: { title: 'Announcements Board', sub: 'Stay updated with meal alerts, notices, and utilities repair logs.' },
+      complaintsPanel: { title: 'Complaints Ticket Desk', sub: 'Raise maintenance concerns and track resolution status.' },
+      documentsPanel: { title: 'My Documents Archive', sub: 'Upload and manage student identity proofs.' },
+      settingsPanel: { title: 'Profile Settings', sub: 'Update your dashboard profile picture or secure your portal credentials.' }
+    };
+
+    // Responsive Mobile menu
+    if (mobileMenuBtn) {
+      mobileMenuBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('open');
+      });
+    }
+
+    // Switch panels
+    function switchPanel(panelId) {
+      panels.forEach(p => p.classList.remove('active'));
+      menuItems.forEach(item => item.classList.remove('active'));
+
+      const targetPanel = document.getElementById(panelId);
+      if (targetPanel) targetPanel.classList.add('active');
+
+      const menuItem = Array.from(menuItems).find(item => item.getAttribute('data-panel') === panelId);
+      if (menuItem) menuItem.classList.add('active');
+
+      const meta = panelMeta[panelId];
+      if (meta) {
+        panelTitle.innerText = meta.title;
+        panelSubtitle.innerText = meta.sub;
+      }
+      sidebar.classList.remove('open');
+
+      // Hook data load triggers
+      if (panelId === 'paymentsPanel') {
+        fetchMyPayments();
+      } else if (panelId === 'complaintsPanel') {
+        fetchMyComplaints();
+      } else if (panelId === 'documentsPanel') {
+        fetchMyDocuments();
+      }
+    }
+
+    menuItems.forEach(item => {
+      item.addEventListener('click', () => {
+        switchPanel(item.getAttribute('data-panel'));
+      });
+    });
+
+    // Logout
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', () => {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.replace('../student-login.html');
+      });
+    }
+
+    // Fetch and bind student profile details
+    async function loadStudentProfile() {
+      const token = localStorage.getItem('token');
+      try {
+        const response = await fetch('/api/auth/me', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        
+        if (data.success) {
+          const user = data.user;
+          const profile = data.profile;
+          
+          // Header Profile Info
+          document.getElementById('profileName').innerText = user.name;
+          const avatarUrl = (profile && profile.photo) ? profile.photo : '/assets/avatar-placeholder.png';
+          document.getElementById('headerAvatar').src = avatarUrl;
+          document.getElementById('profileAvatarLarge').src = avatarUrl;
+          
+          // Bind stay badge statistics
+          document.getElementById('roomBadge').innerText = (profile && profile.roomNumber) ? `Room ${profile.roomNumber}` : 'Room --';
+          document.getElementById('bedBadge').innerText = (profile && profile.bedNumber) ? `Bed ${profile.bedNumber}` : 'Bed --';
+          document.getElementById('rentBadge').innerText = profile ? `₹${profile.monthlyRent.toLocaleString('en-IN')}` : '₹0';
+          
+          const duesBadge = document.getElementById('duesBadge');
+          const duesBadge2 = document.getElementById('duesBadge2');
+          document.getElementById('rentDeposit').innerText = profile ? `₹${profile.depositAmount.toLocaleString('en-IN')}` : '₹0';
+          
+          const isPaid = profile && profile.paymentStatus === 'paid';
+          if (isPaid) {
+            duesBadge.innerText = 'Paid';
+            duesBadge.className = 'status-badge active';
+            duesBadge2.innerText = 'Paid';
+            duesBadge2.className = 'status-badge active';
+          } else {
+            duesBadge.innerText = 'Unpaid';
+            duesBadge.className = 'status-badge inactive';
+            duesBadge2.innerText = 'Unpaid';
+            duesBadge2.className = 'status-badge inactive';
+          }
+
+          // Personal Details card
+          document.getElementById('detailsName').innerText = user.name;
+          document.getElementById('detailsCollege').innerText = profile ? profile.collegeName : 'Aurora College';
+          document.getElementById('detailsJoinDate').innerText = profile ? profile.joinDate : 'N/A';
+          document.getElementById('detailsStatus').innerText = profile ? profile.status : 'active';
+          
+          document.getElementById('detailsPhone').innerText = user.phone;
+          document.getElementById('detailsAadhaar').innerText = profile ? profile.aadhaarNumber : '---- ---- ----';
+          document.getElementById('detailsCollegeFull').innerText = profile ? profile.collegeName : 'N/A';
+          document.getElementById('detailsYear').innerText = profile ? profile.year : 'N/A';
+          document.getElementById('detailsParentName').innerText = profile ? profile.parentName : 'N/A';
+          document.getElementById('detailsParentPhone').innerText = profile ? profile.parentPhone : 'N/A';
+          
+          // Settings page inputs
+          document.getElementById('immutablePhone').value = user.phone;
+          document.getElementById('immutableAadhaar').value = profile ? profile.aadhaarNumber : '';
+        } else {
+          // Token expired or invalid
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.replace('../student-login.html');
+        }
+      } catch (err) {
+        console.error('Failed to load student stay profile:', err);
+      }
+    }
+
+    // Settings Profile Photo upload
+    const avatarForm = document.getElementById('avatarForm');
+    if (avatarForm) {
+      avatarForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const photoFile = document.getElementById('updatePhotoInput').files[0];
+        const submitBtn = avatarForm.querySelector('button[type="submit"]');
+        const token = localStorage.getItem('token');
+
+        if (!photoFile) return;
+
+        const formData = new FormData();
+        formData.append('photo', photoFile);
+
+        try {
+          submitBtn.disabled = true;
+          submitBtn.innerText = 'Uploading...';
+
+          const response = await fetch('/api/auth/update-profile-picture', {
+            method: 'PUT',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            alert(data.message);
+            document.getElementById('headerAvatar').src = data.photo;
+            document.getElementById('profileAvatarLarge').src = data.photo;
+            document.getElementById('updatePhotoInput').value = '';
+          } else {
+            alert(data.message || 'Upload failed.');
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Failed to connect to the server.');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerText = 'Upload Photo';
+        }
+      });
+    }
+
+    // Change Password Form
+    const passwordForm = document.getElementById('passwordForm');
+    if (passwordForm) {
+      passwordForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const currentPassword = document.getElementById('currentPass').value;
+        const newPassword = document.getElementById('newPass').value;
+        const confirmNewPassword = document.getElementById('confirmNewPass').value;
+        const submitBtn = passwordForm.querySelector('button[type="submit"]');
+        const token = localStorage.getItem('token');
+
+        if (newPassword !== confirmNewPassword) {
+          alert('Passwords do not match.');
+          return;
+        }
+
+        try {
+          submitBtn.disabled = true;
+          submitBtn.innerText = 'Updating...';
+
+          const response = await fetch('/api/auth/change-password', {
+            method: 'PUT',
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ currentPassword, newPassword, confirmNewPassword })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            alert(data.message);
+            passwordForm.reset();
+          } else {
+            alert(data.message || 'Password update failed.');
+          }
+        } catch (err) {
+          console.error(err);
+          alert('Failed to connect to the server.');
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerText = 'Update Password';
+        }
+      });
+    }
+
+    // Payments and simulated Razorpay payments loaders
+    async function fetchMyPayments() {
+      const token = localStorage.getItem('token');
+      const tableBody = document.querySelector('#paymentsTable tbody');
+      if (!tableBody) return;
+      tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Loading billing invoices...</td></tr>';
+      
+      try {
+        const res = await fetch('/api/payments/my-payments', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          tableBody.innerHTML = '';
+          
+          if (data.payments.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No payment invoices generated.</td></tr>';
+            return;
+          }
+          
+          data.payments.forEach(pay => {
+            const isPaid = pay.status === 'paid';
+            const statusBadge = `<span class="status-badge ${isPaid ? 'active' : 'inactive'}">${pay.status}</span>`;
+            
+            let actions = '';
+            if (isPaid) {
+              actions = `<button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem;" onclick="downloadReceipt(${pay.id})">Download Receipt</button>`;
+            } else {
+              actions = `<button class="btn btn-primary" style="padding:4px 8px; font-size:0.75rem;" onclick="payOnlineSimulate(${pay.id}, ${pay.amountDue - pay.amountPaid})">Pay Online</button>`;
+            }
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td><strong>${pay.billingMonth}</strong></td>
+              <td>${isPaid ? pay.updatedAt.split(' ')[0] : 'Pending'}</td>
+              <td>₹${pay.amountDue.toLocaleString('en-IN')}</td>
+              <td>${isPaid ? 'TXN_' + pay.id : 'N/A'}</td>
+              <td>${isPaid ? 'Online (UPI)' : 'N/A'}</td>
+              <td>${actions}</td>
+            `;
+            tableBody.appendChild(row);
+          });
+        }
+      } catch (err) {
+        console.error('Fetch payments error:', err);
+      }
+    }
+
+    async function payOnlineSimulate(paymentId, amountDue) {
+      if (!confirm(`Simulate payment gateway checkout of ₹${amountDue} using Razorpay?`)) return;
+      const token = localStorage.getItem('token');
+      
+      try {
+        const res = await fetch(`/api/payments/${paymentId}/simulate-online`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            razorpayPaymentId: 'pay_' + Math.random().toString(36).substring(2, 12).toUpperCase()
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('Online Payment successful! Receipt is now available.');
+          fetchMyPayments();
+          loadStudentProfile(); // Reload header & stays metrics
+        } else {
+          alert('Simulated Checkout Failed: ' + data.message);
+        }
+      } catch (err) {
+        alert('Server connection error.');
+      }
+    }
+
+    async function downloadReceipt(paymentId) {
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch(`/api/payments/${paymentId}/receipt`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          const rec = data.receipt;
+          const content = `====================================================
+AKSHAYA DELUXE BOYS HOSTEL - RECEIPT
+====================================================
+Receipt No: ${rec.receiptNo}
+Date: ${rec.date}
+Student Name: ${rec.studentName}
+Phone: ${rec.phone}
+Room Assigned: Room ${rec.roomNumber} - Bed ${rec.bedNumber}
+Billing Month: ${rec.billingMonth}
+----------------------------------------------------
+Amount Due: Rs. ${rec.amountDue}
+Amount Paid: Rs. ${rec.amountPaid}
+Status: ${rec.status.toUpperCase()}
+----------------------------------------------------
+Simulated Razorpay webhook callback verified.
+Thank you for staying with us!
+- Murali (Owner)
+====================================================`;
+
+          const blob = new Blob([content], { type: 'text/plain' });
+          const link = document.createElement('a');
+          link.href = URL.createObjectURL(blob);
+          link.download = `Receipt_${rec.receiptNo}.txt`;
+          link.click();
+        } else {
+          alert('Failed to generate receipt: ' + data.message);
+        }
+      } catch (err) {
+        alert('Server error.');
+      }
+    }
+
+    // Complaints ticket functions
+    async function fetchMyComplaints() {
+      const token = localStorage.getItem('token');
+      const tableBody = document.querySelector('#studentComplaintsTable tbody');
+      if (!tableBody) return;
+      tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading complaints...</td></tr>';
+      
+      try {
+        const res = await fetch('/api/notifications/complaints/my', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          tableBody.innerHTML = '';
+          if (data.complaints.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">No tickets raised yet.</td></tr>';
+            return;
+          }
+          
+          data.complaints.forEach(c => {
+            const isResolved = c.status === 'resolved';
+            const statusBadge = `<span class="status-badge ${isResolved ? 'active' : 'inactive'}">${c.status}</span>`;
+            
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td><strong>${c.category}</strong></td>
+              <td>${c.description}</td>
+              <td>${c.createdAt.split(' ')[0]}</td>
+              <td>${statusBadge}</td>
+              <td>${c.adminRemarks || '<span style="color:var(--text-muted);">Awaiting response</span>'}</td>
+            `;
+            tableBody.appendChild(row);
+          });
+        }
+      } catch (err) {
+        console.error('Fetch complaints error:', err);
+      }
+    }
+
+    const complaintForm = document.getElementById('complaintForm');
+    if (complaintForm) {
+      complaintForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const category = document.getElementById('complaintCategory').value;
+        const description = document.getElementById('complaintDesc').value;
+        const token = localStorage.getItem('token');
+        
+        try {
+          const res = await fetch('/api/notifications/complaints', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ category, description })
+          });
+          const data = await res.json();
+          if (data.success) {
+            alert('Complaint raised successfully!');
+            complaintForm.reset();
+            fetchMyComplaints();
+          } else {
+            alert('Failed: ' + data.message);
+          }
+        } catch (err) {
+          alert('Server connection error.');
+        }
+      });
+    }
+
+    // Documents upload/delete handlers
+    async function fetchMyDocuments() {
+      const token = localStorage.getItem('token');
+      const tableBody = document.querySelector('#studentDocumentsTable tbody');
+      if (!tableBody) return;
+      tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">Loading documents...</td></tr>';
+      
+      try {
+        const res = await fetch('/api/auth/documents', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+          tableBody.innerHTML = '';
+          if (data.documents.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="4" style="text-align:center;">No documents uploaded.</td></tr>';
+            return;
+          }
+          
+          data.documents.forEach(d => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+              <td><strong>${d.name}</strong></td>
+              <td>${d.fileType.toUpperCase()}</td>
+              <td>${d.uploadedAt.split(' ')[0]}</td>
+              <td>
+                <a href="${d.filePath}" target="_blank" class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem; text-decoration:none; display:inline-block;">View</a>
+                <button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem; color:#ef4444; border-color:#ef4444; margin-left:4px;" onclick="deleteDoc(${d.id})">Delete</button>
+              </td>
+            `;
+            tableBody.appendChild(row);
+          });
+        }
+      } catch (err) {
+        console.error('Fetch documents error:', err);
+      }
+    }
+
+    const documentUploadForm = document.getElementById('documentUploadForm');
+    if (documentUploadForm) {
+      documentUploadForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const docName = document.getElementById('docNameInput').value;
+        const docFile = document.getElementById('docFileInput').files[0];
+        const token = localStorage.getItem('token');
+        
+        if (!docFile) return;
+        
+        const formData = new FormData();
+        formData.append('name', docName);
+        formData.append('document', docFile);
+        
+        try {
+          const res = await fetch('/api/auth/documents', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+          });
+          const data = await res.json();
+          if (data.success) {
+            alert('Document uploaded successfully!');
+            documentUploadForm.reset();
+            fetchMyDocuments();
+          } else {
+            alert('Upload failed: ' + data.message);
+          }
+        } catch (err) {
+          alert('Server connection error.');
+        }
+      });
+    }
+
+    async function deleteDoc(docId) {
+      if (!confirm('Are you sure you want to delete this document?')) return;
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch(`/api/auth/documents/${docId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(data.message);
+          fetchMyDocuments();
+        } else {
+          alert('Delete failed: ' + data.message);
+        }
+      } catch (err) {
+        alert('Server error.');
+      }
+    }
+
+    // Trigger initial load
+    loadStudentProfile();
+  </script>
+</body>
+</html>

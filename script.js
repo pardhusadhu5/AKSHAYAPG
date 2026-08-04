@@ -299,7 +299,7 @@ document.addEventListener('DOMContentLoaded', () => {
         activeGalleryList.push({
           src: img.getAttribute('src'),
           alt: img.getAttribute('alt'),
-          title: caption ? caption.innerText : 'Dolphin PG Room Details'
+          title: caption ? caption.innerText : 'Akshaya Deluxe Room Details'
         });
       }
     });
@@ -596,11 +596,11 @@ document.addEventListener('DOMContentLoaded', () => {
       modalSuccessState.style.display = 'flex';
 
       // Auto-trigger WhatsApp messaging link after 3 seconds for active customer conversion
-      const waMsg = `Hi! I have scheduled a visit for Dolphin PG Hostel. \n\nDetails:\nName: ${name}\nPhone: ${phone}\nDate: ${date}\nTime Slot: ${slot}\nRoom Preference: ${room} Sharing\n\nPlease confirm availability.`;
+      const waMsg = `Hi! I am interested in Akshaya Deluxe Boys Hostel. \n\nDetails:\nName: ${name}\nPhone: ${phone}\nExpected Joining/Visit: ${date}\nTime Slot: ${slot}\nRoom Preference: ${room} Sharing\n\nPlease confirm availability.`;
       const encodedWaMsg = encodeURIComponent(waMsg);
       
       setTimeout(() => {
-        window.open(`https://wa.me/918142638659?text=${encodedWaMsg}`, '_blank');
+        window.open(`https://wa.me/919885297517?text=${encodedWaMsg}`, '_blank');
       }, 2500);
     });
   }
@@ -652,10 +652,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Trigger simulated file download
         const link = document.createElement('a');
         link.href = '#'; // In a real app, this links to the PDF asset file path
-        link.setAttribute('download', 'Dolphin_PG_Hostel_Brochure.pdf');
+        link.setAttribute('download', 'Akshaya_Deluxe_Boys_Hostel_Brochure.pdf');
         
         // Create an alert notification for user
-        alert("Success! Dolphin PG Hostel digital brochure PDF has been generated and downloaded to your device.");
+        alert("Success! Akshaya Deluxe Boys Hostel digital brochure PDF has been generated and downloaded to your device.");
 
         setTimeout(() => {
           downloadBrochureBtn.disabled = false;

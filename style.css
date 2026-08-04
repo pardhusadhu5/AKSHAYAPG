@@ -15,9 +15,9 @@
   --accent-gold-dark: #b39265;
   --accent-gold-light: #f5eedf;
   
-  --dark-slate: #0f172a;        /* Sleek dark slate text/bg */
-  --dark-slate-light: #1e293b;
-  --text-muted: #64748b;        /* Muted body text */
+  --dark-slate: #111827;        /* Main headings (Dark navy) */
+  --dark-slate-light: #4b5563;  /* Medium gray text */
+  --text-muted: #6b7280;        /* Soft gray body text */
   --bg-pure: #ffffff;
   
   /* Status Colors */
@@ -285,7 +285,9 @@ ul {
 }
 
 .section-title span {
-  color: var(--primary-brand);
+  background: linear-gradient(135deg, var(--primary-deep) 0%, var(--primary-brand) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .section-subtitle {
@@ -317,13 +319,13 @@ ul {
 }
 
 .btn-primary {
-  background: var(--primary-brand);
+  background: linear-gradient(135deg, var(--primary-brand) 0%, var(--primary-medium) 100%);
   color: var(--bg-pure);
   box-shadow: 0 4px 14px rgba(0, 122, 113, 0.2);
 }
 
 .btn-primary:hover {
-  background: var(--primary-deep);
+  background: linear-gradient(135deg, var(--primary-deep) 0%, var(--primary-brand) 100%);
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(0, 77, 71, 0.3);
 }
@@ -692,7 +694,9 @@ ul {
 }
 
 .hero-title span {
-  color: var(--primary-brand);
+  background: linear-gradient(135deg, var(--primary-deep) 0%, var(--primary-brand) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .hero-subtitle {
