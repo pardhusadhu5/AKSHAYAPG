@@ -490,41 +490,43 @@
     /* Rooms Grid Layout */
     .rooms-layout-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 24px;
-      margin-top: 24px;
+      grid-template-columns: repeat(auto-fill, minmax(225px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
     }
     .room-card-console {
       background: white;
-      border-radius: var(--radius-md);
-      padding: 24px;
-      box-shadow: var(--shadow-md);
-      border: 1px solid rgba(0, 77, 71, 0.04);
+      border-radius: 12px;
+      padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid #E5E7EB;
       display: flex;
       flex-direction: column;
       position: relative;
       transition: transform var(--transition-normal), box-shadow var(--transition-normal);
       cursor: pointer;
+      height: 100%;
+      box-sizing: border-box;
     }
     .room-card-console:hover {
-      transform: translateY(-4px);
-      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
     }
     .room-card-console-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
     .room-number-pill {
-      font-size: 1.25rem;
+      font-size: 1.05rem;
       font-weight: 800;
       color: var(--primary-deep);
     }
     .room-status-badge {
-      padding: 4px 8px;
-      border-radius: var(--radius-sm);
-      font-size: 0.75rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.65rem;
       font-weight: 700;
       text-transform: capitalize;
     }
@@ -534,14 +536,14 @@
     .room-stats-list {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      margin-bottom: 20px;
+      gap: 5px;
+      margin-bottom: 12px;
       flex-grow: 1;
     }
     .room-stat-row {
       display: flex;
       justify-content: space-between;
-      font-size: 0.9rem;
+      font-size: 0.8rem;
     }
     .room-stat-label {
       color: var(--text-muted);
@@ -552,9 +554,9 @@
     }
     .room-card-console-footer {
       display: flex;
-      gap: 8px;
-      border-top: 1px solid rgba(0, 0, 0, 0.04);
-      padding-top: 16px;
+      gap: 6px;
+      border-top: 1px solid rgba(0, 0, 0, 0.05);
+      padding-top: 10px;
     }
     
     /* Allocation Bed Selector Styles */
@@ -2418,8 +2420,8 @@
             // Render Floor Grid
             const floorGrid = document.createElement('div');
             floorGrid.style.display = 'grid';
-            floorGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(280px, 1fr))';
-            floorGrid.style.gap = '20px';
+            floorGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(225px, 1fr))';
+            floorGrid.style.gap = '16px';
             floorGrid.style.gridColumn = '1 / -1';
 
             rooms.forEach(rm => {
@@ -2427,9 +2429,26 @@
               card.className = 'room-card-console';
               card.setAttribute('onclick', `if(!event.target.closest('button')) viewRoomDetails(${rm.id})`);
 
-              let occupantText = 'Empty';
+              let occupantsMarkup = '<div style="color:var(--text-muted); font-size:0.75rem; font-style:italic; padding-left: 2px;">• Empty</div>';
               if (rm.currentStudents && rm.currentStudents.length > 0) {
-                occupantText = rm.currentStudents.map(s => s.studentName).join(', ');
+                const visibleStudents = rm.currentStudents.slice(0, 4);
+                const extraCount = rm.currentStudents.length - 4;
+                
+                let listItems = visibleStudents.map(s => `
+                  <div style="display:flex; align-items:center; gap:4px; font-size:0.78rem; font-weight:600; color:var(--primary-brand); margin-bottom: 2px;">
+                    <i data-lucide="user" style="width:11px; height:11px; stroke-width: 2.5; flex-shrink: 0;"></i>
+                    <span class="text-truncate" style="max-width:140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${s.studentName}">${s.studentName}</span>
+                  </div>
+                `).join('');
+                
+                if (extraCount > 0) {
+                  listItems += `
+                    <div style="font-size:0.7rem; font-weight:700; color:var(--primary-deep); margin-top:2px; cursor:pointer;" onclick="viewRoomDetails(${rm.id}); event.stopPropagation();" title="Click to view all occupants">
+                      +${extraCount} More (View All)
+                    </div>
+                  `;
+                }
+                occupantsMarkup = `<div style="display:flex; flex-direction:column; gap:2px; margin-top:2px; width:100%;">${listItems}</div>`;
               }
 
               card.innerHTML = `
@@ -2454,14 +2473,16 @@
                     <span class="room-stat-label">Rent Fee:</span>
                     <span class="room-stat-val">₹${rm.monthlyFee.toLocaleString('en-IN')} / mo</span>
                   </div>
-                  <div class="room-stat-row" style="margin-top: 8px; flex-direction:column; align-items:flex-start;">
-                    <span class="room-stat-label" style="font-size:0.75rem;">Current Occupants:</span>
-                    <span style="font-size:0.8rem; font-weight:700; color:var(--primary-deep); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;" title="${occupantText}">${occupantText}</span>
+                  <div class="room-stat-row" style="margin-top: 6px; flex-direction:column; align-items:flex-start;">
+                    <span class="room-stat-label" style="font-size:0.7rem; font-weight:700; margin-bottom: 2px;">Current Occupants:</span>
+                    <div style="min-height: 82px; display: flex; flex-direction: column; justify-content: flex-start; width: 100%;">
+                      ${occupantsMarkup}
+                    </div>
                   </div>
                 </div>
                 <div class="room-card-console-footer">
-                  <button class="btn btn-outline" style="flex:1; padding:6px; font-size:0.75rem;" onclick="openEditRoomModal(${rm.id}, '${rm.roomNumber}', ${rm.capacity}, ${rm.monthlyFee}, '${rm.floor || 'Ground Floor'}', '${rm.status}')">Edit</button>
-                  <button class="btn btn-outline" style="flex:1; padding:6px; font-size:0.75rem; color:#ef4444; border-color:#ef4444;" onclick="deleteRoom(${rm.id}, '${rm.roomNumber}')">Delete</button>
+                  <button class="btn btn-outline" style="flex:1; padding:4px 8px; font-size:0.7rem; height:28px;" onclick="openEditRoomModal(${rm.id}, '${rm.roomNumber}', ${rm.capacity}, ${rm.monthlyFee}, '${rm.floor || 'Ground Floor'}', '${rm.status}')">Edit</button>
+                  <button class="btn btn-outline" style="flex:1; padding:4px 8px; font-size:0.7rem; height:28px; color:#ef4444; border-color:#ef4444;" onclick="deleteRoom(${rm.id}, '${rm.roomNumber}')">Delete</button>
                 </div>
               `;
               floorGrid.appendChild(card);
