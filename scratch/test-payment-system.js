@@ -67,7 +67,6 @@ async function runPaymentSystemTests() {
     headers: { 'Authorization': `Bearer ${studentToken}` }
   });
 
-  console.log('feesRes response:', feesRes.status, feesRes.data);
   if (!feesRes.data.success) {
     throw new Error('Fetch student fees failed: ' + JSON.stringify(feesRes.data));
   }
@@ -76,16 +75,19 @@ async function runPaymentSystemTests() {
   console.log(`  ✓ Current Fee: ${currentFee.billingMonth}, Amount: ₹${currentFee.amountDue}, Status: ${currentFee.status}`);
 
   // Ensure an unpaid fee invoice exists for testing
-  let testFeeId = currentFee.id;
+  let testFeeId = (currentFee.status !== 'paid') ? currentFee.id : null;
+
   if (!testFeeId) {
-    console.log('  Generating current month invoice for testing...');
-    const genRes = await makeRequest({
+    const testMonth = `2026-${String(new Date().getMonth() + 2).padStart(2, '0')}`;
+    console.log(`  Generating unpaid invoice for ${testMonth} for testing...`);
+    
+    await makeRequest({
       hostname: 'localhost',
       port: 8080,
       path: '/api/payments/admin/generate-monthly',
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminToken}` }
-    }, { billingMonth: currentFee.billingMonth });
+    }, { billingMonth: testMonth });
 
     const refetchRes = await makeRequest({
       hostname: 'localhost',
@@ -94,7 +96,9 @@ async function runPaymentSystemTests() {
       method: 'GET',
       headers: { 'Authorization': `Bearer ${studentToken}` }
     });
-    testFeeId = refetchRes.data.currentFee.id;
+
+    const unpaidFee = refetchRes.data.history.find(h => h.status !== 'paid');
+    testFeeId = unpaidFee ? unpaidFee.id : refetchRes.data.history[0].id;
   }
 
   // 4. Create Payment Order

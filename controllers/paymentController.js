@@ -365,6 +365,22 @@ async function handleWebhook(req, res) {
           console.error('[Webhook] DB Error:', e);
         }
       }
+    } else if (event === 'payment.failed' && payload && payload.payment) {
+      const orderId = payload.payment.entity.order_id;
+      const db = await getDb();
+      await db.run(
+        `UPDATE paymentTransactions SET status = 'FAILED', updatedAt = CURRENT_TIMESTAMP WHERE gatewayOrderId = ?`,
+        [orderId]
+      );
+      console.log(`[Webhook] Processed payment.failed for order ${orderId}`);
+    } else if (event === 'refund.processed' && payload && payload.refund) {
+      const paymentId = payload.refund.entity.payment_id;
+      const db = await getDb();
+      await db.run(
+        `UPDATE paymentTransactions SET status = 'REFUNDED', updatedAt = CURRENT_TIMESTAMP WHERE gatewayPaymentId = ?`,
+        [paymentId]
+      );
+      console.log(`[Webhook] Processed refund.processed for payment ${paymentId}`);
     }
 
     res.status(200).json({ status: 'ok' });
@@ -539,7 +555,7 @@ async function getAllPayments(req, res) {
     const db = await getDb();
 
     let query = `
-      SELECT p.*, s.studentName, s.phone, r.roomNumber, rm.receiptNumber, pt.gatewayPaymentId, pt.paymentMethod
+      SELECT p.*, s.id as studentId, s.studentName, s.phone, r.roomNumber, rm.receiptNumber, pt.gatewayOrderId, pt.gatewayPaymentId, pt.paymentMethod
       FROM payments p
       JOIN students s ON p.studentId = s.id
       LEFT JOIN rooms r ON s.roomId = r.id
