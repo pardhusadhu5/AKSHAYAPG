@@ -4,7 +4,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'akshaya_deluxe_hostel_secret_key_2
 
 function verifyToken(req, res, next) {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+  const token = (authHeader && authHeader.split(' ')[1]) || req.query.token;
 
   if (!token) {
     return res.status(401).json({ success: false, message: 'Access Denied: No Token Provided' });

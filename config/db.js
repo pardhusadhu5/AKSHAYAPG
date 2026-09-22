@@ -123,6 +123,10 @@ async function initializeDatabase(db) {
     )
   `);
 
+  // Safe migrations for payments table
+  try { await db.exec("ALTER TABLE payments ADD COLUMN dueDate TEXT"); } catch (_) {}
+  try { await db.exec("ALTER TABLE payments ADD COLUMN paidAt TEXT"); } catch (_) {}
+
   // Create Payment History Table
   await db.exec(`
     CREATE TABLE IF NOT EXISTS paymentHistory (
@@ -134,6 +138,44 @@ async function initializeDatabase(db) {
       referenceNumber TEXT,
       notes TEXT,
       FOREIGN KEY (paymentId) REFERENCES payments(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Create Payment Transactions Table (Online Gateway Orders & Verification)
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS paymentTransactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      studentId INTEGER NOT NULL,
+      feeId INTEGER NOT NULL,
+      gatewayOrderId TEXT UNIQUE NOT NULL,
+      gatewayPaymentId TEXT,
+      gatewaySignature TEXT,
+      amount REAL NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'INR',
+      paymentMethod TEXT,
+      status TEXT NOT NULL CHECK(status IN ('CREATED', 'PENDING', 'SUCCESS', 'FAILED', 'CANCELLED', 'REFUNDED')),
+      createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      paidAt TEXT,
+      FOREIGN KEY (studentId) REFERENCES students(id) ON DELETE CASCADE,
+      FOREIGN KEY (feeId) REFERENCES payments(id) ON DELETE CASCADE
+    )
+  `);
+
+  // Create Receipts Table
+  await db.exec(`
+    CREATE TABLE IF NOT EXISTS receipts (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      transactionId INTEGER UNIQUE,
+      receiptNumber TEXT UNIQUE NOT NULL,
+      studentId INTEGER NOT NULL,
+      feeId INTEGER NOT NULL,
+      amount REAL NOT NULL,
+      generatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      receiptUrl TEXT,
+      FOREIGN KEY (transactionId) REFERENCES paymentTransactions(id) ON DELETE CASCADE,
+      FOREIGN KEY (studentId) REFERENCES students(id) ON DELETE CASCADE,
+      FOREIGN KEY (feeId) REFERENCES payments(id) ON DELETE CASCADE
     )
   `);
 

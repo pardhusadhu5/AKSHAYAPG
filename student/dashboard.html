@@ -7,6 +7,7 @@
   
   <link rel="stylesheet" href="../style.css">
   <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
   
   <!-- Client-Side Route Guard (Student verification) -->
   <script>
@@ -530,63 +531,121 @@
 
     <!-- 2. PAYMENTS & DUES PANEL -->
     <div class="panel-view" id="paymentsPanel">
-      <div class="card-container" style="margin-bottom: 28px;">
-        <h3>Rent Dues Summary</h3>
-        <p style="margin-bottom: 16px;">Payments are processed monthly. If your status shows Unpaid, please coordinate with owner Murali (98852 97517) to settle your dues.</p>
-        <div class="info-list" style="max-width: 440px; margin-bottom: 20px;">
-          <div class="info-item">
-            <span class="info-label">Deposit Paid</span>
-            <span class="info-value" id="rentDeposit">₹8,500</span>
+      <!-- Current Month Fee & Quick Pay Card -->
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:24px; margin-bottom: 28px;">
+        <!-- Current Month Card -->
+        <div class="card-container" style="border-left: 5px solid var(--primary-brand);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h3 style="margin:0; border:none; padding:0; font-size:1.1rem; color:var(--dark-slate);">Current Month Fee</h3>
+            <span id="currentMonthBadge" class="status-badge active" style="font-size:0.75rem; text-transform:uppercase;">UNPAID</span>
           </div>
-          <div class="info-item">
-            <span class="info-label">Current Month Status</span>
-            <span class="info-value"><span id="duesBadge2" class="status-badge active">Paid</span></span>
+          <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:12px;" id="currentFeeMonthLabel">September 2026</p>
+          <div style="display:flex; align-items:baseline; gap:8px; margin-bottom:16px;">
+            <h2 style="font-size:2rem; font-weight:800; color:var(--primary-deep); margin:0;" id="currentFeeAmount">₹8,500</h2>
+            <span style="font-size:0.8rem; color:var(--text-muted);">Due by 05th</span>
           </div>
+          <button id="payNowBtn" class="btn btn-primary" style="width:100%; padding:12px; font-weight:700; display:flex; justify-content:center; align-items:center; gap:8px;">
+            <i data-lucide="shield-check" style="width:18px; height:18px;"></i> Pay Now (Razorpay UPI / Cards)
+          </button>
+        </div>
+
+        <!-- Hostel Payment Information & Security Notice Card -->
+        <div class="card-container" style="background:#f8fafc; border:1px solid #e2e8f0;">
+          <h3 style="border:none; margin-bottom:12px; padding-bottom:0; font-size:1.05rem;">🔒 Secure Payment Guarantee</h3>
+          <p style="font-size:0.85rem; color:#475569; line-height:1.5; margin-bottom:12px;">
+            Online payments are processed securely using <strong>Razorpay Gateway</strong>.
+          </p>
+          <ul style="font-size:0.8rem; color:#64748b; padding-left:18px; margin-bottom:0; line-height:1.6;">
+            <li>Supported methods: PhonePe, Google Pay, Paytm, Cards & NetBanking.</li>
+            <li>We <strong>NEVER</strong> collect or store your UPI PIN, Card CVV, or Banking Passwords.</li>
+            <li>Instant official PDF receipt available upon successful verification.</li>
+          </ul>
         </div>
       </div>
 
+      <!-- Previous Outstanding Fees Card (If any) -->
+      <div class="card-container" id="previousDuesCard" style="display:none; margin-bottom: 28px; border-left: 5px solid #ef4444;">
+        <h3 style="color:#ef4444;">⚠️ Previous Outstanding Dues</h3>
+        <p style="margin-bottom:16px; font-size:0.9rem;">You have previous unpaid monthly fees. Please settle your overdue invoices.</p>
+        <div id="previousDuesContainer" style="display:flex; flex-direction:column; gap:12px;">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+
+      <!-- Rent Payment History Table -->
       <div class="card-container">
-        <h3>Rent Payment History</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
+          <h3 style="margin:0; border:none; padding:0;">Hostel Fee Transaction History</h3>
+          <button class="btn btn-outline" onclick="fetchStudentFees()" style="padding:6px 12px; font-size:0.8rem; display:flex; align-items:center; gap:6px;">
+            <i data-lucide="refresh-cw" style="width:14px; height:14px;"></i> Refresh Ledger
+          </button>
+        </div>
+
         <div class="table-responsive">
-          <table class="data-table" id="paymentsTable">
+          <table class="data-table" id="paymentsHistoryTable">
             <thead>
               <tr>
                 <th>Billing Cycle</th>
-                <th>Paid On</th>
-                <th>Amount Settle</th>
-                <th>Transaction ID</th>
-                <th>Method</th>
-                <th>Receipt Status</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Payment Method</th>
+                <th>Payment ID</th>
+                <th>Receipt #</th>
+                <th>Paid Date</th>
+                <th style="text-align:center;">Actions</th>
               </tr>
             </thead>
             <tbody>
-              <!-- Dummy ledger data -->
-              <tr>
-                <td>August 2026</td>
-                <td>2026-08-01</td>
-                <td>₹8,500</td>
-                <td>TXN9835728</td>
-                <td>UPI (PhonePe)</td>
-                <td><span class="status-badge active">Generated</span></td>
-              </tr>
-              <tr>
-                <td>July 2026</td>
-                <td>2026-07-02</td>
-                <td>₹8,500</td>
-                <td>TXN9726194</td>
-                <td>UPI (GPay)</td>
-                <td><span class="status-badge active">Generated</span></td>
-              </tr>
-              <tr>
-                <td>June 2026 (Deposit)</td>
-                <td>2026-06-15</td>
-                <td>₹8,500</td>
-                <td>TXN9611294</td>
-                <td>Cash Payment</td>
-                <td><span class="status-badge active">Generated</span></td>
-              </tr>
+              <tr><td colspan="8" style="text-align:center;">Loading fee records...</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAYMENT CONFIRMATION MODAL -->
+    <div class="modal-overlay" id="paymentConfirmModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+      <div class="card-container" style="width:100%; max-width:480px; background:white; padding:32px; border-radius:16px; position:relative; box-shadow:var(--shadow-lg);">
+        <button onclick="closeModal('paymentConfirmModal')" style="position:absolute; top:20px; right:20px; background:none; border:none; font-size:1.4rem; cursor:pointer; color:#94a3b8;">&times;</button>
+        <h3 style="border-bottom:1px solid #e2e8f0; padding-bottom:12px; margin-bottom:20px;">Confirm Fee Payment</h3>
+        
+        <div class="info-list" style="margin-bottom:24px;">
+          <div class="info-item"><span class="info-label">Student Name:</span><span class="info-value" id="modalStudentName">--</span></div>
+          <div class="info-item"><span class="info-label">Room & Bed:</span><span class="info-value" id="modalRoomInfo">--</span></div>
+          <div class="info-item"><span class="info-label">Billing Cycle:</span><span class="info-value" id="modalBillingMonth">--</span></div>
+          <div class="info-item"><span class="info-label">Fee Amount:</span><span class="info-value" id="modalFeeAmount" style="font-weight:800; color:var(--primary-deep); font-size:1.1rem;">₹0</span></div>
+        </div>
+
+        <div style="background:#eff6ff; padding:12px; border-radius:8px; border:1px solid #bfdbfe; font-size:0.8rem; color:#1e40af; margin-bottom:20px;">
+          ℹ️ You will be redirected to the official Razorpay checkout pop-up. Complete your payment using UPI, PhonePe, GPay, or Cards.
+        </div>
+
+        <button id="proceedPaymentBtn" class="btn btn-primary" style="width:100%; padding:12px; font-weight:700; font-size:1rem; display:flex; justify-content:center; align-items:center; gap:8px;">
+          <i data-lucide="credit-card" style="width:18px; height:18px;"></i> Proceed to Payment
+        </button>
+      </div>
+    </div>
+
+    <!-- PAYMENT SUCCESS MODAL -->
+    <div class="modal-overlay" id="paymentSuccessModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+      <div class="card-container" style="width:100%; max-width:480px; background:white; padding:32px; border-radius:16px; text-align:center; position:relative;">
+        <div style="width:64px; height:64px; background:#ecfdf5; color:#10b981; border-radius:50%; display:flex; align-items:center; justify-content:center; margin:0 auto 16px auto; font-size:2rem;">✓</div>
+        <h3 style="border:none; margin-bottom:8px; color:var(--dark-slate);">Payment Successful!</h3>
+        <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:20px;">Your hostel fee payment has been verified and recorded.</p>
+        
+        <div class="info-list" style="margin-bottom:24px; text-align:left;">
+          <div class="info-item"><span class="info-label">Receipt Number:</span><span class="info-value" id="successReceiptNo" style="font-weight:700; color:var(--primary-brand);">--</span></div>
+          <div class="info-item"><span class="info-label">Billing Cycle:</span><span class="info-value" id="successBillingMonth">--</span></div>
+          <div class="info-item"><span class="info-label">Amount Paid:</span><span class="info-value" id="successAmount">--</span></div>
+          <div class="info-item"><span class="info-label">Payment ID:</span><span class="info-value" id="successPaymentId">--</span></div>
+          <div class="info-item"><span class="info-label">Status:</span><span class="info-value"><span class="status-badge active">PAID</span></span></div>
+        </div>
+
+        <div style="display:flex; gap:12px;">
+          <button id="downloadReceiptBtn" class="btn btn-primary" style="flex:1; padding:10px; font-weight:700; display:flex; align-items:center; justify-content:center; gap:6px;">
+            <i data-lucide="download" style="width:16px; height:16px;"></i> Download Receipt
+          </button>
+          <button onclick="closeModal('paymentSuccessModal')" class="btn btn-secondary" style="padding:10px 16px;">Close</button>
         </div>
       </div>
     </div>
@@ -1285,28 +1344,316 @@ Thank you for staying with us!
       });
     }
 
-    async function deleteDoc(docId) {
-      if (!confirm('Are you sure you want to delete this document?')) return;
+    // Helper Modal Controls
+    function openModal(id) {
+      const el = document.getElementById(id);
+      if (el) { el.style.display = 'flex'; }
+    }
+    function closeModal(id) {
+      const el = document.getElementById(id);
+      if (el) { el.style.display = 'none'; }
+    }
+
+    // State variable for active fee payment target
+    let activeFeePaymentTarget = null;
+    let currentStudentProfile = null;
+
+    // Fetch student hostel fees & payment history
+    async function fetchStudentFees() {
       const token = localStorage.getItem('token');
+      const tableBody = document.querySelector('#paymentsHistoryTable tbody');
+      if (tableBody) {
+        tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Fetching live fee ledger...</td></tr>';
+      }
+
       try {
-        const res = await fetch(`/api/auth/documents/${docId}`, {
-          method: 'DELETE',
+        const res = await fetch('/api/payments/student/fees', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
+
         if (data.success) {
-          alert(data.message);
-          fetchMyDocuments();
-        } else {
-          alert('Delete failed: ' + data.message);
+          currentStudentProfile = data.studentInfo;
+          const { currentFee, previousDues, history } = data;
+
+          // 1. Render Current Month Card
+          const currentMonthBadge = document.getElementById('currentMonthBadge');
+          const currentFeeMonthLabel = document.getElementById('currentFeeMonthLabel');
+          const currentFeeAmount = document.getElementById('currentFeeAmount');
+          const payNowBtn = document.getElementById('payNowBtn');
+
+          if (currentFeeMonthLabel) currentFeeMonthLabel.innerText = currentFee.billingMonth || 'Current Month';
+          if (currentFeeAmount) currentFeeAmount.innerText = `₹${Number(currentFee.amountDue || 8500).toLocaleString('en-IN')}`;
+
+          const isPaid = currentFee.status === 'paid';
+          if (currentMonthBadge) {
+            currentMonthBadge.innerText = isPaid ? 'PAID' : 'UNPAID';
+            currentMonthBadge.className = `status-badge ${isPaid ? 'active' : 'inactive'}`;
+          }
+
+          if (payNowBtn) {
+            if (isPaid) {
+              payNowBtn.disabled = true;
+              payNowBtn.style.opacity = '0.6';
+              payNowBtn.style.cursor = 'not-allowed';
+              payNowBtn.innerHTML = '<i data-lucide="check-circle" style="width:18px; height:18px;"></i> Paid for Current Month';
+            } else {
+              payNowBtn.disabled = false;
+              payNowBtn.style.opacity = '1';
+              payNowBtn.style.cursor = 'pointer';
+              payNowBtn.innerHTML = '<i data-lucide="shield-check" style="width:18px; height:18px;"></i> Pay Now (Razorpay UPI / Cards)';
+              payNowBtn.onclick = () => openPaymentConfirmModal(currentFee);
+            }
+          }
+
+          // Update profile dues badge widget
+          const duesBadge = document.getElementById('duesBadge');
+          const duesBadge2 = document.getElementById('duesBadge2');
+          [duesBadge, duesBadge2].forEach(badge => {
+            if (badge) {
+              badge.innerText = isPaid ? 'Paid' : 'Unpaid';
+              badge.className = `status-badge ${isPaid ? 'active' : 'inactive'}`;
+            }
+          });
+
+          // 2. Render Previous Outstanding Dues Card
+          const previousDuesCard = document.getElementById('previousDuesCard');
+          const previousDuesContainer = document.getElementById('previousDuesContainer');
+          if (previousDuesCard && previousDuesContainer) {
+            if (previousDues.length > 0) {
+              previousDuesCard.style.display = 'block';
+              previousDuesContainer.innerHTML = '';
+
+              previousDues.forEach(due => {
+                const item = document.createElement('div');
+                item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; background:#fef2f2; padding:12px 16px; border-radius:8px; border:1px solid #fecaca;';
+                item.innerHTML = `
+                  <div>
+                    <h4 style="margin:0; font-size:0.95rem; color:#991b1b;">${due.billingMonth} Fee</h4>
+                    <span style="font-size:0.8rem; color:#b91c1c; font-weight:700;">₹${Number(due.amountDue).toLocaleString('en-IN')} • OVERDUE</span>
+                  </div>
+                  <button class="btn btn-primary" style="background:#ef4444; border-color:#ef4444; padding:6px 14px; font-size:0.85rem;" onclick='openPaymentConfirmModal(${JSON.stringify(due)})'>Pay Due</button>
+                `;
+                previousDuesContainer.appendChild(item);
+              });
+            } else {
+              previousDuesCard.style.display = 'none';
+            }
+          }
+
+          // 3. Render Transaction History Table
+          if (tableBody) {
+            tableBody.innerHTML = '';
+            if (history.length === 0) {
+              tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No payment records found.</td></tr>';
+            } else {
+              history.forEach(h => {
+                const isPaidStatus = h.status === 'paid';
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                  <td><strong>${h.billingMonth}</strong></td>
+                  <td>₹${Number(h.amountPaid || h.amountDue).toLocaleString('en-IN')}</td>
+                  <td><span class="status-badge ${isPaidStatus ? 'active' : 'inactive'}">${h.status.toUpperCase()}</span></td>
+                  <td>${h.paymentMethod || 'Online Gateway'}</td>
+                  <td><code style="font-size:0.8rem; background:#f1f5f9; padding:2px 6px; border-radius:4px;">${h.gatewayPaymentId || 'N/A'}</code></td>
+                  <td>${h.receiptNumber ? `<strong style="color:var(--primary-brand);">${h.receiptNumber}</strong>` : '--'}</td>
+                  <td>${h.paidAt ? h.paidAt.split(' ')[0] : '--'}</td>
+                  <td style="text-align:center;">
+                    ${isPaidStatus ? `
+                      <button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem;" onclick="downloadReceiptPdf('${h.receiptNumber || h.id}')">
+                        <i data-lucide="download" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:2px;"></i> Receipt PDF
+                      </button>
+                    ` : `
+                      <button class="btn btn-primary" style="padding:4px 8px; font-size:0.75rem;" onclick='openPaymentConfirmModal(${JSON.stringify(h)})'>
+                        Pay Now
+                      </button>
+                    `}
+                  </td>
+                `;
+                tableBody.appendChild(row);
+              });
+            }
+          }
+
+          if (window.lucide) lucide.createIcons();
         }
       } catch (err) {
-        alert('Server error.');
+        console.error('Fetch student fees error:', err);
       }
     }
 
+    // Open Payment Confirmation Modal
+    function openPaymentConfirmModal(feeObj) {
+      if (!feeObj || !feeObj.id) {
+        alert('Fee invoice record not found. Generating invoice...');
+        return;
+      }
+      activeFeePaymentTarget = feeObj;
+
+      const modalStudentName = document.getElementById('modalStudentName');
+      const modalRoomInfo = document.getElementById('modalRoomInfo');
+      const modalBillingMonth = document.getElementById('modalBillingMonth');
+      const modalFeeAmount = document.getElementById('modalFeeAmount');
+
+      if (modalStudentName && currentStudentProfile) modalStudentName.innerText = currentStudentProfile.name || 'Student';
+      if (modalRoomInfo && currentStudentProfile) modalRoomInfo.innerText = `Room ${currentStudentProfile.roomNumber} (Bed ${currentStudentProfile.bedNumber})`;
+      if (modalBillingMonth) modalBillingMonth.innerText = feeObj.billingMonth || 'Hostel Fee';
+      if (modalFeeAmount) modalFeeAmount.innerText = `₹${Number(feeObj.amountDue || 8500).toLocaleString('en-IN')}`;
+
+      openModal('paymentConfirmModal');
+    }
+
+    // Initiate Razorpay Checkout
+    const proceedPaymentBtn = document.getElementById('proceedPaymentBtn');
+    if (proceedPaymentBtn) {
+      proceedPaymentBtn.addEventListener('click', async () => {
+        if (!activeFeePaymentTarget || !activeFeePaymentTarget.id) return;
+        
+        proceedPaymentBtn.disabled = true;
+        proceedPaymentBtn.innerHTML = 'Initializing Gateway...';
+
+        const token = localStorage.getItem('token');
+
+        try {
+          // 1. Request server to create Razorpay Order
+          const orderRes = await fetch('/api/payments/create-order', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ feeId: activeFeePaymentTarget.id })
+          });
+
+          const orderData = await orderRes.json();
+          proceedPaymentBtn.disabled = false;
+          proceedPaymentBtn.innerHTML = '<i data-lucide="credit-card" style="width:18px; height:18px;"></i> Proceed to Payment';
+
+          if (!orderData.success) {
+            alert('Failed to initialize payment: ' + orderData.message);
+            return;
+          }
+
+          closeModal('paymentConfirmModal');
+
+          // 2. Launch Razorpay Checkout Popup
+          const options = {
+            key: orderData.keyId,
+            amount: orderData.amount,
+            currency: orderData.currency || 'INR',
+            name: 'Akshaya Deluxe Boys Hostel',
+            description: `Hostel Rent Fee - ${orderData.billingMonth}`,
+            image: '../assets/avatar-placeholder.png',
+            order_id: orderData.orderId,
+            prefill: {
+              name: orderData.studentName,
+              email: orderData.email,
+              contact: orderData.phone
+            },
+            theme: {
+              color: '#004D47'
+            },
+            handler: async function (response) {
+              // 3. Send Razorpay response to Backend for HMAC verification
+              verifyRazorpayPayment({
+                feeId: orderData.feeId,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              });
+            },
+            modal: {
+              ondismiss: function () {
+                console.log('Payment modal dismissed by user.');
+              }
+            }
+          };
+
+          // Handle Sandbox/Test fallback if Razorpay SDK popup fails or sandbox mock is active
+          if (orderData.isSandbox || orderData.orderId.startsWith('order_sbx_')) {
+            const simulateSuccess = confirm(
+              `SANDBOX TEST MODE ACTIVE\n\nSimulate successful payment for ${orderData.billingMonth} (₹${orderData.amountRupees})?\n\nOrder ID: ${orderData.orderId}`
+            );
+            if (simulateSuccess) {
+              verifyRazorpayPayment({
+                feeId: orderData.feeId,
+                razorpay_order_id: orderData.orderId,
+                razorpay_payment_id: `pay_sbx_${Date.now()}_${Math.random().toString(36).substring(2,8)}`,
+                razorpay_signature: 'sandbox_valid_signature'
+              });
+            }
+            return;
+          }
+
+          const rzp = new Razorpay(options);
+          rzp.on('payment.failed', function (response) {
+            alert(`Payment Failed: ${response.error.description}`);
+          });
+          rzp.open();
+
+        } catch (err) {
+          proceedPaymentBtn.disabled = false;
+          proceedPaymentBtn.innerHTML = '<i data-lucide="credit-card" style="width:18px; height:18px;"></i> Proceed to Payment';
+          alert('Server connection error during payment initialization.');
+        }
+      });
+    }
+
+    // Verify Payment Callback with Backend
+    async function verifyRazorpayPayment(payload) {
+      const token = localStorage.getItem('token');
+      try {
+        const verifyRes = await fetch('/api/payments/verify', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        const verifyData = await verifyRes.json();
+        if (verifyData.success) {
+          // Show Success Modal
+          document.getElementById('successReceiptNo').innerText = verifyData.receiptNumber || 'N/A';
+          document.getElementById('successBillingMonth').innerText = verifyData.billingMonth || activeFeePaymentTarget.billingMonth;
+          document.getElementById('successAmount').innerText = `₹${Number(verifyData.amountPaid || activeFeePaymentTarget.amountDue).toLocaleString('en-IN')}`;
+          document.getElementById('successPaymentId').innerText = verifyData.transactionId || payload.razorpay_payment_id;
+
+          const downloadBtn = document.getElementById('downloadReceiptBtn');
+          if (downloadBtn) {
+            downloadBtn.onclick = () => downloadReceiptPdf(verifyData.receiptNumber);
+          }
+
+          openModal('paymentSuccessModal');
+          fetchStudentFees();
+        } else {
+          alert('Payment Verification Failed: ' + verifyData.message);
+        }
+      } catch (err) {
+        alert('Server verification error. Please check your payment history.');
+      }
+    }
+
+    // Download PDF Receipt Helper
+    function downloadReceiptPdf(receiptNo) {
+      const token = localStorage.getItem('token');
+      window.open(`/api/payments/receipt/${receiptNo}/pdf?token=${token}`, '_blank');
+    }
+
+    // Wire fetchStudentFees into menu tab switching
+    document.querySelectorAll('.menu-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const targetPanel = item.getAttribute('data-panel');
+        if (targetPanel === 'paymentsPanel') {
+          fetchStudentFees();
+        }
+      });
+    });
+
     // Trigger initial load
     loadStudentProfile();
+    fetchStudentFees();
   </script>
 </body>
 </html>

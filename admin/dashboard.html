@@ -3049,7 +3049,7 @@
       }
     }
 
-    // Payments Ledger Module Loader
+    // Payments Ledger Module Loader (Admin Management)
     async function fetchPaymentsLedger() {
       const token = localStorage.getItem('token');
       const tableBody = document.querySelector('#paymentsLedgerTable tbody');
@@ -3057,22 +3057,27 @@
       tableBody.innerHTML = '<tr><td colspan="5" style="text-align:center;">Loading ledger...</td></tr>';
       
       try {
-        // 1. Fetch aggregates
-        const statsRes = await fetch('/api/payments/stats', {
+        // 1. Fetch Admin Collection Statistics
+        const statsRes = await fetch('/api/payments/admin/stats', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const statsData = await statsRes.json();
         if (statsData.success) {
           const stats = statsData.stats;
-          document.getElementById('paymentCollectedHeader').innerText = '₹' + stats.monthly.toLocaleString('en-IN');
-          document.getElementById('paymentOutstandingHeader').innerText = '₹' + stats.outstanding.toLocaleString('en-IN');
-          const totalFee = stats.monthly + stats.outstanding;
-          const rate = totalFee > 0 ? Math.round((stats.monthly / totalFee) * 100) : 0;
-          document.getElementById('paymentCollectionRateHeader').innerText = rate + '%';
+          const collectedEl = document.getElementById('paymentCollectedHeader');
+          const outstandingEl = document.getElementById('paymentOutstandingHeader');
+          const rateEl = document.getElementById('paymentCollectionRateHeader');
+
+          if (collectedEl) collectedEl.innerText = '₹' + Number(stats.thisMonth || 0).toLocaleString('en-IN');
+          if (outstandingEl) outstandingEl.innerText = '₹' + Number(stats.pendingDues || 0).toLocaleString('en-IN');
+
+          const totalFee = (stats.thisMonth || 0) + (stats.pendingDues || 0);
+          const rate = totalFee > 0 ? Math.round((stats.thisMonth / totalFee) * 100) : 0;
+          if (rateEl) rateEl.innerText = rate + '%';
         }
 
         // 2. Fetch all payment records
-        const res = await fetch('/api/payments', {
+        const res = await fetch('/api/payments/admin/all', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -3087,14 +3092,21 @@
           data.payments.forEach(pay => {
             const row = document.createElement('tr');
             const isPaid = pay.status === 'paid';
-            const statusBadge = `<span class="status-badge ${isPaid ? 'active' : (pay.status === 'partial' ? 'warning' : 'inactive')}">${pay.status}</span>`;
-            
+            const statusBadge = `<span class="status-badge ${isPaid ? 'active' : (pay.status === 'partial' ? 'warning' : 'inactive')}">${pay.status.toUpperCase()}</span>`;
+            const receiptNo = pay.receiptNumber || `HFR-${new Date().getFullYear()}-${String(pay.id).padStart(6, '0')}`;
+
             let actionCell = '';
             if (isPaid) {
-              actionCell = `<button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem;" onclick="downloadAdminReceipt(${pay.id})"><i data-lucide="download" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:4px;"></i> Receipt</button>`;
+              actionCell = `
+                <button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem;" onclick="downloadAdminReceipt('${receiptNo}', ${pay.id})">
+                  <i data-lucide="download" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:4px;"></i> PDF Receipt
+                </button>`;
             } else {
               const remaining = pay.amountDue - pay.amountPaid;
-              actionCell = `<button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem; color:#10b981; border-color:#10b981;" onclick="openRecordPaymentModal(${pay.id}, '${pay.studentName}', '${pay.billingMonth}', ${remaining})">Record Payment</button>`;
+              actionCell = `
+                <button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem; color:#10b981; border-color:#10b981;" onclick="openRecordPaymentModal(${pay.id}, '${pay.studentName}', '${pay.billingMonth}', ${remaining})">
+                  Record Cash/UPI
+                </button>`;
             }
             
             row.innerHTML = `
@@ -3103,7 +3115,7 @@
                 <div style="font-size:0.7rem; color:var(--text-muted);">${pay.phone}</div>
               </td>
               <td>Room ${pay.roomNumber || 'Unassigned'} (${pay.billingMonth})</td>
-              <td>₹${pay.amountDue.toLocaleString('en-IN')} <span style="font-size:0.75rem; color:var(--text-muted);">(Paid: ₹${pay.amountPaid.toLocaleString('en-IN')})</span></td>
+              <td>₹${Number(pay.amountDue).toLocaleString('en-IN')} <span style="font-size:0.75rem; color:var(--text-muted);">(Paid: ₹${Number(pay.amountPaid).toLocaleString('en-IN')})</span></td>
               <td>${statusBadge}</td>
               <td>${actionCell}</td>
             `;
@@ -3127,7 +3139,7 @@
 
       const token = localStorage.getItem('token');
       try {
-        const res = await fetch('/api/payments/generate-monthly', {
+        const res = await fetch('/api/payments/admin/generate-monthly', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -3192,46 +3204,9 @@
       });
     }
 
-    async function downloadAdminReceipt(paymentId) {
+    async function downloadAdminReceipt(receiptNo, paymentId) {
       const token = localStorage.getItem('token');
-      try {
-        const res = await fetch(`/api/payments/${paymentId}/receipt`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        
-        if (data.success) {
-          const rec = data.receipt;
-          const content = `====================================================
-AKSHAYA DELUXE BOYS HOSTEL - RECEIPT
-====================================================
-Receipt No: ${rec.receiptNo}
-Date: ${rec.date}
-Student Name: ${rec.studentName}
-Phone: ${rec.phone}
-Room Assigned: Room ${rec.roomNumber} - Bed ${rec.bedNumber}
-Billing Month: ${rec.billingMonth}
-----------------------------------------------------
-Amount Due: Rs. ${rec.amountDue}
-Amount Paid: Rs. ${rec.amountPaid}
-Status: ${rec.status.toUpperCase()}
-----------------------------------------------------
-Payments recorded & processed by Administrator.
-Thank you!
-- Murali (Owner)
-====================================================`;
-
-          const blob = new Blob([content], { type: 'text/plain' });
-          const link = document.createElement('a');
-          link.href = URL.createObjectURL(blob);
-          link.download = `Receipt_${rec.receiptNo}.txt`;
-          link.click();
-        } else {
-          alert('Failed: ' + data.message);
-        }
-      } catch (err) {
-        alert('Server error.');
-      }
+      window.open(`/api/payments/receipt/${receiptNo || paymentId}/pdf?token=${token}`, '_blank');
     }
 
     // Reminders List Module Loader

@@ -3,21 +3,27 @@ const router = express.Router();
 const paymentController = require('../controllers/paymentController');
 const { verifyToken, requireRole } = require('../middleware/authMiddleware');
 
-// General stats (Admin/Manager only)
-router.get('/', verifyToken, requireRole(['admin', 'manager']), paymentController.getAllPayments);
-router.get('/stats', verifyToken, requireRole(['admin', 'manager']), paymentController.getPaymentStats);
+// Public Razorpay Webhook Endpoint
+router.post('/webhook', express.raw({ type: 'application/json' }), paymentController.handleWebhook);
 
-// Monthly Invoicing runs (Admin/Manager only)
-router.post('/generate-monthly', verifyToken, requireRole(['admin', 'manager']), paymentController.generateMonthlyFee);
+// Student Online Payment Gateway Routes
+router.post('/create-order', verifyToken, requireRole(['student']), paymentController.createOrder);
+router.post('/verify', verifyToken, requireRole(['student']), paymentController.verifyPayment);
+router.get('/student/fees', verifyToken, requireRole(['student']), paymentController.getStudentFees);
 
-// Cash/UPI collections (Admin/Manager only)
+// PDF Receipt Download Route (Student / Admin)
+router.get('/receipt/:receiptNumber/pdf', verifyToken, paymentController.downloadReceiptPdf);
+router.get('/:id/receipt', verifyToken, paymentController.getPaymentReceipt);
+
+// Admin / Manager Payment Management Routes
+router.get('/admin/all', verifyToken, requireRole(['admin', 'manager']), paymentController.getAllPayments);
+router.get('/admin/stats', verifyToken, requireRole(['admin', 'manager']), paymentController.getPaymentStats);
+router.post('/admin/generate-monthly', verifyToken, requireRole(['admin', 'manager']), paymentController.generateMonthlyFee);
 router.post('/:id/record', verifyToken, requireRole(['admin', 'manager']), paymentController.recordPayment);
 
-// Razorpay checkout online simulation (Access: Admin, Manager, Student)
-router.post('/:id/simulate-online', verifyToken, paymentController.simulateOnlinePayment);
-
-// Receipts generation (Access: Admin, Manager, Student)
-router.get('/my-payments', verifyToken, paymentController.getMyPayments);
-router.get('/:id/receipt', verifyToken, paymentController.getPaymentReceipt);
+// Legacy routes for compatibility
+router.get('/', verifyToken, requireRole(['admin', 'manager']), paymentController.getAllPayments);
+router.get('/stats', verifyToken, requireRole(['admin', 'manager']), paymentController.getPaymentStats);
+router.get('/my-payments', verifyToken, paymentController.getStudentFees);
 
 module.exports = router;
