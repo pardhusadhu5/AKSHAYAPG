@@ -141,10 +141,12 @@ async function getStudentsList(req, res) {
         s.phone LIKE ? OR 
         s.aadhaarNumber LIKE ? OR 
         s.collegeName LIKE ? OR 
-        r.roomNumber LIKE ?
+        r.roomNumber LIKE ? OR
+        u.email LIKE ? OR
+        CAST(s.id AS TEXT) LIKE ?
       )`;
       const term = `%${search.trim()}%`;
-      params.push(term, term, term, term, term);
+      params.push(term, term, term, term, term, term, term);
     }
 
     if (paymentStatus && paymentStatus !== 'all') {

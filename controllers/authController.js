@@ -333,7 +333,7 @@ async function getMe(req, res) {
     let studentProfile = null;
     if (user.role === 'student') {
       studentProfile = await db.get(`
-        SELECT s.*, r.roomNumber, b.bedNumber
+        SELECT s.*, r.roomNumber, r.floor, b.bedNumber
         FROM students s
         LEFT JOIN rooms r ON s.roomId = r.id
         LEFT JOIN beds b ON s.bedId = b.id

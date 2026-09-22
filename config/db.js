@@ -217,9 +217,21 @@ async function initializeDatabase(db) {
     await db.run('BEGIN TRANSACTION');
     try {
       const mockRooms = [
-        { roomNumber: 'G1', capacity: 4, monthlyFee: 7000, floor: 'Ground Floor' },
-        { roomNumber: 'A101', capacity: 2, monthlyFee: 10500, floor: 'First Floor' },
-        { roomNumber: 'B202', capacity: 3, monthlyFee: 8500, floor: 'Second Floor' }
+        { roomNumber: '001', capacity: 2, monthlyFee: 8500, floor: 'Ground Floor' },
+        { roomNumber: '002', capacity: 3, monthlyFee: 8500, floor: 'Ground Floor' },
+        { roomNumber: '003', capacity: 4, monthlyFee: 8500, floor: 'Ground Floor' },
+        { roomNumber: '101', capacity: 2, monthlyFee: 8500, floor: 'First Floor' },
+        { roomNumber: '102', capacity: 3, monthlyFee: 8500, floor: 'First Floor' },
+        { roomNumber: '103', capacity: 4, monthlyFee: 8500, floor: 'First Floor' },
+        { roomNumber: '104', capacity: 2, monthlyFee: 8500, floor: 'First Floor' },
+        { roomNumber: '201', capacity: 2, monthlyFee: 8500, floor: 'Second Floor' },
+        { roomNumber: '202', capacity: 3, monthlyFee: 8500, floor: 'Second Floor' },
+        { roomNumber: '203', capacity: 4, monthlyFee: 8500, floor: 'Second Floor' },
+        { roomNumber: '204', capacity: 2, monthlyFee: 8500, floor: 'Second Floor' },
+        { roomNumber: '301', capacity: 2, monthlyFee: 8500, floor: 'Third Floor' },
+        { roomNumber: '302', capacity: 3, monthlyFee: 8500, floor: 'Third Floor' },
+        { roomNumber: '303', capacity: 4, monthlyFee: 8500, floor: 'Third Floor' },
+        { roomNumber: '304', capacity: 2, monthlyFee: 8500, floor: 'Third Floor' }
       ];
 
       for (const room of mockRooms) {
@@ -252,63 +264,159 @@ async function initializeDatabase(db) {
     try {
       const mockStudents = [
         {
-          name: 'Sai Teja',
-          email: 'saiteja@gmail.com',
-          phone: '9848022338',
-          parentName: 'Narayana Teja',
-          parentPhone: '9848022339',
-          aadhaar: '543210987654',
-          college: 'Aurora Engineering College',
-          course: 'CSE',
-          year: '3rd Year',
-          address: 'Secunderabad, Hyderabad',
-          monthlyRent: 10500,
-          depositAmount: 10500,
-          photo: '/assets/avatar-placeholder.png',
-          roomNumber: 'A101',
+          name: 'Arjun Reddy',
+          email: 'arjun.reddy.demo@gmail.com',
+          password: 'Arjun@123',
+          phone: '9876543210',
+          parentName: 'Ramana Reddy',
+          parentPhone: '9876543200',
+          aadhaar: '987654321001',
+          college: 'Aurora Deemed University',
+          course: 'B.Tech Computer Science',
+          year: '2nd Year',
+          roomNumber: '101',
           bedNum: 1,
           paymentStatus: 'paid'
         },
         {
-          name: 'Rahul Kumar',
-          email: 'rahulkumar@gmail.com',
-          phone: '9000123456',
-          parentName: 'Suresh Kumar',
-          parentPhone: '9000123457',
-          aadhaar: '123456789012',
-          college: 'Aurora Engineering College',
-          course: 'ECE',
-          year: '2nd Year',
-          address: 'Warangal, Telangana',
-          monthlyRent: 8500,
-          depositAmount: 8500,
-          photo: '/assets/avatar-placeholder.png',
-          roomNumber: 'B202',
+          name: 'Rahul Varma',
+          email: 'rahul.varma.demo@gmail.com',
+          password: 'Rahul@123',
+          phone: '9876543211',
+          parentName: 'Srinivas Varma',
+          parentPhone: '9876543201',
+          aadhaar: '987654321002',
+          college: 'Aurora Deemed University',
+          course: 'B.Tech Artificial Intelligence',
+          year: '1st Year',
+          roomNumber: '101',
           bedNum: 2,
-          paymentStatus: 'unpaid'
+          paymentStatus: 'paid'
         },
         {
-          name: 'Vinay Prasad',
-          email: 'vinay@gmail.com',
-          phone: '8008123456',
-          parentName: 'Jagdish Prasad',
-          parentPhone: '8008123457',
-          aadhaar: '987654321098',
-          college: 'Nalla Malla Reddy Engg College',
-          course: 'Mechanical',
+          name: 'Karthik Naidu',
+          email: 'karthik.naidu.demo@gmail.com',
+          password: 'Karthik@123',
+          phone: '9876543212',
+          parentName: 'Venkatesh Naidu',
+          parentPhone: '9876543202',
+          aadhaar: '987654321003',
+          college: 'Malla Reddy University',
+          course: 'B.Tech Information Technology',
+          year: '3rd Year',
+          roomNumber: '102',
+          bedNum: 1,
+          paymentStatus: 'paid'
+        },
+        {
+          name: 'Sai Teja',
+          email: 'sai.teja.demo@gmail.com',
+          password: 'Sai@123',
+          phone: '9876543213',
+          parentName: 'Narayana Teja',
+          parentPhone: '9876543203',
+          aadhaar: '987654321004',
+          college: 'CMR Technical Campus',
+          course: 'B.Tech Electronics and Communication',
+          year: '2nd Year',
+          roomNumber: '102',
+          bedNum: 2,
+          paymentStatus: 'paid'
+        },
+        {
+          name: 'Aditya Kumar',
+          email: 'aditya.kumar.demo@gmail.com',
+          password: 'Aditya@123',
+          phone: '9876543214',
+          parentName: 'Rajesh Kumar',
+          parentPhone: '9876543204',
+          aadhaar: '987654321005',
+          college: "St. Mary's College",
+          course: 'BCA',
+          year: '2nd Year',
+          roomNumber: '201',
+          bedNum: 1,
+          paymentStatus: 'paid'
+        },
+        {
+          name: 'Rohit Sharma',
+          email: 'rohit.sharma.demo@gmail.com',
+          password: 'Rohit@123',
+          phone: '9876543215',
+          parentName: 'Anand Sharma',
+          parentPhone: '9876543205',
+          aadhaar: '987654321006',
+          college: 'Vardhaman College of Engineering',
+          course: 'B.Tech Mechanical Engineering',
+          year: '3rd Year',
+          roomNumber: '202',
+          bedNum: 1,
+          paymentStatus: 'paid'
+        },
+        {
+          name: 'Vishal Reddy',
+          email: 'vishal.reddy.demo@gmail.com',
+          password: 'Vishal@123',
+          phone: '9876543216',
+          parentName: 'Prabhakar Reddy',
+          parentPhone: '9876543206',
+          aadhaar: '987654321007',
+          college: 'Malla Reddy University',
+          course: 'B.Tech Data Science',
+          year: '1st Year',
+          roomNumber: '202',
+          bedNum: 2,
+          paymentStatus: 'paid'
+        },
+        {
+          name: 'Naveen Kumar',
+          email: 'naveen.kumar.demo@gmail.com',
+          password: 'Naveen@123',
+          phone: '9876543217',
+          parentName: 'Bhaskar Kumar',
+          parentPhone: '9876543207',
+          aadhaar: '987654321008',
+          college: 'CMR Institute of Technology',
+          course: 'B.Tech Computer Science',
           year: '4th Year',
-          address: 'Nalgonda, Telangana',
-          monthlyRent: 7000,
-          depositAmount: 7000,
-          photo: '/assets/avatar-placeholder.png',
-          roomNumber: 'G1',
+          roomNumber: '301',
+          bedNum: 1,
+          paymentStatus: 'paid'
+        },
+        {
+          name: 'Abhishek Rao',
+          email: 'abhishek.rao.demo@gmail.com',
+          password: 'Abhishek@123',
+          phone: '9876543218',
+          parentName: 'Ramesh Rao',
+          parentPhone: '9876543208',
+          aadhaar: '987654321009',
+          college: 'Aurora Deemed University',
+          course: 'B.Tech Artificial Intelligence',
+          year: '2nd Year',
+          roomNumber: '301',
+          bedNum: 2,
+          paymentStatus: 'paid'
+        },
+        {
+          name: 'Manish Yadav',
+          email: 'manish.yadav.demo@gmail.com',
+          password: 'Manish@123',
+          phone: '9876543219',
+          parentName: 'Satyanarayana Yadav',
+          parentPhone: '9876543209',
+          aadhaar: '987654321010',
+          college: "St. Joseph's Degree College",
+          course: 'BCA',
+          year: '1st Year',
+          roomNumber: '302',
           bedNum: 1,
           paymentStatus: 'paid'
         }
       ];
 
       for (const stud of mockStudents) {
-        const hashedPassword = await bcrypt.hash('student123', 10);
+        const hashedPassword = await bcrypt.hash(stud.password, 10);
         const userResult = await db.run(
           `INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)`,
           [stud.name, stud.email, stud.phone, hashedPassword, 'student']
@@ -327,11 +435,32 @@ async function initializeDatabase(db) {
         }
 
         // Insert Student
-        await db.run(
-          `INSERT INTO students (userId, studentName, phone, parentName, parentPhone, aadhaarNumber, collegeName, course, year, address, joinDate, monthlyRent, depositAmount, roomId, bedId, status, photo, paymentStatus) 
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [userId, stud.name, stud.phone, stud.parentName, stud.parentPhone, stud.aadhaar, stud.college, stud.course, stud.year, stud.address, joinDate, stud.monthlyRent, stud.depositAmount, roomId, bedId, 'active', stud.photo, stud.paymentStatus]
+        const studentResult = await db.run(
+          `INSERT INTO students (userId, studentName, phone, parentName, parentPhone, aadhaarNumber, collegeName, course, year, address, photo, idProof, joinDate, status, monthlyRent, depositAmount, roomId, bedId, paymentStatus) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            userId,
+            stud.name,
+            stud.phone,
+            stud.parentName,
+            stud.parentPhone,
+            stud.aadhaar,
+            stud.college,
+            stud.course,
+            stud.year,
+            'Hyderabad, Telangana',
+            '/assets/avatar-placeholder.png',
+            '',
+            joinDate,
+            'active',
+            8500,
+            8500,
+            roomId,
+            bedId,
+            stud.paymentStatus
+          ]
         );
+        const studentId = studentResult.lastID;
 
         // Update Bed status
         if (bedId) {
@@ -340,6 +469,17 @@ async function initializeDatabase(db) {
             [userId, bedId]
           );
         }
+
+        // Seed payment ledger entry for August 2026
+        const paymentResult = await db.run(
+          `INSERT INTO payments (studentId, billingMonth, amountDue, amountPaid, status) VALUES (?, ?, ?, ?, ?)`,
+          [studentId, '2026-08', 8500, 8500, 'paid']
+        );
+
+        await db.run(
+          `INSERT INTO paymentHistory (paymentId, amount, paymentMode, referenceNumber, notes) VALUES (?, ?, ?, ?, ?)`,
+          [paymentResult.lastID, 8500, 'upi', `TXN${Math.floor(10000000 + Math.random() * 90000000)}`, 'Monthly Rent Paid']
+        );
       }
       await db.run('COMMIT');
       console.log('Seeded mock students with room allocations.');
