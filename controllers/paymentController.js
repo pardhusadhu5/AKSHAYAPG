@@ -26,9 +26,16 @@ async function createOrder(req, res) {
       return res.status(400).json({ success: false, message: 'Fee ID is required.' });
     }
 
+    const { keyId, keySecret } = getRazorpayInstance();
+    if (!keyId || !keySecret || keyId.includes('sample_key_id') || keyId.startsWith('rzp_test_sample')) {
+      return res.status(500).json({
+        success: false,
+        message: 'Razorpay is not configured on the backend. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET in the server environment.'
+      });
+    }
+
     const db = await getDb();
 
-    // 1. Authenticate & fetch logged-in student
     const student = await db.get(
       `SELECT s.*, u.email FROM students s JOIN users u ON s.userId = u.id WHERE s.userId = ?`,
       [req.user.id]
@@ -38,7 +45,6 @@ async function createOrder(req, res) {
       return res.status(404).json({ success: false, message: 'Student record not found.' });
     }
 
-    // 2. Fetch fee invoice and verify ownership & unpaid status
     const fee = await db.get(
       'SELECT * FROM payments WHERE id = ? AND studentId = ?',
       [feeId, student.id]
@@ -53,47 +59,30 @@ async function createOrder(req, res) {
       return res.status(400).json({ success: false, message: 'This hostel fee has already been fully paid.' });
     }
 
-    // 3. Create Gateway Order (Razorpay)
     const amountInPaisa = Math.round(amountDue * 100);
-    const { instance, keyId } = getRazorpayInstance();
+    const { instance } = getRazorpayInstance();
 
-    let orderId;
-    let isSandboxFallback = false;
-
-    try {
-      if (keyId.includes('sample_key_id') || keyId.startsWith('rzp_test_sample')) {
-        throw new Error('Sandbox key detected - using sandbox mode');
+    const orderOptions = {
+      amount: amountInPaisa,
+      currency: 'INR',
+      receipt: `fee_${fee.id}_${Date.now()}`,
+      notes: {
+        studentId: student.id,
+        feeId: fee.id,
+        billingMonth: fee.billingMonth,
+        studentName: student.studentName
       }
+    };
 
-      const orderOptions = {
-        amount: amountInPaisa,
-        currency: 'INR',
-        receipt: `fee_${fee.id}_${Date.now()}`,
-        notes: {
-          studentId: student.id,
-          feeId: fee.id,
-          billingMonth: fee.billingMonth,
-          studentName: student.studentName
-        }
-      };
+    const order = await instance.orders.create(orderOptions);
+    const orderId = order.id;
 
-      const order = await instance.orders.create(orderOptions);
-      orderId = order.id;
-    } catch (rzpErr) {
-      // Fallback sandbox order generation for offline/test mode
-      isSandboxFallback = true;
-      orderId = `order_sbx_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
-      console.log(`[PaymentController] Razorpay SDK fallback sandbox order created: ${orderId}`);
-    }
-
-    // 4. Save PaymentTransaction record
     await db.run(
       `INSERT INTO paymentTransactions (studentId, feeId, gatewayOrderId, amount, currency, status) 
        VALUES (?, ?, ?, ?, 'INR', 'CREATED')`,
       [student.id, fee.id, orderId, amountDue]
     );
 
-    // 5. Update Fee status to pending
     await db.run(
       `UPDATE payments SET status = 'pending', updatedAt = CURRENT_TIMESTAMP WHERE id = ?`,
       [fee.id]
@@ -102,7 +91,7 @@ async function createOrder(req, res) {
     res.status(200).json({
       success: true,
       orderId,
-      keyId: isSandboxFallback ? 'rzp_test_demo_key' : keyId,
+      keyId,
       amount: amountInPaisa,
       amountRupees: amountDue,
       currency: 'INR',
@@ -110,8 +99,7 @@ async function createOrder(req, res) {
       billingMonth: fee.billingMonth,
       studentName: student.studentName,
       email: student.email,
-      phone: student.phone,
-      isSandbox: isSandboxFallback
+      phone: student.phone
     });
   } catch (err) {
     console.error('Create Payment Order Error:', err);
@@ -169,22 +157,21 @@ async function verifyPayment(req, res) {
       });
     }
 
-    // 3. Verify Razorpay HMAC Signature
     const { keySecret } = getRazorpayInstance();
-    const isSandbox = razorpay_order_id.startsWith('order_sbx_');
+    if (!keySecret || keySecret.includes('sample_secret_key')) {
+      return res.status(500).json({ success: false, message: 'Razorpay secret is not configured on the backend.' });
+    }
 
-    if (!isSandbox) {
-      const hmac = crypto.createHmac('sha256', keySecret);
-      hmac.update(razorpay_order_id + '|' + razorpay_payment_id);
-      const generatedSignature = hmac.digest('hex');
+    const hmac = crypto.createHmac('sha256', keySecret);
+    hmac.update(razorpay_order_id + '|' + razorpay_payment_id);
+    const generatedSignature = hmac.digest('hex');
 
-      if (generatedSignature !== razorpay_signature) {
-        await db.run(
-          `UPDATE paymentTransactions SET status = 'FAILED', updatedAt = CURRENT_TIMESTAMP WHERE id = ?`,
-          [tx.id]
-        );
-        return res.status(400).json({ success: false, message: 'Invalid payment signature. Verification failed.' });
-      }
+    if (generatedSignature !== razorpay_signature) {
+      await db.run(
+        `UPDATE paymentTransactions SET status = 'FAILED', updatedAt = CURRENT_TIMESTAMP WHERE id = ?`,
+        [tx.id]
+      );
+      return res.status(400).json({ success: false, message: 'Invalid payment signature. Verification failed.' });
     }
 
     // 4. Begin SQL Transaction for verified payment ledger update

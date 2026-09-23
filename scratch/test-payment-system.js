@@ -119,7 +119,9 @@ async function runPaymentSystemTests() {
 
   // 5. Verify Payment Signature & Settle Invoice
   console.log('\n5. Verifying Payment with Backend...');
-  const mockPaymentId = `pay_test_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+  const paymentId = `pay_test_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+  const crypto = require('crypto');
+  const signature = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET || 'test-secret').update(`${orderData.orderId}|${paymentId}`).digest('hex');
   const verifyRes = await makeRequest({
     hostname: 'localhost',
     port: 8080,
@@ -129,8 +131,8 @@ async function runPaymentSystemTests() {
   }, {
     feeId: testFeeId,
     razorpay_order_id: orderData.orderId,
-    razorpay_payment_id: mockPaymentId,
-    razorpay_signature: 'sandbox_valid_signature'
+    razorpay_payment_id: paymentId,
+    razorpay_signature: signature
   });
 
   if (!verifyRes.data.success) {

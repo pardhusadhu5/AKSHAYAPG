@@ -1110,7 +1110,7 @@
             if (isPaid) {
               actions = `<button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem;" onclick="downloadReceipt(${pay.id})">Download Receipt</button>`;
             } else {
-              actions = `<button class="btn btn-primary" style="padding:4px 8px; font-size:0.75rem;" onclick="payOnlineSimulate(${pay.id}, ${pay.amountDue - pay.amountPaid})">Pay Online</button>`;
+              actions = `<button class="btn btn-primary" style="padding:4px 8px; font-size:0.75rem;" onclick='openPaymentConfirmModal(${JSON.stringify(pay)})'>Pay Online</button>`;
             }
             
             const row = document.createElement('tr');
@@ -1127,34 +1127,6 @@
         }
       } catch (err) {
         console.error('Fetch payments error:', err);
-      }
-    }
-
-    async function payOnlineSimulate(paymentId, amountDue) {
-      if (!confirm(`Simulate payment gateway checkout of ₹${amountDue} using Razorpay?`)) return;
-      const token = localStorage.getItem('token');
-      
-      try {
-        const res = await fetch(`/api/payments/${paymentId}/simulate-online`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            razorpayPaymentId: 'pay_' + Math.random().toString(36).substring(2, 12).toUpperCase()
-          })
-        });
-        const data = await res.json();
-        if (data.success) {
-          alert('Online Payment successful! Receipt is now available.');
-          fetchMyPayments();
-          loadStudentProfile(); // Reload header & stays metrics
-        } else {
-          alert('Simulated Checkout Failed: ' + data.message);
-        }
-      } catch (err) {
-        alert('Server connection error.');
       }
     }
 
@@ -1182,7 +1154,6 @@ Amount Due: Rs. ${rec.amountDue}
 Amount Paid: Rs. ${rec.amountPaid}
 Status: ${rec.status.toUpperCase()}
 ----------------------------------------------------
-Simulated Razorpay webhook callback verified.
 Thank you for staying with us!
 - Murali (Owner)
 ====================================================`;
@@ -1554,7 +1525,6 @@ Thank you for staying with us!
               color: '#004D47'
             },
             handler: async function (response) {
-              // 3. Send Razorpay response to Backend for HMAC verification
               verifyRazorpayPayment({
                 feeId: orderData.feeId,
                 razorpay_order_id: response.razorpay_order_id,
@@ -1564,30 +1534,14 @@ Thank you for staying with us!
             },
             modal: {
               ondismiss: function () {
-                console.log('Payment modal dismissed by user.');
+                alert('Payment cancelled. No payment has been recorded.');
               }
             }
           };
 
-          // Handle Sandbox/Test fallback if Razorpay SDK popup fails or sandbox mock is active
-          if (orderData.isSandbox || orderData.orderId.startsWith('order_sbx_')) {
-            const simulateSuccess = confirm(
-              `SANDBOX TEST MODE ACTIVE\n\nSimulate successful payment for ${orderData.billingMonth} (₹${orderData.amountRupees})?\n\nOrder ID: ${orderData.orderId}`
-            );
-            if (simulateSuccess) {
-              verifyRazorpayPayment({
-                feeId: orderData.feeId,
-                razorpay_order_id: orderData.orderId,
-                razorpay_payment_id: `pay_sbx_${Date.now()}_${Math.random().toString(36).substring(2,8)}`,
-                razorpay_signature: 'sandbox_valid_signature'
-              });
-            }
-            return;
-          }
-
           const rzp = new Razorpay(options);
           rzp.on('payment.failed', function (response) {
-            alert(`Payment Failed: ${response.error.description}`);
+            alert(`Payment failed: ${response.error.description || 'Please try again.'}`);
           });
           rzp.open();
 
