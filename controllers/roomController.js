@@ -14,15 +14,15 @@ async function getAllRooms(req, res) {
       ORDER BY r.roomNumber ASC
     `;
     
-    const rooms = await db.all(query);
+    const rooms = (await (async () => { let args = [query]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
     
     // For each room, get simple occupants list
     for (let room of rooms) {
-      const occupants = await db.all(`
+      const occupants = (await (async () => { let args = [`
         SELECT studentName, phone, year 
         FROM students 
-        WHERE roomId = ?
-      `, [room.id]);
+        WHERE roomId = $1
+      `, [room.id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
       room.currentStudents = occupants;
     }
 
@@ -39,34 +39,34 @@ async function getRoomDetails(req, res) {
     const { id } = req.params;
     const db = await getDb();
 
-    const room = await db.get(`
+    const room = (await (async () => { let args = [`
       SELECT r.*,
         (SELECT COUNT(*) FROM beds b WHERE b.roomId = r.id AND b.status = 'occupied') as occupiedBeds,
         (SELECT COUNT(*) FROM beds b WHERE b.roomId = r.id AND b.status = 'vacant') as vacantBeds
       FROM rooms r
-      WHERE r.id = ?
-    `, [id]);
+      WHERE r.id = $1
+    `, [id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
 
     if (!room) {
       return res.status(404).json({ success: false, message: 'Room not found.' });
     }
 
     // Get all beds details in this room
-    const beds = await db.all(`
+    const beds = (await (async () => { let args = [`
       SELECT b.id, b.bedNumber, b.status, b.userId, u.name as occupantName
       FROM beds b
       LEFT JOIN users u ON b.userId = u.id
-      WHERE b.roomId = ?
+      WHERE b.roomId = $1
       ORDER BY b.bedNumber ASC
-    `, [id]);
+    `, [id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
 
     // Get detailed list of students currently in this room
-    const students = await db.all(`
+    const students = (await (async () => { let args = [`
       SELECT s.*, u.email
       FROM students s
       JOIN users u ON s.userId = u.id
-      WHERE s.roomId = ?
-    `, [id]);
+      WHERE s.roomId = $1
+    `, [id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
 
     res.status(200).json({
       success: true,
@@ -97,34 +97,79 @@ async function createRoom(req, res) {
     const db = await getDb();
 
     // Check if room number is unique
-    const existingRoom = await db.get('SELECT * FROM rooms WHERE roomNumber = ?', [roomNumber]);
+    const existingRoom = (await (async () => { let args = ['SELECT * FROM rooms WHERE roomNumber = $1', [roomNumber]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (existingRoom) {
       return res.status(400).json({ success: false, message: 'Room number already exists.' });
     }
 
-    await db.run('BEGIN TRANSACTION');
+    (await (async () => {
+         let args = ['BEGIN TRANSACTION'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
-    const result = await db.run(
-      `INSERT INTO rooms (roomNumber, capacity, monthlyFee, floor, status) VALUES (?, ?, ?, ?, ?)`,
+    const result = (await (async () => {
+         let args = [
+      `INSERT INTO rooms (roomNumber, capacity, monthlyFee, floor, status) VALUES ($1, $2, $3, $4, $5)`,
       [roomNumber, cap, parseFloat(monthlyFee), floor || 'Ground Floor', status || 'active']
-    );
+    ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
     const roomId = result.lastID;
 
     // Automatically generate beds based on capacity
     for (let b = 1; b <= cap; b++) {
-      await db.run(
-        `INSERT INTO beds (roomId, bedNumber, status) VALUES (?, ?, ?)`,
+      (await (async () => {
+         let args = [
+        `INSERT INTO beds (roomId, bedNumber, status) VALUES ($1, $2, $3)`,
         [roomId, b, 'vacant']
-      );
+      ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
     }
 
-    await db.run('COMMIT');
+    (await (async () => {
+         let args = ['COMMIT'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     res.status(201).json({ success: true, message: `Room ${roomNumber} created with ${cap} beds on ${floor || 'Ground Floor'} successfully.` });
   } catch (err) {
     try {
       const db = await getDb();
-      await db.run('ROLLBACK');
+      (await (async () => {
+         let args = ['ROLLBACK'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
     } catch (_) {}
     console.error('Create Room Error:', err);
     res.status(500).json({ success: false, message: `Failed to create room: ${err.message}` });
@@ -144,33 +189,51 @@ async function editRoom(req, res) {
     const cap = parseInt(capacity);
     const db = await getDb();
 
-    const currentRoom = await db.get('SELECT * FROM rooms WHERE id = ?', [id]);
+    const currentRoom = (await (async () => { let args = ['SELECT * FROM rooms WHERE id = $1', [id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (!currentRoom) {
       return res.status(404).json({ success: false, message: 'Room not found.' });
     }
 
     // Check roomNumber collision
     if (roomNumber !== currentRoom.roomNumber) {
-      const collision = await db.get('SELECT * FROM rooms WHERE roomNumber = ? AND id != ?', [roomNumber, id]);
+      const collision = (await (async () => { let args = ['SELECT * FROM rooms WHERE roomNumber = $1 AND id != $2', [roomNumber, id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
       if (collision) {
         return res.status(400).json({ success: false, message: 'Room number is already in use.' });
       }
     }
 
-    await db.run('BEGIN TRANSACTION');
+    (await (async () => {
+         let args = ['BEGIN TRANSACTION'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     // Handle Capacity Resizing
     if (cap !== currentRoom.capacity) {
       if (cap < currentRoom.capacity) {
         // Decreasing capacity: check if we are going to delete occupied beds!
         // We will be deleting beds with numbers > cap. Check if any are occupied.
-        const occupiedCount = await db.get(
-          `SELECT COUNT(*) as count FROM beds WHERE roomId = ? AND bedNumber > ? AND status != 'vacant'`,
+        const occupiedCount = (await (async () => { let args = [
+          `SELECT COUNT(*) as count FROM beds WHERE roomId = $1 AND bedNumber > $2 AND status != 'vacant'`,
           [id, cap]
-        );
+        ]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
         
         if (occupiedCount.count > 0) {
-          await db.run('ROLLBACK');
+          (await (async () => {
+         let args = ['ROLLBACK'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
           return res.status(400).json({
             success: false,
             message: `Cannot decrease capacity to ${cap}. Beds numbered higher than ${cap} are currently occupied. Deallocate students first.`
@@ -178,39 +241,93 @@ async function editRoom(req, res) {
         }
 
         // Safe to delete excess vacant beds
-        await db.run(`DELETE FROM beds WHERE roomId = ? AND bedNumber > ?`, [id, cap]);
+        (await (async () => {
+         let args = [`DELETE FROM beds WHERE roomId = $1 AND bedNumber > $2`, [id, cap]];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       } else {
         // Increasing capacity: insert new beds
         for (let b = currentRoom.capacity + 1; b <= cap; b++) {
-          await db.run(
-            `INSERT INTO beds (roomId, bedNumber, status) VALUES (?, ?, ?)`,
+          (await (async () => {
+         let args = [
+            `INSERT INTO beds (roomId, bedNumber, status) VALUES ($1, $2, $3)`,
             [id, b, 'vacant']
-          );
+          ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
         }
       }
     }
 
     // Update Room record
-    await db.run(
+    (await (async () => {
+         let args = [
       `UPDATE rooms 
-       SET roomNumber = ?, capacity = ?, monthlyFee = ?, floor = ?, status = ?, updatedAt = CURRENT_TIMESTAMP 
-       WHERE id = ?`,
+       SET roomNumber = $1, capacity = $2, monthlyFee = $3, floor = $4, status = $5, updatedAt = CURRENT_TIMESTAMP 
+       WHERE id = $6`,
       [roomNumber, cap, parseFloat(monthlyFee), floor || 'Ground Floor', status, id]
-    );
+    ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     // Update the student monthly Rent details for all students currently in this room to match the new room fee
-    await db.run(
-      `UPDATE students SET monthlyRent = ? WHERE roomId = ?`,
+    (await (async () => {
+         let args = [
+      `UPDATE students SET monthlyRent = $1 WHERE roomId = $2`,
       [parseFloat(monthlyFee), id]
-    );
+    ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
-    await db.run('COMMIT');
+    (await (async () => {
+         let args = ['COMMIT'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     res.status(200).json({ success: true, message: 'Room updated successfully.' });
   } catch (err) {
     try {
       const db = await getDb();
-      await db.run('ROLLBACK');
+      (await (async () => {
+         let args = ['ROLLBACK'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
     } catch (_) {}
     console.error('Edit Room Error:', err);
     res.status(500).json({ success: false, message: `Failed to update room: ${err.message}` });
@@ -225,13 +342,13 @@ async function deleteRoom(req, res) {
     const { id } = req.params;
     const db = await getDb();
 
-    const room = await db.get('SELECT * FROM rooms WHERE id = ?', [id]);
+    const room = (await (async () => { let args = ['SELECT * FROM rooms WHERE id = $1', [id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (!room) {
       return res.status(404).json({ success: false, message: 'Room not found.' });
     }
 
     // Check if room has any occupied beds
-    const occupiedCheck = await db.get(`SELECT COUNT(*) as count FROM beds WHERE roomId = ? AND status != 'vacant'`, [id]);
+    const occupiedCheck = (await (async () => { let args = [`SELECT COUNT(*) as count FROM beds WHERE roomId = $1 AND status != 'vacant'`, [id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (occupiedCheck.count > 0) {
       return res.status(400).json({
         success: false,
@@ -240,7 +357,16 @@ async function deleteRoom(req, res) {
     }
 
     // Safe to delete
-    await db.run('DELETE FROM rooms WHERE id = ?', [id]);
+    (await (async () => {
+         let args = ['DELETE FROM rooms WHERE id = $1', [id]];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     res.status(200).json({ success: true, message: `Room ${room.roomNumber} deleted successfully.` });
   } catch (err) {
@@ -254,10 +380,10 @@ async function getVacantBeds(req, res) {
   try {
     const { roomId } = req.params;
     const db = await getDb();
-    const vacantBeds = await db.all(
-      'SELECT id, bedNumber, status FROM beds WHERE roomId = ? AND status = "vacant" ORDER BY bedNumber ASC',
+    const vacantBeds = (await (async () => { let args = [
+      'SELECT id, bedNumber, status FROM beds WHERE roomId = $1 AND status = "vacant" ORDER BY bedNumber ASC',
       [roomId]
-    );
+    ]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
     res.status(200).json({ success: true, beds: vacantBeds });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -276,7 +402,7 @@ async function allocateStudent(req, res) {
     const db = await getDb();
 
     // 1. Verify Student
-    const student = await db.get('SELECT * FROM students WHERE id = ?', [studentId]);
+    const student = (await (async () => { let args = ['SELECT * FROM students WHERE id = $1', [studentId]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student record not found.' });
     }
@@ -287,7 +413,7 @@ async function allocateStudent(req, res) {
     }
 
     // 2. Verify Room Fee & Status
-    const room = await db.get('SELECT * FROM rooms WHERE id = ?', [roomId]);
+    const room = (await (async () => { let args = ['SELECT * FROM rooms WHERE id = $1', [roomId]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (!room) {
       return res.status(404).json({ success: false, message: 'Room not found.' });
     }
@@ -296,7 +422,7 @@ async function allocateStudent(req, res) {
     }
 
     // 3. Verify Bed
-    const bed = await db.get('SELECT * FROM beds WHERE id = ? AND roomId = ?', [bedId, roomId]);
+    const bed = (await (async () => { let args = ['SELECT * FROM beds WHERE id = $1 AND roomId = $2', [bedId, roomId]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (!bed) {
       return res.status(404).json({ success: false, message: 'Bed not found in the selected room.' });
     }
@@ -305,23 +431,59 @@ async function allocateStudent(req, res) {
     }
 
     // 4. Perform transaction
-    await db.run('BEGIN TRANSACTION');
+    (await (async () => {
+         let args = ['BEGIN TRANSACTION'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     // Update student coordinates (match rent with room's monthly fee)
-    await db.run(
+    (await (async () => {
+         let args = [
       `UPDATE students 
-       SET roomId = ?, bedId = ?, monthlyRent = ?, updatedAt = CURRENT_TIMESTAMP 
-       WHERE id = ?`,
+       SET roomId = $1, bedId = $2, monthlyRent = $3, updatedAt = CURRENT_TIMESTAMP 
+       WHERE id = $4`,
       [roomId, bedId, room.monthlyFee, studentId]
-    );
+    ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     // Update bed occupier
-    await db.run(
-      `UPDATE beds SET status = 'occupied', userId = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`,
+    (await (async () => {
+         let args = [
+      `UPDATE beds SET status = 'occupied', userId = $1, updatedAt = CURRENT_TIMESTAMP WHERE id = $2`,
       [student.userId, bedId]
-    );
+    ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
-    await db.run('COMMIT');
+    (await (async () => {
+         let args = ['COMMIT'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     res.status(200).json({
       success: true,
@@ -330,7 +492,16 @@ async function allocateStudent(req, res) {
   } catch (err) {
     try {
       const db = await getDb();
-      await db.run('ROLLBACK');
+      (await (async () => {
+         let args = ['ROLLBACK'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
     } catch (_) {}
     console.error('Allocation Error:', err);
     res.status(500).json({ success: false, message: `Allocation failed: ${err.message}` });
@@ -349,7 +520,7 @@ async function deallocateStudent(req, res) {
     const db = await getDb();
 
     // Verify Student Stay
-    const student = await db.get('SELECT * FROM students WHERE id = ?', [studentId]);
+    const student = (await (async () => { let args = ['SELECT * FROM students WHERE id = $1', [studentId]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student record not found.' });
     }
@@ -358,29 +529,74 @@ async function deallocateStudent(req, res) {
       return res.status(400).json({ success: false, message: 'Student is not currently allocated to any room.' });
     }
 
-    await db.run('BEGIN TRANSACTION');
+    (await (async () => {
+         let args = ['BEGIN TRANSACTION'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     // Reset bed occupant parameters
     if (student.bedId) {
-      await db.run(
-        `UPDATE beds SET status = 'vacant', userId = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`,
+      (await (async () => {
+         let args = [
+        `UPDATE beds SET status = 'vacant', userId = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = $1`,
         [student.bedId]
-      );
+      ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
     }
 
     // Reset student fields
-    await db.run(
-      `UPDATE students SET roomId = NULL, bedId = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`,
+    (await (async () => {
+         let args = [
+      `UPDATE students SET roomId = NULL, bedId = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = $1`,
       [studentId]
-    );
+    ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
-    await db.run('COMMIT');
+    (await (async () => {
+         let args = ['COMMIT'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     res.status(200).json({ success: true, message: `Deallocated ${student.studentName} successfully.` });
   } catch (err) {
     try {
       const db = await getDb();
-      await db.run('ROLLBACK');
+      (await (async () => {
+         let args = ['ROLLBACK'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
     } catch (_) {}
     console.error('Deallocation Error:', err);
     res.status(500).json({ success: false, message: `Deallocation failed: ${err.message}` });
@@ -399,7 +615,7 @@ async function transferStudent(req, res) {
     const db = await getDb();
 
     // 1. Verify Student
-    const student = await db.get('SELECT * FROM students WHERE id = ?', [studentId]);
+    const student = (await (async () => { let args = ['SELECT * FROM students WHERE id = $1', [studentId]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student record not found.' });
     }
@@ -407,7 +623,7 @@ async function transferStudent(req, res) {
     const oldBedId = student.bedId;
 
     // 2. Verify target Room
-    const room = await db.get('SELECT * FROM rooms WHERE id = ?', [targetRoomId]);
+    const room = (await (async () => { let args = ['SELECT * FROM rooms WHERE id = $1', [targetRoomId]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (!room) {
       return res.status(404).json({ success: false, message: 'Target room not found.' });
     }
@@ -416,7 +632,7 @@ async function transferStudent(req, res) {
     }
 
     // 3. Verify target Bed
-    const bed = await db.get('SELECT * FROM beds WHERE id = ? AND roomId = ?', [targetBedId, targetRoomId]);
+    const bed = (await (async () => { let args = ['SELECT * FROM beds WHERE id = $1 AND roomId = $2', [targetBedId, targetRoomId]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (!bed) {
       return res.status(404).json({ success: false, message: 'Target bed not found in the selected room.' });
     }
@@ -425,31 +641,76 @@ async function transferStudent(req, res) {
     }
 
     // 4. Perform transaction
-    await db.run('BEGIN TRANSACTION');
+    (await (async () => {
+         let args = ['BEGIN TRANSACTION'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     // Vacate old bed
     if (oldBedId) {
-      await db.run(
-        `UPDATE beds SET status = 'vacant', userId = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`,
+      (await (async () => {
+         let args = [
+        `UPDATE beds SET status = 'vacant', userId = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = $1`,
         [oldBedId]
-      );
+      ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
     }
 
     // Allocate target bed
-    await db.run(
-      `UPDATE beds SET status = 'occupied', userId = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`,
+    (await (async () => {
+         let args = [
+      `UPDATE beds SET status = 'occupied', userId = $1, updatedAt = CURRENT_TIMESTAMP WHERE id = $2`,
       [student.userId, targetBedId]
-    );
+    ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     // Update student coordinates
-    await db.run(
+    (await (async () => {
+         let args = [
       `UPDATE students 
-       SET roomId = ?, bedId = ?, monthlyRent = ?, updatedAt = CURRENT_TIMESTAMP 
-       WHERE id = ?`,
+       SET roomId = $1, bedId = $2, monthlyRent = $3, updatedAt = CURRENT_TIMESTAMP 
+       WHERE id = $4`,
       [targetRoomId, targetBedId, room.monthlyFee, studentId]
-    );
+    ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
-    await db.run('COMMIT');
+    (await (async () => {
+         let args = ['COMMIT'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     res.status(200).json({
       success: true,
@@ -458,7 +719,16 @@ async function transferStudent(req, res) {
   } catch (err) {
     try {
       const db = await getDb();
-      await db.run('ROLLBACK');
+      (await (async () => {
+         let args = ['ROLLBACK'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
     } catch (_) {}
     console.error('Transfer Error:', err);
     res.status(500).json({ success: false, message: `Transfer failed: ${err.message}` });
@@ -476,7 +746,7 @@ async function updateBedStatus(req, res) {
     }
 
     const db = await getDb();
-    const bed = await db.get('SELECT * FROM beds WHERE id = ?', [id]);
+    const bed = (await (async () => { let args = ['SELECT * FROM beds WHERE id = $1', [id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (!bed) {
       return res.status(404).json({ success: false, message: 'Bed record not found.' });
     }
@@ -485,10 +755,19 @@ async function updateBedStatus(req, res) {
       return res.status(400).json({ success: false, message: 'Cannot modify status of an occupied bed.' });
     }
 
-    await db.run(
-      `UPDATE beds SET status = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`,
+    (await (async () => {
+         let args = [
+      `UPDATE beds SET status = $1, updatedAt = CURRENT_TIMESTAMP WHERE id = $2`,
       [status, id]
-    );
+    ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     res.status(200).json({ success: true, message: `Bed status updated to ${status} successfully.` });
   } catch (err) {

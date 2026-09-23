@@ -36,19 +36,19 @@ async function createOrder(req, res) {
 
     const db = await getDb();
 
-    const student = await db.get(
-      `SELECT s.*, u.email FROM students s JOIN users u ON s.userId = u.id WHERE s.userId = ?`,
+    const student = (await (async () => { let args = [
+      `SELECT s.*, u.email FROM students s JOIN users u ON s.userId = u.id WHERE s.userId = $1`,
       [req.user.id]
-    );
+    ]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
 
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student record not found.' });
     }
 
-    const fee = await db.get(
-      'SELECT * FROM payments WHERE id = ? AND studentId = ?',
+    const fee = (await (async () => { let args = [
+      'SELECT * FROM payments WHERE id = $1 AND studentId = $2',
       [feeId, student.id]
-    );
+    ]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
 
     if (!fee) {
       return res.status(404).json({ success: false, message: 'Hostel fee invoice not found.' });
@@ -77,16 +77,34 @@ async function createOrder(req, res) {
     const order = await instance.orders.create(orderOptions);
     const orderId = order.id;
 
-    await db.run(
+    (await (async () => {
+         let args = [
       `INSERT INTO paymentTransactions (studentId, feeId, gatewayOrderId, amount, currency, status) 
-       VALUES (?, ?, ?, ?, 'INR', 'CREATED')`,
+       VALUES ($1, $2, $3, $4, 'INR', 'CREATED')`,
       [student.id, fee.id, orderId, amountDue]
-    );
+    ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
-    await db.run(
-      `UPDATE payments SET status = 'pending', updatedAt = CURRENT_TIMESTAMP WHERE id = ?`,
+    (await (async () => {
+         let args = [
+      `UPDATE payments SET status = 'pending', updatedAt = CURRENT_TIMESTAMP WHERE id = $1`,
       [fee.id]
-    );
+    ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     res.status(200).json({
       success: true,
@@ -122,25 +140,25 @@ async function verifyPayment(req, res) {
     const db = await getDb();
 
     // 1. Authenticate student
-    const student = await db.get(
+    const student = (await (async () => { let args = [
       `SELECT s.*, u.email, r.roomNumber, r.floor, b.bedNumber 
        FROM students s 
        JOIN users u ON s.userId = u.id 
        LEFT JOIN rooms r ON s.roomId = r.id
        LEFT JOIN beds b ON s.bedId = b.id
-       WHERE s.userId = ?`,
+       WHERE s.userId = $1`,
       [req.user.id]
-    );
+    ]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
 
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student profile not found.' });
     }
 
     // 2. Fetch transaction record
-    const tx = await db.get(
-      'SELECT * FROM paymentTransactions WHERE gatewayOrderId = ? AND feeId = ?',
+    const tx = (await (async () => { let args = [
+      'SELECT * FROM paymentTransactions WHERE gatewayOrderId = $1 AND feeId = $2',
       [razorpay_order_id, feeId]
-    );
+    ]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
 
     if (!tx) {
       return res.status(404).json({ success: false, message: 'Matching payment order transaction not found.' });
@@ -148,7 +166,7 @@ async function verifyPayment(req, res) {
 
     // Prevent duplicate verification
     if (tx.status === 'SUCCESS') {
-      const existingReceipt = await db.get('SELECT receiptNumber FROM receipts WHERE transactionId = ?', [tx.id]);
+      const existingReceipt = (await (async () => { let args = ['SELECT receiptNumber FROM receipts WHERE transactionId = $1', [tx.id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
       return res.status(200).json({
         success: true,
         message: 'Payment already verified.',
@@ -167,62 +185,143 @@ async function verifyPayment(req, res) {
     const generatedSignature = hmac.digest('hex');
 
     if (generatedSignature !== razorpay_signature) {
-      await db.run(
-        `UPDATE paymentTransactions SET status = 'FAILED', updatedAt = CURRENT_TIMESTAMP WHERE id = ?`,
+      (await (async () => {
+         let args = [
+        `UPDATE paymentTransactions SET status = 'FAILED', updatedAt = CURRENT_TIMESTAMP WHERE id = $1`,
         [tx.id]
-      );
+      ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       return res.status(400).json({ success: false, message: 'Invalid payment signature. Verification failed.' });
     }
 
     // 4. Begin SQL Transaction for verified payment ledger update
-    const fee = await db.get('SELECT * FROM payments WHERE id = ?', [feeId]);
+    const fee = (await (async () => { let args = ['SELECT * FROM payments WHERE id = $1', [feeId]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     const receiptNumber = `HFR-${new Date().getFullYear()}-${String(fee.id).padStart(6, '0')}`;
 
-    await db.run('BEGIN TRANSACTION');
+    (await (async () => {
+         let args = ['BEGIN TRANSACTION'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
     try {
       // Update PaymentTransaction
-      await db.run(
+      (await (async () => {
+         let args = [
         `UPDATE paymentTransactions 
-         SET gatewayPaymentId = ?, gatewaySignature = ?, status = 'SUCCESS', paidAt = CURRENT_TIMESTAMP, updatedAt = CURRENT_TIMESTAMP 
-         WHERE id = ?`,
+         SET gatewayPaymentId = $1, gatewaySignature = $2, status = 'SUCCESS', paidAt = CURRENT_TIMESTAMP, updatedAt = CURRENT_TIMESTAMP 
+         WHERE id = $3`,
         [razorpay_payment_id, razorpay_signature || 'sandbox_sig', tx.id]
-      );
+      ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
       // Update Payments Fee Invoice
-      await db.run(
+      (await (async () => {
+         let args = [
         `UPDATE payments 
          SET amountPaid = amountDue, status = 'paid', paidAt = CURRENT_TIMESTAMP, updatedAt = CURRENT_TIMESTAMP 
-         WHERE id = ?`,
+         WHERE id = $1`,
         [feeId]
-      );
+      ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
       // Update Student payment status flag
-      await db.run(
-        `UPDATE students SET paymentStatus = 'paid', updatedAt = CURRENT_TIMESTAMP WHERE id = ?`,
+      (await (async () => {
+         let args = [
+        `UPDATE students SET paymentStatus = 'paid', updatedAt = CURRENT_TIMESTAMP WHERE id = $1`,
         [student.id]
-      );
+      ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
       // Record in PaymentHistory table
-      await db.run(
+      (await (async () => {
+         let args = [
         `INSERT INTO paymentHistory (paymentId, amount, paymentMode, referenceNumber, notes) 
-         VALUES (?, ?, 'online', ?, 'Verified Online Razorpay Payment')`,
+         VALUES ($1, $2, 'online', $3, 'Verified Online Razorpay Payment')`,
         [feeId, tx.amount, razorpay_payment_id]
-      );
+      ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
       // Create Receipt Record
-      const receiptInsert = await db.run(
+      const receiptInsert = (await (async () => {
+         let args = [
         `INSERT INTO receipts (transactionId, receiptNumber, studentId, feeId, amount) 
-         VALUES (?, ?, ?, ?, ?)`,
+         VALUES ($1, $2, $3, $4, $5)`,
         [tx.id, receiptNumber, student.id, feeId, tx.amount]
-      );
+      ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
       // Create Notification
-      await db.run(
-        `INSERT INTO notifications (type, message) VALUES (?, ?)`,
+      (await (async () => {
+         let args = [
+        `INSERT INTO notifications (type, message) VALUES ($1, $2)`,
         ['payment_received', `Online fee payment of ₹${tx.amount} received from ${student.studentName} (${fee.billingMonth}).`]
-      );
+      ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
-      await db.run('COMMIT');
+      (await (async () => {
+         let args = ['COMMIT'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
       // 5. Generate PDF & Send Email asynchronously
       const receiptData = {
@@ -268,7 +367,16 @@ async function verifyPayment(req, res) {
         amountPaid: tx.amount
       });
     } catch (txErr) {
-      await db.run('ROLLBACK');
+      (await (async () => {
+         let args = ['ROLLBACK'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       throw txErr;
     }
   } catch (err) {
@@ -305,68 +413,158 @@ async function handleWebhook(req, res) {
       const paymentId = entity.id;
 
       const db = await getDb();
-      const tx = await db.get('SELECT * FROM paymentTransactions WHERE gatewayOrderId = ?', [orderId]);
+      const tx = (await (async () => { let args = ['SELECT * FROM paymentTransactions WHERE gatewayOrderId = $1', [orderId]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
 
       if (tx && tx.status !== 'SUCCESS') {
-        const fee = await db.get('SELECT * FROM payments WHERE id = ?', [tx.feeId]);
-        const student = await db.get('SELECT * FROM students WHERE id = ?', [tx.studentId]);
+        const fee = (await (async () => { let args = ['SELECT * FROM payments WHERE id = $1', [tx.feeId]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
+        const student = (await (async () => { let args = ['SELECT * FROM students WHERE id = $1', [tx.studentId]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
         const receiptNumber = `HFR-${new Date().getFullYear()}-${String(fee.id).padStart(6, '0')}`;
 
-        await db.run('BEGIN TRANSACTION');
+        (await (async () => {
+         let args = ['BEGIN TRANSACTION'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
         try {
-          await db.run(
+          (await (async () => {
+         let args = [
             `UPDATE paymentTransactions 
-             SET gatewayPaymentId = ?, status = 'SUCCESS', paidAt = CURRENT_TIMESTAMP, updatedAt = CURRENT_TIMESTAMP 
-             WHERE id = ?`,
+             SET gatewayPaymentId = $1, status = 'SUCCESS', paidAt = CURRENT_TIMESTAMP, updatedAt = CURRENT_TIMESTAMP 
+             WHERE id = $2`,
             [paymentId, tx.id]
-          );
+          ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
-          await db.run(
+          (await (async () => {
+         let args = [
             `UPDATE payments 
              SET amountPaid = amountDue, status = 'paid', paidAt = CURRENT_TIMESTAMP, updatedAt = CURRENT_TIMESTAMP 
-             WHERE id = ?`,
+             WHERE id = $1`,
             [tx.feeId]
-          );
+          ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
-          await db.run(
-            `UPDATE students SET paymentStatus = 'paid', updatedAt = CURRENT_TIMESTAMP WHERE id = ?`,
+          (await (async () => {
+         let args = [
+            `UPDATE students SET paymentStatus = 'paid', updatedAt = CURRENT_TIMESTAMP WHERE id = $1`,
             [tx.studentId]
-          );
+          ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
-          await db.run(
+          (await (async () => {
+         let args = [
             `INSERT INTO paymentHistory (paymentId, amount, paymentMode, referenceNumber, notes) 
-             VALUES (?, ?, 'online', ?, 'Razorpay Webhook Captured Payment')`,
+             VALUES ($1, $2, 'online', $3, 'Razorpay Webhook Captured Payment')`,
             [tx.feeId, tx.amount, paymentId]
-          );
+          ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
-          await db.run(
+          (await (async () => {
+         let args = [
             `INSERT OR IGNORE INTO receipts (transactionId, receiptNumber, studentId, feeId, amount) 
-             VALUES (?, ?, ?, ?, ?)`,
+             VALUES ($1, $2, $3, $4, $5)`,
             [tx.id, receiptNumber, tx.studentId, tx.feeId, tx.amount]
-          );
+          ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
-          await db.run('COMMIT');
+          (await (async () => {
+         let args = ['COMMIT'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
           console.log(`[Webhook] Processed payment.captured for order ${orderId}`);
         } catch (e) {
-          await db.run('ROLLBACK');
+          (await (async () => {
+         let args = ['ROLLBACK'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
           console.error('[Webhook] DB Error:', e);
         }
       }
     } else if (event === 'payment.failed' && payload && payload.payment) {
       const orderId = payload.payment.entity.order_id;
       const db = await getDb();
-      await db.run(
-        `UPDATE paymentTransactions SET status = 'FAILED', updatedAt = CURRENT_TIMESTAMP WHERE gatewayOrderId = ?`,
+      (await (async () => {
+         let args = [
+        `UPDATE paymentTransactions SET status = 'FAILED', updatedAt = CURRENT_TIMESTAMP WHERE gatewayOrderId = $1`,
         [orderId]
-      );
+      ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       console.log(`[Webhook] Processed payment.failed for order ${orderId}`);
     } else if (event === 'refund.processed' && payload && payload.refund) {
       const paymentId = payload.refund.entity.payment_id;
       const db = await getDb();
-      await db.run(
-        `UPDATE paymentTransactions SET status = 'REFUNDED', updatedAt = CURRENT_TIMESTAMP WHERE gatewayPaymentId = ?`,
+      (await (async () => {
+         let args = [
+        `UPDATE paymentTransactions SET status = 'REFUNDED', updatedAt = CURRENT_TIMESTAMP WHERE gatewayPaymentId = $1`,
         [paymentId]
-      );
+      ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       console.log(`[Webhook] Processed refund.processed for payment ${paymentId}`);
     }
 
@@ -386,7 +584,7 @@ async function downloadReceiptPdf(req, res) {
     const { receiptNumber } = req.params;
     const db = await getDb();
 
-    const receipt = await db.get(
+    const receipt = (await (async () => { let args = [
       `SELECT r.*, p.billingMonth, p.amountDue, pt.gatewayOrderId, pt.gatewayPaymentId, pt.paymentMethod,
               s.studentName, s.phone, s.userId, rm.roomNumber, rm.floor, b.bedNumber, s.collegeName
        FROM receipts r
@@ -395,9 +593,9 @@ async function downloadReceiptPdf(req, res) {
        JOIN students s ON r.studentId = s.id
        LEFT JOIN rooms rm ON s.roomId = rm.id
        LEFT JOIN beds b ON s.bedId = b.id
-       WHERE r.receiptNumber = ? OR r.id = ?`,
+       WHERE r.receiptNumber = $1 OR r.id = $2`,
       [receiptNumber, receiptNumber]
-    );
+    ]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
 
     if (!receipt) {
       return res.status(404).json({ success: false, message: 'Receipt record not found.' });
@@ -405,7 +603,7 @@ async function downloadReceiptPdf(req, res) {
 
     // Security check for student role
     if (req.user.role === 'student') {
-      const student = await db.get('SELECT id FROM students WHERE userId = ?', [req.user.id]);
+      const student = (await (async () => { let args = ['SELECT id FROM students WHERE userId = $1', [req.user.id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
       if (!student || student.id !== receipt.studentId) {
         return res.status(403).json({ success: false, message: 'Access denied to another student receipt.' });
       }
@@ -448,30 +646,30 @@ async function downloadReceiptPdf(req, res) {
 async function getStudentFees(req, res) {
   try {
     const db = await getDb();
-    const student = await db.get(
+    const student = (await (async () => { let args = [
       `SELECT s.*, u.email, r.roomNumber, r.floor, r.monthlyFee as roomRent, b.bedNumber 
        FROM students s 
        JOIN users u ON s.userId = u.id 
        LEFT JOIN rooms r ON s.roomId = r.id 
        LEFT JOIN beds b ON s.bedId = b.id 
-       WHERE s.userId = ?`,
+       WHERE s.userId = $1`,
       [req.user.id]
-    );
+    ]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
 
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student record not found.' });
     }
 
     // Fetch all fees for student
-    const fees = await db.all(
+    const fees = (await (async () => { let args = [
       `SELECT p.*, r.receiptNumber, pt.gatewayOrderId, pt.gatewayPaymentId, pt.status as gatewayStatus
        FROM payments p
        LEFT JOIN receipts r ON r.feeId = p.id
        LEFT JOIN paymentTransactions pt ON pt.feeId = p.id AND pt.status = 'SUCCESS'
-       WHERE p.studentId = ?
+       WHERE p.studentId = $1
        ORDER BY p.billingMonth DESC`,
       [student.id]
-    );
+    ]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
 
     // Current month identifier e.g. '2026-09'
     const now = new Date();
@@ -568,7 +766,7 @@ async function getAllPayments(req, res) {
 
     query += ` ORDER BY p.billingMonth DESC, p.id DESC`;
 
-    const payments = await db.all(query, params);
+    const payments = (await (async () => { let args = [query, params]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
     res.status(200).json({ success: true, payments });
   } catch (err) {
     console.error('Admin Get All Payments Error:', err);
@@ -585,26 +783,26 @@ async function getPaymentStats(req, res) {
     const db = await getDb();
 
     // Total Collection ever
-    const totalCollectedRes = await db.get(`SELECT SUM(amountPaid) as sum FROM payments WHERE status = 'paid'`);
+    const totalCollectedRes = (await (async () => { let args = [`SELECT SUM(amountPaid) as sum FROM payments WHERE status = 'paid'`]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     const totalCollected = totalCollectedRes && totalCollectedRes.sum ? totalCollectedRes.sum : 0;
 
     // Current Month Collection
-    const currentMonthRes = await db.get(
+    const currentMonthRes = (await (async () => { let args = [
       `SELECT SUM(amountPaid) as sum FROM payments WHERE strftime('%Y-%m', updatedAt) = strftime('%Y-%m', 'now') AND status = 'paid'`
-    );
+    ]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     const thisMonth = currentMonthRes && currentMonthRes.sum ? currentMonthRes.sum : 0;
 
     // Total Pending Dues
-    const pendingRes = await db.get(`SELECT SUM(amountDue - amountPaid) as sum FROM payments WHERE status != 'paid'`);
+    const pendingRes = (await (async () => { let args = [`SELECT SUM(amountDue - amountPaid) as sum FROM payments WHERE status != 'paid'`]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     const pendingDues = pendingRes && pendingRes.sum ? pendingRes.sum : 0;
 
     // Total Failed Transactions
-    const failedRes = await db.get(`SELECT COUNT(*) as count FROM paymentTransactions WHERE status = 'FAILED'`);
+    const failedRes = (await (async () => { let args = [`SELECT COUNT(*) as count FROM paymentTransactions WHERE status = 'FAILED'`]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     const failedCount = failedRes ? failedRes.count : 0;
 
     // Total Active Billed Students
-    const billedStudentsRes = await db.get(`SELECT COUNT(DISTINCT studentId) as count FROM payments`);
-    const paidStudentsRes = await db.get(`SELECT COUNT(DISTINCT studentId) as count FROM payments WHERE status = 'paid'`);
+    const billedStudentsRes = (await (async () => { let args = [`SELECT COUNT(DISTINCT studentId) as count FROM payments`]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
+    const paidStudentsRes = (await (async () => { let args = [`SELECT COUNT(DISTINCT studentId) as count FROM payments WHERE status = 'paid'`]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
 
     res.status(200).json({
       success: true,
@@ -635,47 +833,101 @@ async function generateMonthlyFee(req, res) {
     }
 
     const db = await getDb();
-    const students = await db.all(`SELECT id, studentName, monthlyRent FROM students WHERE status = 'active' AND roomId IS NOT NULL`);
+    const students = (await (async () => { let args = [`SELECT id, studentName, monthlyRent FROM students WHERE status = 'active' AND roomId IS NOT NULL`]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
 
     if (students.length === 0) {
       return res.status(400).json({ success: false, message: 'No active allocated students found.' });
     }
 
-    await db.run('BEGIN TRANSACTION');
+    (await (async () => {
+         let args = ['BEGIN TRANSACTION'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
     let generatedCount = 0;
     let skippedCount = 0;
 
     try {
       for (const stud of students) {
-        const existing = await db.get('SELECT id FROM payments WHERE studentId = ? AND billingMonth = ?', [stud.id, billingMonth]);
+        const existing = (await (async () => { let args = ['SELECT id FROM payments WHERE studentId = $1 AND billingMonth = $2', [stud.id, billingMonth]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
         if (existing) {
           skippedCount++;
           continue;
         }
 
-        await db.run(
-          `INSERT INTO payments (studentId, billingMonth, amountDue, amountPaid, status) VALUES (?, ?, ?, 0, 'pending')`,
+        (await (async () => {
+         let args = [
+          `INSERT INTO payments (studentId, billingMonth, amountDue, amountPaid, status) VALUES ($1, $2, $3, 0, 'pending')`,
           [stud.id, billingMonth, stud.monthlyRent]
-        );
+        ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
-        await db.run(`UPDATE students SET paymentStatus = 'unpaid', updatedAt = CURRENT_TIMESTAMP WHERE id = ?`, [stud.id]);
+        (await (async () => {
+         let args = [`UPDATE students SET paymentStatus = 'unpaid', updatedAt = CURRENT_TIMESTAMP WHERE id = $1`, [stud.id]];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
         generatedCount++;
       }
 
       if (generatedCount > 0) {
-        await db.run(
-          `INSERT INTO notifications (type, message) VALUES (?, ?)`,
+        (await (async () => {
+         let args = [
+          `INSERT INTO notifications (type, message) VALUES ($1, $2)`,
           ['payment_due', `Generated monthly fee invoices for ${generatedCount} student(s) for ${billingMonth}.`]
-        );
+        ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       }
 
-      await db.run('COMMIT');
+      (await (async () => {
+         let args = ['COMMIT'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       res.status(200).json({
         success: true,
         message: `Billing run complete for ${billingMonth}. Generated: ${generatedCount}, Already billed: ${skippedCount}.`
       });
     } catch (txErr) {
-      await db.run('ROLLBACK');
+      (await (async () => {
+         let args = ['ROLLBACK'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       throw txErr;
     }
   } catch (err) {
@@ -703,7 +955,7 @@ async function recordPayment(req, res) {
     }
 
     const db = await getDb();
-    const payment = await db.get('SELECT * FROM payments WHERE id = ?', [id]);
+    const payment = (await (async () => { let args = ['SELECT * FROM payments WHERE id = $1', [id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
 
     if (!payment) {
       return res.status(404).json({ success: false, message: 'Payment invoice not found.' });
@@ -712,31 +964,94 @@ async function recordPayment(req, res) {
     const totalPaid = payment.amountPaid + payAmt;
     const nextStatus = totalPaid >= payment.amountDue ? 'paid' : 'partial';
 
-    await db.run('BEGIN TRANSACTION');
+    (await (async () => {
+         let args = ['BEGIN TRANSACTION'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
     try {
-      await db.run(
-        `UPDATE payments SET amountPaid = ?, status = ?, paidAt = CURRENT_TIMESTAMP, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`,
+      (await (async () => {
+         let args = [
+        `UPDATE payments SET amountPaid = $1, status = $2, paidAt = CURRENT_TIMESTAMP, updatedAt = CURRENT_TIMESTAMP WHERE id = $3`,
         [totalPaid, nextStatus, id]
-      );
+      ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
-      await db.run(
-        `INSERT INTO paymentHistory (paymentId, amount, paymentMode, referenceNumber, notes) VALUES (?, ?, ?, ?, ?)`,
+      (await (async () => {
+         let args = [
+        `INSERT INTO paymentHistory (paymentId, amount, paymentMode, referenceNumber, notes) VALUES ($1, $2, $3, $4, $5)`,
         [id, payAmt, paymentMode, referenceNumber || 'MANUAL', notes || 'Manual admin entry']
-      );
+      ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
       if (nextStatus === 'paid') {
-        await db.run(`UPDATE students SET paymentStatus = 'paid', updatedAt = CURRENT_TIMESTAMP WHERE id = ?`, [payment.studentId]);
-        const stud = await db.get('SELECT studentName FROM students WHERE id = ?', [payment.studentId]);
-        await db.run(
-          `INSERT INTO notifications (type, message) VALUES (?, ?)`,
+        (await (async () => {
+         let args = [`UPDATE students SET paymentStatus = 'paid', updatedAt = CURRENT_TIMESTAMP WHERE id = $1`, [payment.studentId]];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
+        const stud = (await (async () => { let args = ['SELECT studentName FROM students WHERE id = $1', [payment.studentId]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
+        (await (async () => {
+         let args = [
+          `INSERT INTO notifications (type, message) VALUES ($1, $2)`,
           ['payment_received', `Manual payment of ₹${payAmt} recorded for ${stud ? stud.studentName : 'Student'}.`]
-        );
+        ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       }
 
-      await db.run('COMMIT');
+      (await (async () => {
+         let args = ['COMMIT'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       res.status(200).json({ success: true, message: `Successfully recorded manual payment of ₹${payAmt}. Status: ${nextStatus}` });
     } catch (txErr) {
-      await db.run('ROLLBACK');
+      (await (async () => {
+         let args = ['ROLLBACK'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       throw txErr;
     }
   } catch (err) {
@@ -753,25 +1068,25 @@ async function getPaymentReceipt(req, res) {
     const { id } = req.params;
     const db = await getDb();
 
-    const payment = await db.get(
+    const payment = (await (async () => { let args = [
       `SELECT p.*, s.studentName, s.phone, r.roomNumber, b.bedNumber, rm.receiptNumber
        FROM payments p
        JOIN students s ON p.studentId = s.id
        LEFT JOIN rooms r ON s.roomId = r.id
        LEFT JOIN beds b ON s.bedId = b.id
        LEFT JOIN receipts rm ON rm.feeId = p.id
-       WHERE p.id = ?`,
+       WHERE p.id = $1`,
       [id]
-    );
+    ]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
 
     if (!payment) {
       return res.status(404).json({ success: false, message: 'Payment invoice not found.' });
     }
 
-    const history = await db.all(
-      'SELECT id, amount, paymentDate, paymentMode, referenceNumber FROM paymentHistory WHERE paymentId = ? ORDER BY id DESC',
+    const history = (await (async () => { let args = [
+      'SELECT id, amount, paymentDate, paymentMode, referenceNumber FROM paymentHistory WHERE paymentId = $1 ORDER BY id DESC',
       [id]
-    );
+    ]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
 
     const receiptNo = payment.receiptNumber || `HFR-${new Date().getFullYear()}-${String(payment.id).padStart(6, '0')}`;
 

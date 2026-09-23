@@ -4,7 +4,7 @@ const { getDb } = require('../config/db');
 async function getNotifications(req, res) {
   try {
     const db = await getDb();
-    const notifications = await db.all('SELECT * FROM notifications ORDER BY id DESC LIMIT 50');
+    const notifications = (await (async () => { let args = ['SELECT * FROM notifications ORDER BY id DESC LIMIT 50']; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
     res.status(200).json({ success: true, notifications });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -15,7 +15,16 @@ async function markAsRead(req, res) {
   try {
     const { id } = req.params;
     const db = await getDb();
-    await db.run('UPDATE notifications SET isRead = 1 WHERE id = ?', [id]);
+    (await (async () => {
+         let args = ['UPDATE notifications SET isRead = 1 WHERE id = $1', [id]];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
     res.status(200).json({ success: true, message: 'Notification marked as read.' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -33,29 +42,74 @@ async function submitComplaint(req, res) {
     const db = await getDb();
     
     // Get student ID mapped from authenticated user
-    const student = await db.get('SELECT id, studentName FROM students WHERE userId = ?', [req.user.id]);
+    const student = (await (async () => { let args = ['SELECT id, studentName FROM students WHERE userId = $1', [req.user.id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (!student) {
       return res.status(403).json({ success: false, message: 'Only registered hostel students can submit complaints.' });
     }
 
-    await db.run('BEGIN TRANSACTION');
+    (await (async () => {
+         let args = ['BEGIN TRANSACTION'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
     try {
       // 1. Insert Complaint
-      await db.run(
-        `INSERT INTO complaints (studentId, category, description, status) VALUES (?, ?, ?, 'pending')`,
+      (await (async () => {
+         let args = [
+        `INSERT INTO complaints (studentId, category, description, status) VALUES ($1, $2, $3, 'pending')`,
         [student.id, category, description]
-      );
+      ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
       // 2. Insert Alert notification for the admin
-      await db.run(
-        `INSERT INTO notifications (type, message) VALUES (?, ?)`,
+      (await (async () => {
+         let args = [
+        `INSERT INTO notifications (type, message) VALUES ($1, $2)`,
         ['new_complaint', `Complaint raised by ${student.studentName} (${category}).`]
-      );
+      ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
-      await db.run('COMMIT');
+      (await (async () => {
+         let args = ['COMMIT'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       res.status(201).json({ success: true, message: 'Complaint ticket submitted successfully.' });
     } catch (txErr) {
-      await db.run('ROLLBACK');
+      (await (async () => {
+         let args = ['ROLLBACK'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       throw txErr;
     }
   } catch (err) {
@@ -68,15 +122,15 @@ async function submitComplaint(req, res) {
 async function getMyComplaints(req, res) {
   try {
     const db = await getDb();
-    const student = await db.get('SELECT id FROM students WHERE userId = ?', [req.user.id]);
+    const student = (await (async () => { let args = ['SELECT id FROM students WHERE userId = $1', [req.user.id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (!student) {
       return res.status(403).json({ success: false, message: 'Student record not found.' });
     }
 
-    const list = await db.all(
-      'SELECT * FROM complaints WHERE studentId = ? ORDER BY id DESC',
+    const list = (await (async () => { let args = [
+      'SELECT * FROM complaints WHERE studentId = $1 ORDER BY id DESC',
       [student.id]
-    );
+    ]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
     res.status(200).json({ success: true, complaints: list });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -87,13 +141,13 @@ async function getMyComplaints(req, res) {
 async function getAllComplaints(req, res) {
   try {
     const db = await getDb();
-    const list = await db.all(
+    const list = (await (async () => { let args = [
       `SELECT c.*, s.studentName, s.phone, r.roomNumber
        FROM complaints c
        JOIN students s ON c.studentId = s.id
        LEFT JOIN rooms r ON s.roomId = r.id
        ORDER BY c.id DESC`
-    );
+    ]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
     res.status(200).json({ success: true, complaints: list });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -111,10 +165,19 @@ async function resolveComplaint(req, res) {
     }
 
     const db = await getDb();
-    const result = await db.run(
-      `UPDATE complaints SET status = ?, adminRemarks = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`,
+    const result = (await (async () => {
+         let args = [
+      `UPDATE complaints SET status = $1, adminRemarks = $2, updatedAt = CURRENT_TIMESTAMP WHERE id = $3`,
       [status, adminRemarks || '', id]
-    );
+    ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     if (result.changes === 0) {
       return res.status(404).json({ success: false, message: 'Complaint ticket not found.' });

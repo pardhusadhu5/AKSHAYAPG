@@ -7,74 +7,74 @@ async function getStats(req, res) {
     const db = await getDb();
     
     // 1. Total Students
-    const totalStudentsResult = await db.get("SELECT COUNT(*) as count FROM users WHERE role = 'student'");
+    const totalStudentsResult = (await (async () => { let args = ["SELECT COUNT(*) as count FROM users WHERE role = 'student'"]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     const totalStudents = totalStudentsResult ? totalStudentsResult.count : 0;
 
     // 2. Active Students
-    const activeStudentsResult = await db.get("SELECT COUNT(*) as count FROM students WHERE status = 'active'");
+    const activeStudentsResult = (await (async () => { let args = ["SELECT COUNT(*) as count FROM students WHERE status = 'active'"]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     const activeStudents = activeStudentsResult ? activeStudentsResult.count : 0;
 
     // 3. Total Rooms
-    const totalRoomsResult = await db.get("SELECT COUNT(*) as count FROM rooms");
+    const totalRoomsResult = (await (async () => { let args = ["SELECT COUNT(*) as count FROM rooms"]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     const totalRooms = totalRoomsResult ? totalRoomsResult.count : 0;
 
     // 4. Occupied Beds
-    const occupiedBedsResult = await db.get("SELECT COUNT(*) as count FROM beds WHERE status = 'occupied'");
+    const occupiedBedsResult = (await (async () => { let args = ["SELECT COUNT(*) as count FROM beds WHERE status = 'occupied'"]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     const occupiedBeds = occupiedBedsResult ? occupiedBedsResult.count : 0;
 
     // 5. Available Beds (Vacant)
-    const vacantBedsResult = await db.get("SELECT COUNT(*) as count FROM beds WHERE status = 'vacant'");
+    const vacantBedsResult = (await (async () => { let args = ["SELECT COUNT(*) as count FROM beds WHERE status = 'vacant'"]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     const vacantBeds = vacantBedsResult ? vacantBedsResult.count : 0;
 
     // 6. Monthly Collections (sum of monthly rent for active students who have paid)
-    const monthlyRentSumResult = await db.get("SELECT SUM(monthlyRent) as sum FROM students WHERE status = 'active' AND paymentStatus = 'paid'");
+    const monthlyRentSumResult = (await (async () => { let args = ["SELECT SUM(monthlyRent) as sum FROM students WHERE status = 'active' AND paymentStatus = 'paid'"]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     const monthlyIncome = (monthlyRentSumResult && monthlyRentSumResult.sum) ? monthlyRentSumResult.sum : 0;
 
     // 7. Pending Payments (sum of monthly rent for active students who are unpaid)
-    const pendingRentSumResult = await db.get("SELECT SUM(monthlyRent) as sum FROM students WHERE status = 'active' AND paymentStatus = 'unpaid'");
+    const pendingRentSumResult = (await (async () => { let args = ["SELECT SUM(monthlyRent) as sum FROM students WHERE status = 'active' AND paymentStatus = 'unpaid'"]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     const pendingPayments = (pendingRentSumResult && pendingRentSumResult.sum) ? pendingRentSumResult.sum : 0;
 
     // 8. New Registrations (registered in last 7 days)
-    const newRegistrationsResult = await db.get("SELECT COUNT(*) as count FROM students WHERE joinDate >= date('now', '-7 days')");
+    const newRegistrationsResult = (await (async () => { let args = ["SELECT COUNT(*) as count FROM students WHERE joinDate >= date('now', '-7 days')"]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     const newRegistrations = newRegistrationsResult ? newRegistrationsResult.count : 0;
 
     // 9. Recent Admissions (last 5)
-    const recentStudents = await db.all(`
+    const recentStudents = (await (async () => { let args = [`
       SELECT s.*, r.roomNumber, b.bedNumber 
       FROM students s 
       LEFT JOIN rooms r ON s.roomId = r.id 
       LEFT JOIN beds b ON s.bedId = b.id 
       ORDER BY s.id DESC 
       LIMIT 5
-    `);
+    `]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
 
     // 10. Pending Payments List
-    const pendingPaymentsList = await db.all(`
+    const pendingPaymentsList = (await (async () => { let args = [`
       SELECT s.*, r.roomNumber, b.bedNumber 
       FROM students s 
       LEFT JOIN rooms r ON s.roomId = r.id 
       LEFT JOIN beds b ON s.bedId = b.id 
       WHERE s.paymentStatus = 'unpaid' 
       ORDER BY s.id DESC
-    `);
+    `]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
 
     // 11. Room-wise Bed Occupancy Progress rates
-    const roomOccupancy = await db.all(`
+    const roomOccupancy = (await (async () => { let args = [`
       SELECT r.id, r.roomNumber, r.capacity, 
         (SELECT COUNT(*) FROM beds b WHERE b.roomId = r.id AND b.status = 'occupied') as occupied
       FROM rooms r 
       ORDER BY r.roomNumber ASC
-    `);
+    `]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
 
     // 12. Chart Data Counts
-    const paidCountResult = await db.get("SELECT COUNT(*) as count FROM students WHERE paymentStatus = 'paid'");
-    const unpaidCountResult = await db.get("SELECT COUNT(*) as count FROM students WHERE paymentStatus = 'unpaid'");
+    const paidCountResult = (await (async () => { let args = ["SELECT COUNT(*) as count FROM students WHERE paymentStatus = 'paid'"]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
+    const unpaidCountResult = (await (async () => { let args = ["SELECT COUNT(*) as count FROM students WHERE paymentStatus = 'unpaid'"]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     const paidCount = paidCountResult ? paidCountResult.count : 0;
     const unpaidCount = unpaidCountResult ? unpaidCountResult.count : 0;
 
     // Dynamic Activity Logs based on actual database data
     const dynamicActivities = [];
-    const recentAdms = await db.all("SELECT studentName, joinDate, roomId FROM students ORDER BY id DESC LIMIT 3");
+    const recentAdms = (await (async () => { let args = ["SELECT studentName, joinDate, roomId FROM students ORDER BY id DESC LIMIT 3"]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
     recentAdms.forEach((adm, idx) => {
       const roomStr = adm.roomId ? `allocated Room` : `registered`;
       dynamicActivities.push({
@@ -171,7 +171,7 @@ async function getStudentsList(req, res) {
 
     query += ` ORDER BY s.id DESC`;
     
-    const list = await db.all(query, params);
+    const list = (await (async () => { let args = [query, params]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
     res.status(200).json({ success: true, students: list });
   } catch (err) {
     console.error('Students List Fetch Error:', err);
@@ -189,10 +189,19 @@ async function updatePaymentStatus(req, res) {
     }
 
     const db = await getDb();
-    const result = await db.run(
-      'UPDATE students SET paymentStatus = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?',
+    const result = (await (async () => {
+         let args = [
+      'UPDATE students SET paymentStatus = $1, updatedAt = CURRENT_TIMESTAMP WHERE id = $2',
       [paymentStatus, id]
-    );
+    ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     if (result.changes === 0) {
       return res.status(404).json({ success: false, message: 'Student record not found.' });
@@ -209,8 +218,8 @@ async function updatePaymentStatus(req, res) {
 async function getFilterOptions(req, res) {
   try {
     const db = await getDb();
-    const colleges = await db.all('SELECT DISTINCT collegeName FROM students WHERE collegeName != ""');
-    const rooms = await db.all('SELECT id, roomNumber FROM rooms ORDER BY roomNumber ASC');
+    const colleges = (await (async () => { let args = ['SELECT DISTINCT collegeName FROM students WHERE collegeName != ""']; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
+    const rooms = (await (async () => { let args = ['SELECT id, roomNumber FROM rooms ORDER BY roomNumber ASC']; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
     res.status(200).json({
       success: true,
       colleges: colleges.map(c => c.collegeName),
@@ -235,13 +244,13 @@ async function addStudent(req, res) {
     const db = await getDb();
 
     // Check duplicate check on users (email, phone) and students (Aadhaar)
-    const duplicateEmail = await db.get('SELECT * FROM users WHERE email = ?', [email]);
+    const duplicateEmail = (await (async () => { let args = ['SELECT * FROM users WHERE email = $1', [email]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (duplicateEmail) return res.status(400).json({ success: false, message: 'Email already registered.' });
 
-    const duplicatePhone = await db.get('SELECT * FROM users WHERE phone = ?', [phone]);
+    const duplicatePhone = (await (async () => { let args = ['SELECT * FROM users WHERE phone = $1', [phone]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (duplicatePhone) return res.status(400).json({ success: false, message: 'Phone number already registered.' });
 
-    const duplicateAadhaar = await db.get('SELECT * FROM students WHERE aadhaarNumber = ?', [aadhaarNumber]);
+    const duplicateAadhaar = (await (async () => { let args = ['SELECT * FROM students WHERE aadhaarNumber = $1', [aadhaarNumber]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (duplicateAadhaar) return res.status(400).json({ success: false, message: 'Aadhaar Number already registered.' });
 
     // File Upload handling
@@ -259,39 +268,93 @@ async function addStudent(req, res) {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    await db.run('BEGIN TRANSACTION');
+    (await (async () => {
+         let args = ['BEGIN TRANSACTION'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
     try {
       // 1. Insert User
-      const userResult = await db.run(
-        `INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)`,
+      const userResult = (await (async () => {
+         let args = [
+        `INSERT INTO users (name, email, phone, password, role) VALUES ($1, $2, $3, $4, $5)`,
         [studentName, email, phone, hashedPassword, 'student']
-      );
+      ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       const userId = userResult.lastID;
 
       // 2. Insert Student
-      await db.run(
+      (await (async () => {
+         let args = [
         `INSERT INTO students (
           userId, studentName, phone, parentName, parentPhone, aadhaarNumber,
           collegeName, course, year, address, joinDate, monthlyRent, depositAmount,
           photo, idProof, status, paymentStatus
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 'unpaid')`,
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'active', 'unpaid')`,
         [
           userId, studentName, phone, parentName || '', parentPhone || '', aadhaarNumber,
           collegeName || '', course || '', year || '', address || '', joinDate || new Date().toISOString().split('T')[0],
           parseFloat(monthlyRent || 0), parseFloat(depositAmount || 0), photoPath, idProofPath
         ]
-      );
+      ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
       // 3. Create Notification
-      await db.run(
-        `INSERT INTO notifications (type, message) VALUES (?, ?)`,
+      (await (async () => {
+         let args = [
+        `INSERT INTO notifications (type, message) VALUES ($1, $2)`,
         ['new_student', `New student admission: ${studentName} registered.`]
-      );
+      ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
-      await db.run('COMMIT');
+      (await (async () => {
+         let args = ['COMMIT'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       res.status(201).json({ success: true, message: `Student ${studentName} added successfully.` });
     } catch (txErr) {
-      await db.run('ROLLBACK');
+      (await (async () => {
+         let args = ['ROLLBACK'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       throw txErr;
     }
   } catch (err) {
@@ -311,19 +374,19 @@ async function editStudent(req, res) {
     const db = await getDb();
 
     // Verify Student
-    const student = await db.get('SELECT * FROM students WHERE id = ?', [id]);
+    const student = (await (async () => { let args = ['SELECT * FROM students WHERE id = $1', [id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student record not found.' });
     }
 
     // Verify collisions
-    const duplicateEmail = await db.get('SELECT * FROM users WHERE email = ? AND id != ?', [email, student.userId]);
+    const duplicateEmail = (await (async () => { let args = ['SELECT * FROM users WHERE email = $1 AND id != $2', [email, student.userId]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (duplicateEmail) return res.status(400).json({ success: false, message: 'Email already registered by another account.' });
 
-    const duplicatePhone = await db.get('SELECT * FROM users WHERE phone = ? AND id != ?', [phone, student.userId]);
+    const duplicatePhone = (await (async () => { let args = ['SELECT * FROM users WHERE phone = $1 AND id != $2', [phone, student.userId]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (duplicatePhone) return res.status(400).json({ success: false, message: 'Phone already registered by another account.' });
 
-    const duplicateAadhaar = await db.get('SELECT * FROM students WHERE aadhaarNumber = ? AND id != ?', [aadhaarNumber, id]);
+    const duplicateAadhaar = (await (async () => { let args = ['SELECT * FROM students WHERE aadhaarNumber = $1 AND id != $2', [aadhaarNumber, id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (duplicateAadhaar) return res.status(400).json({ success: false, message: 'Aadhaar Number already registered.' });
 
     // File Upload handling
@@ -339,34 +402,79 @@ async function editStudent(req, res) {
       }
     }
 
-    await db.run('BEGIN TRANSACTION');
+    (await (async () => {
+         let args = ['BEGIN TRANSACTION'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
     try {
       // 1. Update User
-      await db.run(
-        `UPDATE users SET name = ?, email = ?, phone = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`,
+      (await (async () => {
+         let args = [
+        `UPDATE users SET name = $1, email = $2, phone = $3, updatedAt = CURRENT_TIMESTAMP WHERE id = $4`,
         [studentName, email, phone, student.userId]
-      );
+      ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
       // 2. Update Student
-      await db.run(
+      (await (async () => {
+         let args = [
         `UPDATE students 
-         SET studentName = ?, phone = ?, parentName = ?, parentPhone = ?, aadhaarNumber = ?,
-             collegeName = ?, course = ?, year = ?, address = ?, joinDate = ?, 
-             monthlyRent = ?, depositAmount = ?, photo = ?, idProof = ?, status = ?,
+         SET studentName = $1, phone = $2, parentName = $3, parentPhone = $4, aadhaarNumber = $5,
+             collegeName = $6, course = $7, year = $8, address = $9, joinDate = $10, 
+             monthlyRent = $11, depositAmount = $12, photo = $13, idProof = $14, status = $15,
              updatedAt = CURRENT_TIMESTAMP 
-         WHERE id = ?`,
+         WHERE id = $16`,
         [
           studentName, phone, parentName, parentPhone, aadhaarNumber,
           collegeName, course, year, address, joinDate,
           parseFloat(monthlyRent), parseFloat(depositAmount), photoPath, idProofPath, status || 'active',
           id
         ]
-      );
+      ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
-      await db.run('COMMIT');
+      (await (async () => {
+         let args = ['COMMIT'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       res.status(200).json({ success: true, message: 'Student updated successfully.' });
     } catch (txErr) {
-      await db.run('ROLLBACK');
+      (await (async () => {
+         let args = ['ROLLBACK'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       throw txErr;
     }
   } catch (err) {
@@ -381,31 +489,85 @@ async function deleteStudent(req, res) {
     const db = await getDb();
 
     // Verify Student
-    const student = await db.get('SELECT * FROM students WHERE id = ?', [id]);
+    const student = (await (async () => { let args = ['SELECT * FROM students WHERE id = $1', [id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student record not found.' });
     }
 
-    await db.run('BEGIN TRANSACTION');
+    (await (async () => {
+         let args = ['BEGIN TRANSACTION'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
     try {
       // 1. Vacate Bed if assigned
       if (student.bedId) {
-        await db.run(
-          `UPDATE beds SET status = 'vacant', userId = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = ?`,
+        (await (async () => {
+         let args = [
+          `UPDATE beds SET status = 'vacant', userId = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = $1`,
           [student.bedId]
-        );
+        ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       }
 
       // 2. Delete Student
-      await db.run('DELETE FROM students WHERE id = ?', [id]);
+      (await (async () => {
+         let args = ['DELETE FROM students WHERE id = $1', [id]];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
       // 3. Delete corresponding User
-      await db.run('DELETE FROM users WHERE id = ?', [student.userId]);
+      (await (async () => {
+         let args = ['DELETE FROM users WHERE id = $1', [student.userId]];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
-      await db.run('COMMIT');
+      (await (async () => {
+         let args = ['COMMIT'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       res.status(200).json({ success: true, message: `Student ${student.studentName} deleted successfully.` });
     } catch (txErr) {
-      await db.run('ROLLBACK');
+      (await (async () => {
+         let args = ['ROLLBACK'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       throw txErr;
     }
   } catch (err) {
@@ -418,7 +580,7 @@ async function deleteStudent(req, res) {
 async function getSettings(req, res) {
   try {
     const db = await getDb();
-    const rows = await db.all('SELECT * FROM hostelSettings');
+    const rows = (await (async () => { let args = ['SELECT * FROM hostelSettings']; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
     const settings = {};
     rows.forEach(r => {
       settings[r.key] = r.value;
@@ -435,19 +597,55 @@ async function updateSettings(req, res) {
     const settings = req.body;
     const db = await getDb();
 
-    await db.run('BEGIN TRANSACTION');
+    (await (async () => {
+         let args = ['BEGIN TRANSACTION'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
     try {
       for (const [key, value] of Object.entries(settings)) {
-        await db.run(
-          `INSERT INTO hostelSettings (key, value) VALUES (?, ?) 
-           ON CONFLICT(key) DO UPDATE SET value = ?`,
+        (await (async () => {
+         let args = [
+          `INSERT INTO hostelSettings (key, value) VALUES ($1, $2) 
+           ON CONFLICT(key) DO UPDATE SET value = $3`,
           [key, value, value]
-        );
+        ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       }
-      await db.run('COMMIT');
+      (await (async () => {
+         let args = ['COMMIT'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       res.status(200).json({ success: true, message: 'Settings updated successfully.' });
     } catch (txErr) {
-      await db.run('ROLLBACK');
+      (await (async () => {
+         let args = ['ROLLBACK'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       throw txErr;
     }
   } catch (err) {

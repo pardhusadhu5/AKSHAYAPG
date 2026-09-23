@@ -12,7 +12,7 @@ async function login(req, res) {
 
     // Student login (uses phone)
     if (phone) {
-      const user = await db.get('SELECT * FROM users WHERE phone = ?', [phone]);
+      const user = (await (async () => { let args = ['SELECT * FROM users WHERE phone = $1', [phone]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
       if (!user) {
         return res.status(404).json({ success: false, message: 'Student account not found.' });
       }
@@ -46,7 +46,7 @@ async function login(req, res) {
 
     // Admin / Manager login (uses email)
     if (email) {
-      const user = await db.get('SELECT * FROM users WHERE email = ?', [email]);
+      const user = (await (async () => { let args = ['SELECT * FROM users WHERE email = $1', [email]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
       if (!user) {
         return res.status(401).json({ success: false, message: 'Invalid email or password.' });
       }
@@ -109,20 +109,20 @@ async function register(req, res) {
     const db = await getDb();
 
     // Validation: Mobile Number uniqueness
-    const existingPhone = await db.get('SELECT * FROM users WHERE phone = ?', [phone]);
+    const existingPhone = (await (async () => { let args = ['SELECT * FROM users WHERE phone = $1', [phone]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (existingPhone) {
       return res.status(400).json({ success: false, message: 'This mobile number is already registered.' });
     }
 
     // Validation: Email uniqueness
     const mockEmail = email || `student_${phone}@akshayadeluxepg.com`; // fallback email for user record
-    const existingEmail = await db.get('SELECT * FROM users WHERE email = ?', [mockEmail]);
+    const existingEmail = (await (async () => { let args = ['SELECT * FROM users WHERE email = $1', [mockEmail]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (existingEmail) {
       return res.status(400).json({ success: false, message: 'This email is already registered.' });
     }
 
     // Validation: Aadhaar uniqueness
-    const existingAadhaar = await db.get('SELECT * FROM students WHERE aadhaarNumber = ?', [aadhaarNumber]);
+    const existingAadhaar = (await (async () => { let args = ['SELECT * FROM students WHERE aadhaarNumber = $1', [aadhaarNumber]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (existingAadhaar) {
       return res.status(400).json({ success: false, message: 'This Aadhaar number is already registered.' });
     }
@@ -136,19 +136,38 @@ async function register(req, res) {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     // Start transaction
-    await db.run('BEGIN TRANSACTION');
+    (await (async () => {
+         let args = ['BEGIN TRANSACTION'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
-    const userResult = await db.run(
-      `INSERT INTO users (name, email, phone, password, role) VALUES (?, ?, ?, ?, ?)`,
+    const userResult = (await (async () => {
+         let args = [
+      `INSERT INTO users (name, email, phone, password, role) VALUES ($1, $2, $3, $4, $5)`,
       [name, mockEmail, phone, hashedPassword, 'student']
-    );
+    ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     const userId = userResult.lastID;
     const joinDate = new Date().toISOString().split('T')[0];
 
-    await db.run(
+    (await (async () => {
+         let args = [
       `INSERT INTO students (userId, studentName, phone, parentName, parentPhone, aadhaarNumber, collegeName, course, year, address, photo, idProof, joinDate, monthlyRent, depositAmount, roomId, bedId, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
       [
         userId,
         name,
@@ -169,9 +188,26 @@ async function register(req, res) {
         null, // default bed placeholder
         'active'
       ]
-    );
+    ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
-    await db.run('COMMIT');
+    (await (async () => {
+         let args = ['COMMIT'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     res.status(201).json({
       success: true,
@@ -180,7 +216,16 @@ async function register(req, res) {
   } catch (err) {
     try {
       const db = await getDb();
-      await db.run('ROLLBACK');
+      (await (async () => {
+         let args = ['ROLLBACK'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
     } catch (_) {}
     console.error('Registration Error:', err);
     res.status(500).json({ success: false, message: `Registration failed: ${err.message}` });
@@ -197,7 +242,7 @@ async function updateProfilePicture(req, res) {
     const db = await getDb();
 
     // Check old photo to delete it (prevent disk clutter)
-    const currentStudent = await db.get('SELECT photo FROM students WHERE userId = ?', [req.user.id]);
+    const currentStudent = (await (async () => { let args = ['SELECT photo FROM students WHERE userId = $1', [req.user.id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (currentStudent && currentStudent.photo && currentStudent.photo.startsWith('/uploads/')) {
       const oldFilePath = path.join(__dirname, '..', currentStudent.photo);
       fs.unlink(oldFilePath, (err) => {
@@ -205,7 +250,16 @@ async function updateProfilePicture(req, res) {
       });
     }
 
-    await db.run('UPDATE students SET photo = ? WHERE userId = ?', [photoPath, req.user.id]);
+    (await (async () => {
+         let args = ['UPDATE students SET photo = $1 WHERE userId = $2', [photoPath, req.user.id]];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     res.status(200).json({
       success: true,
@@ -231,7 +285,7 @@ async function changePassword(req, res) {
     }
 
     const db = await getDb();
-    const user = await db.get('SELECT password FROM users WHERE id = ?', [req.user.id]);
+    const user = (await (async () => { let args = ['SELECT password FROM users WHERE id = $1', [req.user.id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
 
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found.' });
@@ -243,7 +297,16 @@ async function changePassword(req, res) {
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await db.run('UPDATE users SET password = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?', [hashedPassword, req.user.id]);
+    (await (async () => {
+         let args = ['UPDATE users SET password = $1, updatedAt = CURRENT_TIMESTAMP WHERE id = $2', [hashedPassword, req.user.id]];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     res.status(200).json({ success: true, message: 'Password updated successfully.' });
   } catch (err) {
@@ -261,7 +324,7 @@ async function forgotPassword(req, res) {
     }
 
     const db = await getDb();
-    const user = await db.get('SELECT * FROM users WHERE email = ?', [email]);
+    const user = (await (async () => { let args = ['SELECT * FROM users WHERE email = $1', [email]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
 
     if (!user) {
       return res.status(200).json({
@@ -309,10 +372,19 @@ async function resetPassword(req, res) {
     const hashedPassword = await bcrypt.hash(password, 10);
     const db = await getDb();
 
-    await db.run(
-      'UPDATE users SET password = ?, updatedAt = CURRENT_TIMESTAMP WHERE id = ?',
+    (await (async () => {
+         let args = [
+      'UPDATE users SET password = $1, updatedAt = CURRENT_TIMESTAMP WHERE id = $2',
       [hashedPassword, decoded.id]
-    );
+    ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     res.status(200).json({ success: true, message: 'Password has been reset successfully' });
   } catch (err) {
@@ -324,7 +396,7 @@ async function resetPassword(req, res) {
 async function getMe(req, res) {
   try {
     const db = await getDb();
-    const user = await db.get('SELECT id, name, email, phone, role, createdAt FROM users WHERE id = ?', [req.user.id]);
+    const user = (await (async () => { let args = ['SELECT id, name, email, phone, role, createdAt FROM users WHERE id = $1', [req.user.id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     
     if (!user) {
       return res.status(404).json({ success: false, message: 'User not found' });
@@ -332,13 +404,13 @@ async function getMe(req, res) {
 
     let studentProfile = null;
     if (user.role === 'student') {
-      studentProfile = await db.get(`
+      studentProfile = (await (async () => { let args = [`
         SELECT s.*, r.roomNumber, r.floor, b.bedNumber
         FROM students s
         LEFT JOIN rooms r ON s.roomId = r.id
         LEFT JOIN beds b ON s.bedId = b.id
-        WHERE s.userId = ?
-      `, [user.id]);
+        WHERE s.userId = $1
+      `, [user.id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     }
 
     res.status(200).json({
@@ -360,7 +432,7 @@ async function uploadDocument(req, res) {
     }
 
     const db = await getDb();
-    const student = await db.get('SELECT id FROM students WHERE userId = ?', [req.user.id]);
+    const student = (await (async () => { let args = ['SELECT id FROM students WHERE userId = $1', [req.user.id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (!student) {
       return res.status(403).json({ success: false, message: 'Only students can upload documents.' });
     }
@@ -368,10 +440,19 @@ async function uploadDocument(req, res) {
     const filePath = '/uploads/' + req.file.filename;
     const fileType = path.extname(req.file.originalname).substring(1).toLowerCase();
 
-    await db.run(
-      `INSERT INTO documents (studentId, name, filePath, fileType) VALUES (?, ?, ?, ?)`,
+    (await (async () => {
+         let args = [
+      `INSERT INTO documents (studentId, name, filePath, fileType) VALUES ($1, $2, $3, $4)`,
       [student.id, name, filePath, fileType]
-    );
+    ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     res.status(201).json({ success: true, message: 'Document uploaded successfully.', document: { name, filePath, fileType } });
   } catch (err) {
@@ -383,12 +464,12 @@ async function uploadDocument(req, res) {
 async function getMyDocuments(req, res) {
   try {
     const db = await getDb();
-    const student = await db.get('SELECT id FROM students WHERE userId = ?', [req.user.id]);
+    const student = (await (async () => { let args = ['SELECT id FROM students WHERE userId = $1', [req.user.id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student record not found.' });
     }
 
-    const documents = await db.all('SELECT * FROM documents WHERE studentId = ? ORDER BY id DESC', [student.id]);
+    const documents = (await (async () => { let args = ['SELECT * FROM documents WHERE studentId = $1 ORDER BY id DESC', [student.id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
     res.status(200).json({ success: true, documents });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -400,17 +481,26 @@ async function deleteDocument(req, res) {
     const { id } = req.params;
     const db = await getDb();
 
-    const student = await db.get('SELECT id FROM students WHERE userId = ?', [req.user.id]);
+    const student = (await (async () => { let args = ['SELECT id FROM students WHERE userId = $1', [req.user.id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (!student) {
       return res.status(403).json({ success: false, message: 'Access denied.' });
     }
 
-    const doc = await db.get('SELECT * FROM documents WHERE id = ? AND studentId = ?', [id, student.id]);
+    const doc = (await (async () => { let args = ['SELECT * FROM documents WHERE id = $1 AND studentId = $2', [id, student.id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (!doc) {
       return res.status(404).json({ success: false, message: 'Document not found.' });
     }
 
-    await db.run('DELETE FROM documents WHERE id = ?', [id]);
+    (await (async () => {
+         let args = ['DELETE FROM documents WHERE id = $1', [id]];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     try {
       const absolutePath = path.join(__dirname, '..', doc.filePath);

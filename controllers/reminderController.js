@@ -11,16 +11,25 @@ async function sendIndividualReminder(req, res) {
     const db = await getDb();
 
     // Verify Student
-    const student = await db.get('SELECT * FROM students WHERE id = ?', [studentId]);
+    const student = (await (async () => { let args = ['SELECT * FROM students WHERE id = $1', [studentId]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student record not found.' });
     }
 
     // Insert Reminder log
-    await db.run(
-      `INSERT INTO reminders (studentId, title, message, channel, status) VALUES (?, ?, ?, ?, 'sent')`,
+    (await (async () => {
+         let args = [
+      `INSERT INTO reminders (studentId, title, message, channel, status) VALUES ($1, $2, $3, $4, 'sent')`,
       [studentId, title || 'Rent Due Alert', message, channel]
-    );
+    ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
 
     res.status(200).json({
       success: true,
@@ -45,33 +54,69 @@ async function sendBulkReminders(req, res) {
     const db = await getDb();
 
     // Query unpaid invoices for that billing month
-    const unpaidPayments = await db.all(
+    const unpaidPayments = (await (async () => { let args = [
       `SELECT p.id, p.amountDue, p.amountPaid, s.id as studentId, s.studentName, s.phone, s.parentPhone
        FROM payments p
        JOIN students s ON p.studentId = s.id
-       WHERE p.billingMonth = ? AND p.status != 'paid'`,
+       WHERE p.billingMonth = $1 AND p.status != 'paid'`,
       [billingMonth]
-    );
+    ]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
 
     if (unpaidPayments.length === 0) {
       return res.status(200).json({ success: true, message: 'All student accounts are fully paid for this month.' });
     }
 
-    await db.run('BEGIN TRANSACTION');
+    (await (async () => {
+         let args = ['BEGIN TRANSACTION'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
     try {
       for (const pay of unpaidPayments) {
         const dueAmt = pay.amountDue - pay.amountPaid;
         const msg = `Hello ${pay.studentName}, your rent balance of Rs. ${dueAmt} for ${billingMonth} is pending. Please complete your payment. Regards, Akshaya Deluxe Boys Hostel.`;
         
-        await db.run(
-          `INSERT INTO reminders (studentId, title, message, channel, status) VALUES (?, ?, ?, 'whatsapp', 'sent')`,
+        (await (async () => {
+         let args = [
+          `INSERT INTO reminders (studentId, title, message, channel, status) VALUES ($1, $2, $3, 'whatsapp', 'sent')`,
           [pay.studentId, `Rent Due ${billingMonth}`, msg]
-        );
+        ];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       }
-      await db.run('COMMIT');
+      (await (async () => {
+         let args = ['COMMIT'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       res.status(200).json({ success: true, message: `Dispatched WhatsApp reminders to ${unpaidPayments.length} unpaid students.` });
     } catch (txErr) {
-      await db.run('ROLLBACK');
+      (await (async () => {
+         let args = ['ROLLBACK'];
+         let sql = args[0];
+         let params = args.slice(1).length ? args.slice(1)[0] : [];
+         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
+            sql += ' RETURNING id';
+         }
+         const { rows, rowCount } = await db.query(sql, params);
+         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
+      })());
       throw txErr;
     }
   } catch (err) {
@@ -84,12 +129,12 @@ async function sendBulkReminders(req, res) {
 async function getReminderLogs(req, res) {
   try {
     const db = await getDb();
-    const logs = await db.all(
+    const logs = (await (async () => { let args = [
       `SELECT r.*, s.studentName, s.phone
        FROM reminders r
        JOIN students s ON r.studentId = s.id
        ORDER BY r.id DESC LIMIT 100`
-    );
+    ]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
     res.status(200).json({ success: true, logs });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
