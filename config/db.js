@@ -6,8 +6,15 @@ let pool = null;
 async function getDb() {
   if (pool) return pool;
 
+  if (!process.env.DATABASE_URL) {
+    throw new Error("FATAL: DATABASE_URL is not defined in the environment. Please configure your PostgreSQL connection string.");
+  }
+
   pool = new Pool({
-    connectionString: process.env.DATABASE_URL
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+      rejectUnauthorized: false
+    }
   });
 
   await initializeDatabase(pool);
