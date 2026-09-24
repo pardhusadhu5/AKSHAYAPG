@@ -232,6 +232,28 @@ document.addEventListener('DOMContentLoaded', () => {
   const foodTabBtns = document.querySelectorAll('.food-tab-btn');
   const foodMenuContents = document.querySelectorAll('.food-menu-content');
 
+  // Automatically determine current calendar day in Asia/Kolkata (India) timezone
+  function selectCurrentDayMenu() {
+    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const nowInIndia = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    const currentDayName = days[nowInIndia.getDay()];
+
+    const targetBtn = document.querySelector(`.food-tab-btn[data-day="${currentDayName}"]`);
+    if (targetBtn) {
+      foodTabBtns.forEach(b => b.classList.remove('active'));
+      targetBtn.classList.add('active');
+
+      foodMenuContents.forEach(menu => {
+        menu.classList.remove('active');
+        if (menu.getAttribute('id') === currentDayName) {
+          menu.classList.add('active');
+        }
+      });
+    }
+  }
+
+  selectCurrentDayMenu();
+
   foodTabBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       const selectedDay = btn.getAttribute('data-day');
