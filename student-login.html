@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Student Login | Akshaya Deluxe Boys Hostel</title>
+  <meta name="description" content="Access the Akshaya Deluxe Boys Hostel student portal. Manage your stay, check weekly food menus, make payments, and raise maintenance tickets.">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .auth-section {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 100px 24px 60px 24px;
+      background: linear-gradient(135deg, var(--primary-light) 0%, #ffffff 50%, var(--primary-ultra-light) 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    .auth-container {
+      width: 100%;
+      max-width: 440px;
+      position: relative;
+      z-index: 2;
+    }
+    .auth-card {
+      padding: 40px;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--glass-border);
+    }
+    .auth-header {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+    .auth-header h2 {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--primary-deep);
+      margin-bottom: 8px;
+    }
+    .auth-header p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+    .auth-actions-footer {
+      text-align: center;
+      margin-top: 24px;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+    .auth-actions-footer a {
+      color: var(--primary-brand);
+      font-weight: 600;
+      transition: var(--transition-fast);
+    }
+    .auth-actions-footer a:hover {
+      color: var(--primary-deep);
+      text-decoration: underline;
+    }
+    .forgot-link {
+      display: block;
+      text-align: right;
+      font-size: 0.85rem;
+      color: var(--primary-brand);
+      margin-top: -12px;
+      margin-bottom: 24px;
+      font-weight: 500;
+    }
+    .forgot-link:hover {
+      color: var(--primary-deep);
+      text-decoration: underline;
+    }
+    @media (max-width: 767px) {
+      .auth-section {
+        padding-top: 80px;
+      }
+      .auth-card {
+        padding: 24px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Sticky Header -->
+  <header class="header scrolled" style="position: fixed; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); box-shadow: var(--shadow-sm);">
+    <div class="container nav-container">
+      <a href="index.html" class="logo">
+        <div class="logo-icon"><i data-lucide="home"></i></div>
+        Akshaya<span>Deluxe</span>
+      </a>
+      <nav class="nav-menu" id="navMenu">
+        <a href="index.html#home" class="nav-link">Home</a>
+        <a href="index.html#about" class="nav-link">About</a>
+        <a href="index.html#rooms" class="nav-link">Rooms</a>
+        <a href="index.html#facilities" class="nav-link">Facilities</a>
+        <a href="index.html#food" class="nav-link">Food Menu</a>
+        <a href="index.html#gallery" class="nav-link">Gallery</a>
+        <a href="index.html#contact" class="nav-link">Contact</a>
+      </nav>
+      <div class="nav-actions">
+        <a href="index.html" class="btn btn-outline" style="padding: 10px 20px; font-size: 0.85rem;">Back to Home</a>
+        <button class="menu-toggle" id="menuToggle" aria-label="Toggle Menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Login Area -->
+  <section class="auth-section">
+    <div class="hero-blob hero-blob-1"></div>
+    <div class="hero-blob hero-blob-2"></div>
+    
+    <div class="container auth-container">
+      <div class="auth-card glass-card">
+        <div class="auth-header">
+          <h2>Student Portal</h2>
+          <p>Sign in to manage your hostel room & stay</p>
+        </div>
+        
+        <form id="studentLoginForm">
+          <div class="form-group">
+            <label class="form-label" for="studPhone">Mobile Number</label>
+            <input type="tel" id="studPhone" class="form-input" placeholder="e.g. 9848022338" required pattern="[0-9]{10,15}">
+          </div>
+          
+          <div class="form-group" style="margin-bottom: 24px;">
+            <label class="form-label" for="studPass">Password</label>
+            <input type="password" id="studPass" class="form-input" placeholder="••••••••" required>
+          </div>
+          
+          <a href="forgot-password.html" class="forgot-link">Forgot Password?</a>
+          
+          <button type="submit" class="btn btn-primary" style="width: 100%;">Sign In to Portal</button>
+        </form>
+        
+        <div class="auth-actions-footer">
+          <p>New to Akshaya Deluxe? <a href="student-register.html">Register Here</a></p>
+          <p style="margin-top: 10px; font-size: 0.8rem;"><a href="admin-login.html" style="color: var(--text-muted);">Admin Dashboard Login</a></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer" style="padding: 40px 0 20px 0;">
+    <div class="container footer-bottom" style="border-top: none; padding-top: 0; flex-direction: column; text-align: center; gap: 12px;">
+      <p>Copyright &copy; 2026 Akshaya Deluxe Boys Hostel. All Rights Reserved.</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+  <script>
+    (function() {
+      const originalFetch = window.fetch;
+      const API_BASE = (window.location.protocol === 'file:') ? 'http://localhost:8080' : '';
+      window.fetch = function(input, init) {
+        if (typeof input === 'string' && input.startsWith('/api/')) {
+          input = API_BASE + input;
+        }
+        return originalFetch(input, init);
+      };
+    })();
+
+    const form = document.getElementById('studentLoginForm');
+    if (form) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const phone = document.getElementById('studPhone').value;
+        const password = document.getElementById('studPass').value;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerText;
+
+        try {
+          submitBtn.disabled = true;
+          submitBtn.innerText = 'Signing In...';
+
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone, password })
+          });
+
+          const data = await response.json();
+
+          if (data.success) {
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            
+            // Redirect based on role
+            if (data.user.role === 'admin' || data.user.role === 'manager') {
+              window.location.href = 'admin/dashboard.html';
+            } else {
+              window.location.href = 'student/dashboard.html';
+            }
+          } else {
+            alert(data.message || 'Login failed. Invalid credentials.');
+          }
+        } catch (err) {
+          console.error('Error:', err);
+          alert('Connection Error: ' + err.message);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.innerText = originalText;
+        }
+      });
+    }
+  </script>
+</body>
+</html>
