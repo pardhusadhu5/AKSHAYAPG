@@ -926,6 +926,9 @@
           <div class="form-group">
             <label class="form-label" for="newRoomFloor">Floor Location</label>
             <select id="newRoomFloor" class="form-input">
+              <option value="Floor 1">Floor 1</option>
+              <option value="Floor 2">Floor 2</option>
+              <option value="Floor 3 — Penthouse">Floor 3 — Penthouse</option>
               <option value="Ground Floor">Ground Floor</option>
               <option value="First Floor">First Floor</option>
               <option value="Second Floor">Second Floor</option>
@@ -935,22 +938,24 @@
         </div>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom: 16px;">
           <div class="form-group">
-            <label class="form-label" for="newRoomType">Room Type</label>
+            <label class="form-label" for="newRoomType">Room Type / Sharing</label>
             <select id="newRoomType" class="form-input">
-              <option value="Single Sharing">Single Sharing</option>
-              <option value="Double Sharing">Double Sharing</option>
+              <option value="5 Sharing">5 Sharing</option>
+              <option value="4 Sharing">4 Sharing</option>
+              <option value="6 Sharing">6 Sharing</option>
               <option value="Triple Sharing">Triple Sharing</option>
-              <option value="Four Sharing">Four Sharing</option>
+              <option value="Double Sharing">Double Sharing</option>
+              <option value="Single Sharing">Single Sharing</option>
             </select>
           </div>
           <div class="form-group">
             <label class="form-label" for="newRoomCap">Number of Beds</label>
-            <input type="number" id="newRoomCap" class="form-input" min="1" max="10" value="3" required>
+            <input type="number" id="newRoomCap" class="form-input" min="1" max="10" value="5" required>
           </div>
         </div>
         <div class="form-group" style="margin-bottom: 16px;">
           <label class="form-label" for="newRoomFee">Monthly Rent per Bed (₹)</label>
-          <input type="number" id="newRoomFee" class="form-input" placeholder="e.g. 7500" required>
+          <input type="number" id="newRoomFee" class="form-input" placeholder="e.g. 8500" required>
         </div>
         <div class="form-group" style="margin-bottom: 24px;">
           <label class="form-label" for="newRoomStatus">Status</label>
@@ -981,6 +986,8 @@
           <div class="form-group">
             <label class="form-label" for="editRoomBlock">Block / Wing</label>
             <select id="editRoomBlock" class="form-input">
+              <option value="Main Block">Main Block</option>
+              <option value="Penthouse">Penthouse</option>
               <option value="Block A">Block A</option>
               <option value="Block B">Block B</option>
             </select>
@@ -988,6 +995,9 @@
           <div class="form-group">
             <label class="form-label" for="editRoomFloor">Floor Location</label>
             <select id="editRoomFloor" class="form-input">
+              <option value="Floor 1">Floor 1</option>
+              <option value="Floor 2">Floor 2</option>
+              <option value="Floor 3 — Penthouse">Floor 3 — Penthouse</option>
               <option value="Ground Floor">Ground Floor</option>
               <option value="First Floor">First Floor</option>
               <option value="Second Floor">Second Floor</option>
@@ -997,12 +1007,14 @@
         </div>
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom: 16px;">
           <div class="form-group">
-            <label class="form-label" for="editRoomType">Room Type</label>
+            <label class="form-label" for="editRoomType">Room Type / Sharing</label>
             <select id="editRoomType" class="form-input">
-              <option value="Single Sharing">Single Sharing</option>
-              <option value="Double Sharing">Double Sharing</option>
+              <option value="5 Sharing">5 Sharing</option>
+              <option value="4 Sharing">4 Sharing</option>
+              <option value="6 Sharing">6 Sharing</option>
               <option value="Triple Sharing">Triple Sharing</option>
-              <option value="Four Sharing">Four Sharing</option>
+              <option value="Double Sharing">Double Sharing</option>
+              <option value="Single Sharing">Single Sharing</option>
             </select>
           </div>
           <div class="form-group">
@@ -1960,12 +1972,12 @@
           // Group by floor
           const roomsByFloor = {};
           data.rooms.forEach(rm => {
-            const floor = rm.floor || 'Ground Floor';
+            const floor = rm.floor || 'Floor 1';
             if (!roomsByFloor[floor]) roomsByFloor[floor] = [];
             roomsByFloor[floor].push(rm);
           });
 
-          const floorOrder = ['Ground Floor', 'First Floor', 'Second Floor', 'Third Floor'];
+          const floorOrder = ['Floor 1', 'Floor 2', 'Floor 3 — Penthouse', 'Ground Floor', 'First Floor', 'Second Floor', 'Third Floor'];
           Object.keys(roomsByFloor).forEach(f => {
             if (!floorOrder.includes(f)) floorOrder.push(f);
           });
@@ -1974,13 +1986,37 @@
             const rooms = roomsByFloor[floorName];
             if (!rooms || rooms.length === 0) return;
 
+            let floorTotalBeds = 0;
+            let floorOccupiedBeds = 0;
+            let floorVacantBeds = 0;
+            rooms.forEach(rm => {
+              floorTotalBeds += rm.capacity;
+              floorOccupiedBeds += rm.occupiedBeds;
+              floorVacantBeds += rm.vacantBeds;
+            });
+
             const heading = document.createElement('div');
             heading.style.gridColumn = '1 / -1';
             heading.style.marginTop = '24px';
             heading.style.marginBottom = '12px';
             heading.style.borderBottom = '2px solid var(--primary-light)';
             heading.style.paddingBottom = '8px';
-            heading.innerHTML = `<h4 style="font-weight: 800; color: var(--primary-deep); margin: 0; display:flex; align-items:center; gap:8px;"><i data-lucide="layers" style="width:18px; height:18px;"></i>${floorName}</h4>`;
+            heading.style.display = 'flex';
+            heading.style.justifyContent = 'space-between';
+            heading.style.alignItems = 'center';
+            heading.style.flexWrap = 'wrap';
+            heading.style.gap = '8px';
+            heading.innerHTML = `
+              <h4 style="font-weight: 800; color: var(--primary-deep); margin: 0; display:flex; align-items:center; gap:8px;">
+                <i data-lucide="layers" style="width:18px; height:18px;"></i>${floorName}
+              </h4>
+              <div style="display:flex; gap:12px; font-size:0.8rem; font-weight:700;">
+                <span style="color:var(--dark-slate);">${rooms.length} Rooms</span>
+                <span style="color:var(--dark-slate);">${floorTotalBeds} Total Beds</span>
+                <span style="color:var(--primary-deep);">${floorOccupiedBeds} Occupied</span>
+                <span style="color:#10b981;">${floorVacantBeds} Available</span>
+              </div>
+            `;
             container.appendChild(heading);
 
             const floorGrid = document.createElement('div');
@@ -2228,12 +2264,36 @@
               node.style.background = '#fffbeb';
             }
             
+            let bedActions = '';
+            if (isOcc) {
+              const escStudName = (bed.studentName || '').replace(/'/g, "\\'");
+              bedActions = `
+                <div style="display:flex; gap:3px; margin-top:4px;">
+                  ${bed.studentId ? `<button class="btn btn-outline" style="padding:2px 4px; font-size:0.58rem; flex:1;" onclick="viewStudentDetails(${bed.studentId}); event.stopPropagation();">View</button>` : ''}
+                  ${bed.studentId ? `<button class="btn btn-outline" style="padding:2px 4px; font-size:0.58rem; flex:1;" onclick="openTransferModal(${bed.studentId}, '${escStudName}'); event.stopPropagation();">Change</button>` : ''}
+                </div>
+              `;
+            } else if (isMaint) {
+              bedActions = `
+                <div style="margin-top:4px;">
+                  <button class="btn btn-outline" style="padding:2px 4px; font-size:0.58rem; width:100%; border-color:#10b981; color:#10b981;" onclick="toggleBedMaintenance(${bed.id}, 'vacant', ${roomId}); event.stopPropagation();">Mark Available</button>
+                </div>
+              `;
+            } else {
+              bedActions = `
+                <div style="display:flex; gap:3px; margin-top:4px;">
+                  <button class="btn btn-outline" style="padding:2px 4px; font-size:0.58rem; flex:1; color:var(--primary-brand); border-color:var(--primary-brand);" onclick="openAllocateFromDetails(); event.stopPropagation();">+ Allocate</button>
+                  <button class="btn btn-outline" style="padding:2px 4px; font-size:0.58rem; flex:1; color:#d97706; border-color:#f59e0b;" onclick="toggleBedMaintenance(${bed.id}, 'maintenance', ${roomId}); event.stopPropagation();">Maint</button>
+                </div>
+              `;
+            }
+            
             node.innerHTML = `
               <div style="font-size:0.65rem; color:var(--text-muted); font-weight:700;">${bedName}</div>
-              <div style="font-size:0.7rem; font-weight:800; color:${isOcc ? '#ef4444' : (isMaint ? '#d97706' : '#10b981')}; text-transform:uppercase; margin-top:2px;">
+              <div style="font-size:0.7rem; font-weight:800; color:${isOcc ? '#ef4444' : (isMaint ? '#d97706' : '#10b981')}; text-transform:uppercase; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${isOcc ? (bed.studentName || 'Occupied') : (isMaint ? 'Maintenance' : 'Available')}">
                 ${isOcc ? (bed.studentName || 'Occupied') : (isMaint ? 'Maintenance' : 'Available')}
               </div>
-              ${!isOcc ? `<button class="btn btn-outline" style="padding:2px 4px; font-size:0.6rem; margin-top:4px; border-color:${isMaint ? '#10b981' : '#f59e0b'}; color:${isMaint ? '#10b981' : '#d97706'};" onclick="toggleBedMaintenance(${bed.id}, '${isMaint ? 'vacant' : 'maintenance'}', ${roomId}); event.stopPropagation();">${isMaint ? 'Mark Available' : 'Mark Maintenance'}</button>` : ''}
+              ${bedActions}
             `;
             board.appendChild(node);
           });

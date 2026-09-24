@@ -1,5 +1,17 @@
 const { getDb } = require('../config/db');
 
+// Helper function to convert numeric index to alphabetical bed suffix (1 -> A, 2 -> B, 6 -> F)
+function getBedLetter(index) {
+  let letter = '';
+  let i = parseInt(index);
+  while (i > 0) {
+    let rem = (i - 1) % 26;
+    letter = String.fromCharCode(65 + rem) + letter;
+    i = Math.floor((i - 1) / 26);
+  }
+  return letter;
+}
+
 // Helper function to calculate room display status
 function calculateRoomStatus(room, occupiedCount) {
   if (room.status === 'maintenance') return 'Maintenance';
@@ -28,6 +40,12 @@ async function getAllRooms(req, res) {
     const { rows: rooms } = await db.query(query);
     
     for (let room of rooms) {
+      room.roomNumber = room.roomnumber || room.roomNumber;
+      room.monthlyFee = parseFloat(room.monthlyfee || room.monthlyFee || 0);
+      room.roomType = room.roomtype || room.roomType;
+      room.capacity = parseInt(room.capacity || 0);
+      room.floor = room.floor || 'Floor 1';
+      room.block = room.block || 'Main Block';
       room.occupiedBeds = parseInt(room.occupiedbeds || room.occupiedBeds || 0);
       room.vacantBeds = parseInt(room.vacantbeds || room.vacantBeds || 0);
       room.maintenanceBeds = parseInt(room.maintenancebeds || room.maintenanceBeds || 0);
@@ -49,7 +67,7 @@ async function getAllRooms(req, res) {
                s.id as studentId, s.studentCustomId, s.studentName, s.joinDate
         FROM beds b
         LEFT JOIN users u ON b.userId = u.id
-        LEFT JOIN students s ON s.userId = u.id
+        LEFT JOIN students s ON (s.bedId = b.id OR (b.userId IS NOT NULL AND s.userId = u.id))
         WHERE b.roomId = $1
         ORDER BY b.bedNumber ASC
       `, [room.id]);
@@ -83,6 +101,12 @@ async function getRoomDetails(req, res) {
       return res.status(404).json({ success: false, message: 'Room not found.' });
     }
 
+    room.roomNumber = room.roomnumber || room.roomNumber;
+    room.monthlyFee = parseFloat(room.monthlyfee || room.monthlyFee || 0);
+    room.roomType = room.roomtype || room.roomType;
+    room.capacity = parseInt(room.capacity || 0);
+    room.floor = room.floor || 'Floor 1';
+    room.block = room.block || 'Main Block';
     room.occupiedBeds = parseInt(room.occupiedbeds || room.occupiedBeds || 0);
     room.vacantBeds = parseInt(room.vacantbeds || room.vacantBeds || 0);
     room.maintenanceBeds = parseInt(room.maintenancebeds || room.maintenanceBeds || 0);
@@ -94,7 +118,7 @@ async function getRoomDetails(req, res) {
              s.id as studentId, s.studentCustomId, s.studentName, s.phone, s.joinDate
       FROM beds b
       LEFT JOIN users u ON b.userId = u.id
-      LEFT JOIN students s ON s.userId = u.id
+      LEFT JOIN students s ON (s.bedId = b.id OR (b.userId IS NOT NULL AND s.userId = u.id))
       WHERE b.roomId = $1
       ORDER BY b.bedNumber ASC
     `, [id]);
@@ -143,14 +167,7 @@ async function createRoom(req, res) {
       return res.status(400).json({ success: false, message: `Room number "${roomNumber}" already exists.` });
     }
 
-    // Default room type based on capacity if not provided
-    let calculatedType = roomType;
-    if (!calculatedType) {
-      if (totalBeds === 1) calculatedType = 'Single Sharing';
-      else if (totalBeds === 2) calculatedType = 'Double Sharing';
-      else if (totalBeds === 3) calculatedType = 'Triple Sharing';
-      else calculatedType = 'Four Sharing';
-    }
+    let calculatedType = roomType || `${totalBeds} Sharing`;
 
     await db.query('BEGIN');
 
@@ -161,17 +178,17 @@ async function createRoom(req, res) {
         roomNumber.trim(),
         totalBeds,
         parseFloat(monthlyFee),
-        floor || 'Ground Floor',
-        block || 'Block A',
+        floor || 'Floor 1',
+        block || 'Main Block',
         calculatedType,
         status || 'active'
       ]
     );
     const roomId = roomResult[0].id;
 
-    // Automatically generate beds with labels
+    // Automatically generate beds with alphabetical labels (e.g. 101-A, 101-B)
     for (let b = 1; b <= totalBeds; b++) {
-      const bedLabel = `${roomNumber.trim()}-${b}`;
+      const bedLabel = `${roomNumber.trim()}-${getBedLetter(b)}`;
       await db.query(
         `INSERT INTO beds (roomId, bedNumber, bedLabel, status) VALUES ($1, $2, $3, $4)`,
         [roomId, b, bedLabel, 'vacant']
@@ -196,7 +213,7 @@ async function createRoom(req, res) {
   }
 }
 
-// Edit room details (supports capacity resizing)
+// Edit room details (supports capacity resizing with occupied safety check)
 async function editRoom(req, res) {
   try {
     const { id } = req.params;
@@ -223,33 +240,58 @@ async function editRoom(req, res) {
       }
     }
 
-    await db.query('BEGIN');
-
     // Handle capacity resizing
+    let bedsToDelete = [];
     if (totalBeds !== currentRoom.capacity) {
       if (totalBeds < currentRoom.capacity) {
-        // Check if higher beds are occupied
+        // Count occupied beds
         const { rows: occCheck } = await db.query(
-          `SELECT COUNT(*) as count FROM beds WHERE roomId = $1 AND bedNumber > $2 AND status = 'occupied'`,
-          [id, totalBeds]
+          `SELECT COUNT(*) as count FROM beds WHERE roomId = $1 AND status = 'occupied'`,
+          [id]
         );
-        if (parseInt(occCheck[0].count) > 0) {
-          await db.query('ROLLBACK');
+        const occupiedCount = parseInt(occCheck[0].count);
+
+        if (totalBeds < occupiedCount) {
           return res.status(400).json({
             success: false,
-            message: `Cannot reduce capacity to ${totalBeds}. Beds numbered higher than ${totalBeds} are currently occupied.`
+            message: `Cannot reduce this room to ${totalBeds} sharing because ${occupiedCount} beds are currently occupied.`
           });
         }
-        await db.query(`DELETE FROM beds WHERE roomId = $1 AND bedNumber > $2`, [id, totalBeds]);
-      } else {
-        // Insert new beds
-        for (let b = currentRoom.capacity + 1; b <= totalBeds; b++) {
-          const bedLabel = `${roomNumber.trim()}-${b}`;
-          await db.query(
-            `INSERT INTO beds (roomId, bedNumber, bedLabel, status) VALUES ($1, $2, $3, $4)`,
-            [id, b, bedLabel, 'vacant']
-          );
+
+        const bedsToRemoveCount = currentRoom.capacity - totalBeds;
+        const { rows: vacantBeds } = await db.query(
+          `SELECT id FROM beds WHERE roomId = $1 AND status = 'vacant' ORDER BY bedNumber DESC LIMIT $2`,
+          [id, bedsToRemoveCount]
+        );
+
+        if (vacantBeds.length < bedsToRemoveCount) {
+          return res.status(400).json({
+            success: false,
+            message: `Cannot reduce capacity: room requires ${bedsToRemoveCount} vacant beds to remove, but only found ${vacantBeds.length}.`
+          });
         }
+
+        bedsToDelete = vacantBeds.map(b => b.id);
+      }
+    }
+
+    await db.query('BEGIN');
+
+    // Delete vacant beds if reducing capacity
+    if (bedsToDelete.length > 0) {
+      for (const bedId of bedsToDelete) {
+        await db.query(`DELETE FROM beds WHERE id = $1`, [bedId]);
+      }
+    }
+
+    // Insert new beds if increasing capacity
+    if (totalBeds > currentRoom.capacity) {
+      for (let b = currentRoom.capacity + 1; b <= totalBeds; b++) {
+        const bedLabel = `${roomNumber.trim()}-${getBedLetter(b)}`;
+        await db.query(
+          `INSERT INTO beds (roomId, bedNumber, bedLabel, status) VALUES ($1, $2, $3, $4)`,
+          [id, b, bedLabel, 'vacant']
+        );
       }
     }
 
@@ -257,17 +299,17 @@ async function editRoom(req, res) {
     if (roomNumber.trim() !== currentRoom.roomNumber) {
       const { rows: existingBeds } = await db.query('SELECT id, bedNumber FROM beds WHERE roomId = $1', [id]);
       for (const bed of existingBeds) {
-        await db.query('UPDATE beds SET bedLabel = $1 WHERE id = $2', [`${roomNumber.trim()}-${bed.bedNumber}`, bed.id]);
+        await db.query('UPDATE beds SET bedLabel = $1 WHERE id = $2', [`${roomNumber.trim()}-${getBedLetter(bed.bedNumber)}`, bed.id]);
       }
     }
 
     // Update Room
-    let calculatedType = roomType || currentRoom.roomType;
+    let calculatedType = roomType || `${totalBeds} Sharing`;
     await db.query(
       `UPDATE rooms 
        SET roomNumber = $1, capacity = $2, monthlyFee = $3, floor = $4, block = $5, roomType = $6, status = $7, updatedAt = CURRENT_TIMESTAMP 
        WHERE id = $8`,
-      [roomNumber.trim(), totalBeds, parseFloat(monthlyFee), floor || 'Ground Floor', block || 'Block A', calculatedType, status || 'active', id]
+      [roomNumber.trim(), totalBeds, parseFloat(monthlyFee), floor || 'Floor 1', block || 'Main Block', calculatedType, status || 'active', id]
     );
 
     // Update monthly rent for assigned students

@@ -199,31 +199,50 @@ async function initializeDatabase(db) {
     console.log('Seeded admin account: joelramireddy@gmail.com');
   }
 
-  // Check if standard Block A rooms exist
-  const { rows: existingRooms } = await db.query("SELECT COUNT(*) as count FROM rooms WHERE roomNumber LIKE 'A-%'");
+  // Check if standard rooms (101, 102, 201, 301, etc.) exist
+  const { rows: existingRooms } = await db.query("SELECT COUNT(*) as count FROM rooms WHERE roomNumber = '101'");
   if (parseInt(existingRooms[0].count) === 0) {
     // Clear legacy unformatted rooms if any
-    await db.query('DELETE FROM rooms WHERE roomNumber NOT LIKE \'A-%\'');
+    await db.query('DELETE FROM allocations');
+    await db.query('UPDATE students SET roomId = NULL, bedId = NULL');
+    await db.query('DELETE FROM beds');
+    await db.query('DELETE FROM rooms');
 
     await db.query('BEGIN');
     try {
       const mockRooms = [
-        // Ground Floor
-        { roomNumber: 'A-101', capacity: 3, monthlyFee: 8500, floor: 'Ground Floor', block: 'Block A', roomType: 'Triple Sharing' },
-        { roomNumber: 'A-102', capacity: 3, monthlyFee: 8500, floor: 'Ground Floor', block: 'Block A', roomType: 'Triple Sharing' },
-        { roomNumber: 'A-103', capacity: 4, monthlyFee: 7500, floor: 'Ground Floor', block: 'Block A', roomType: 'Four Sharing' },
-        { roomNumber: 'A-104', capacity: 2, monthlyFee: 10000, floor: 'Ground Floor', block: 'Block A', roomType: 'Double Sharing' },
-        // First Floor
-        { roomNumber: 'A-201', capacity: 3, monthlyFee: 8500, floor: 'First Floor', block: 'Block A', roomType: 'Triple Sharing' },
-        { roomNumber: 'A-202', capacity: 3, monthlyFee: 8500, floor: 'First Floor', block: 'Block A', roomType: 'Triple Sharing' },
-        { roomNumber: 'A-203', capacity: 4, monthlyFee: 7500, floor: 'First Floor', block: 'Block A', roomType: 'Four Sharing' },
-        { roomNumber: 'A-204', capacity: 2, monthlyFee: 10000, floor: 'First Floor', block: 'Block A', roomType: 'Double Sharing' },
-        // Second Floor
-        { roomNumber: 'A-301', capacity: 3, monthlyFee: 8500, floor: 'Second Floor', block: 'Block A', roomType: 'Triple Sharing' },
-        { roomNumber: 'A-302', capacity: 3, monthlyFee: 8500, floor: 'Second Floor', block: 'Block A', roomType: 'Triple Sharing' },
-        { roomNumber: 'A-303', capacity: 4, monthlyFee: 7500, floor: 'Second Floor', block: 'Block A', roomType: 'Four Sharing' },
-        { roomNumber: 'A-304', capacity: 2, monthlyFee: 10000, floor: 'Second Floor', block: 'Block A', roomType: 'Double Sharing' }
+        // FLOOR 1 — 6 ROOMS
+        { roomNumber: '101', capacity: 5, monthlyFee: 8500, floor: 'Floor 1', block: 'Main Block', roomType: '5 Sharing' },
+        { roomNumber: '102', capacity: 5, monthlyFee: 8500, floor: 'Floor 1', block: 'Main Block', roomType: '5 Sharing' },
+        { roomNumber: '103', capacity: 5, monthlyFee: 8500, floor: 'Floor 1', block: 'Main Block', roomType: '5 Sharing' },
+        { roomNumber: '104', capacity: 5, monthlyFee: 8500, floor: 'Floor 1', block: 'Main Block', roomType: '5 Sharing' },
+        { roomNumber: '105', capacity: 4, monthlyFee: 9000, floor: 'Floor 1', block: 'Main Block', roomType: '4 Sharing' },
+        { roomNumber: '106', capacity: 4, monthlyFee: 9000, floor: 'Floor 1', block: 'Main Block', roomType: '4 Sharing' },
+
+        // FLOOR 2 — 6 ROOMS
+        { roomNumber: '201', capacity: 5, monthlyFee: 8500, floor: 'Floor 2', block: 'Main Block', roomType: '5 Sharing' },
+        { roomNumber: '202', capacity: 5, monthlyFee: 8500, floor: 'Floor 2', block: 'Main Block', roomType: '5 Sharing' },
+        { roomNumber: '203', capacity: 5, monthlyFee: 8500, floor: 'Floor 2', block: 'Main Block', roomType: '5 Sharing' },
+        { roomNumber: '204', capacity: 5, monthlyFee: 8500, floor: 'Floor 2', block: 'Main Block', roomType: '5 Sharing' },
+        { roomNumber: '205', capacity: 4, monthlyFee: 9000, floor: 'Floor 2', block: 'Main Block', roomType: '4 Sharing' },
+        { roomNumber: '206', capacity: 4, monthlyFee: 9000, floor: 'Floor 2', block: 'Main Block', roomType: '4 Sharing' },
+
+        // FLOOR 3 — PENTHOUSE — 3 ROOMS
+        { roomNumber: '301', capacity: 4, monthlyFee: 9500, floor: 'Floor 3 — Penthouse', block: 'Penthouse', roomType: '4 Sharing' },
+        { roomNumber: '302', capacity: 4, monthlyFee: 9500, floor: 'Floor 3 — Penthouse', block: 'Penthouse', roomType: '4 Sharing' },
+        { roomNumber: '303', capacity: 5, monthlyFee: 9000, floor: 'Floor 3 — Penthouse', block: 'Penthouse', roomType: '5 Sharing' }
       ];
+
+      function getBedLetter(index) {
+        let letter = '';
+        let i = parseInt(index);
+        while (i > 0) {
+          let rem = (i - 1) % 26;
+          letter = String.fromCharCode(65 + rem) + letter;
+          i = Math.floor((i - 1) / 26);
+        }
+        return letter;
+      }
 
       for (const room of mockRooms) {
         const { rows: roomResult } = await db.query(
@@ -234,7 +253,7 @@ async function initializeDatabase(db) {
         const roomId = roomResult[0].id;
 
         for (let b = 1; b <= room.capacity; b++) {
-          const bedLabel = `${room.roomNumber}-${b}`;
+          const bedLabel = `${room.roomNumber}-${getBedLetter(b)}`;
           await db.query(
             `INSERT INTO beds (roomId, bedNumber, bedLabel, status) VALUES ($1, $2, $3, $4)`,
             [roomId, b, bedLabel, 'vacant']
@@ -242,7 +261,7 @@ async function initializeDatabase(db) {
         }
       }
       await db.query('COMMIT');
-      console.log('Seeded Block A rooms and generated beds.');
+      console.log('Seeded Akshaya Deluxe Hostel rooms (Floor 1, Floor 2, Floor 3 — Penthouse) with alphabetical beds.');
     } catch (err) {
       await db.query('ROLLBACK');
       console.error('Room Seeding Error:', err);
@@ -270,7 +289,7 @@ async function initializeDatabase(db) {
           college: 'Aurora Deemed University',
           course: 'B.Tech Computer Science',
           year: '2nd Year',
-          roomNumber: 'A-101',
+          roomNumber: '101',
           bedNum: 1,
           paymentStatus: 'paid'
         },
@@ -289,7 +308,7 @@ async function initializeDatabase(db) {
           college: 'Aurora Deemed University',
           course: 'B.Tech Artificial Intelligence',
           year: '1st Year',
-          roomNumber: 'A-101',
+          roomNumber: '101',
           bedNum: 2,
           paymentStatus: 'paid'
         },
@@ -308,7 +327,7 @@ async function initializeDatabase(db) {
           college: 'CBR Engineering College',
           course: 'B.Tech Electronics & Comm',
           year: '3rd Year',
-          roomNumber: 'A-102',
+          roomNumber: '102',
           bedNum: 1,
           paymentStatus: 'paid'
         },
@@ -327,7 +346,7 @@ async function initializeDatabase(db) {
           college: 'Aurora Deemed University',
           course: 'B.Tech Information Tech',
           year: '2nd Year',
-          roomNumber: 'A-102',
+          roomNumber: '102',
           bedNum: 2,
           paymentStatus: 'paid'
         },
@@ -346,7 +365,7 @@ async function initializeDatabase(db) {
           college: 'VNR VJIET',
           course: 'B.Tech Civil Engineering',
           year: '1st Year',
-          roomNumber: 'A-103',
+          roomNumber: '103',
           bedNum: 1,
           paymentStatus: 'paid'
         },
@@ -365,8 +384,8 @@ async function initializeDatabase(db) {
           college: 'Gokaraju Rangaraju',
           course: 'B.Tech Mechanical Eng',
           year: '3rd Year',
-          roomNumber: 'A-201',
-          bedNum: 1,
+          roomNumber: '103',
+          bedNum: 2,
           paymentStatus: 'paid'
         },
         {
@@ -384,8 +403,8 @@ async function initializeDatabase(db) {
           college: 'Aurora Deemed University',
           course: 'B.Tech Computer Science',
           year: '4th Year',
-          roomNumber: 'A-201',
-          bedNum: 2,
+          roomNumber: '201',
+          bedNum: 1,
           paymentStatus: 'paid'
         },
         {
@@ -403,7 +422,7 @@ async function initializeDatabase(db) {
           college: 'Aurora Deemed University',
           course: 'B.Tech Data Science',
           year: '2nd Year',
-          roomNumber: 'A-202',
+          roomNumber: '301',
           bedNum: 1,
           paymentStatus: 'paid'
         }
