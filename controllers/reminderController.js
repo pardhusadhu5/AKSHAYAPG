@@ -130,7 +130,7 @@ async function getReminderLogs(req, res) {
   try {
     const db = await getDb();
     const logs = (await (async () => { let args = [
-      `SELECT r.*, s.studentName, s.phone
+      `SELECT r.*, s.studentName, s.phone, s.parentName, s.parentPhone
        FROM reminders r
        JOIN students s ON r.studentId = s.id
        ORDER BY r.id DESC LIMIT 100`
@@ -141,8 +141,76 @@ async function getReminderLogs(req, res) {
   }
 }
 
+// Send targeted reminders (All Students, Single Student, All Parents, Selected Parents)
+async function sendTargetedReminder(req, res) {
+  try {
+    const { targetType, studentId, selectedParentIds, title, message, channel } = req.body;
+    if (!targetType || !message) {
+      return res.status(400).json({ success: false, message: 'Target type and message content are required.' });
+    }
+
+    const db = await getDb();
+    const commChannel = channel || 'whatsapp';
+    const reminderTitle = title || 'Hostel Payment Reminder';
+    let targetStudents = [];
+
+    if (targetType === 'all_students') {
+      const { rows } = await db.query("SELECT id, studentName, phone, parentPhone FROM students WHERE status = 'active'");
+      targetStudents = rows;
+    } else if (targetType === 'single_student') {
+      if (!studentId) {
+        return res.status(400).json({ success: false, message: 'Student selection is required for single student reminder.' });
+      }
+      const { rows } = await db.query("SELECT id, studentName, phone, parentPhone FROM students WHERE id = $1", [studentId]);
+      targetStudents = rows;
+    } else if (targetType === 'all_parents') {
+      const { rows } = await db.query("SELECT id, studentName, phone, parentPhone, parentName FROM students WHERE status = 'active' AND parentPhone IS NOT NULL AND parentPhone != ''");
+      targetStudents = rows;
+    } else if (targetType === 'selected_parents') {
+      if (!selectedParentIds || !Array.isArray(selectedParentIds) || selectedParentIds.length === 0) {
+        return res.status(400).json({ success: false, message: 'Parent selection is required for selected parents reminder.' });
+      }
+      const { rows } = await db.query("SELECT id, studentName, phone, parentPhone, parentName FROM students WHERE id = ANY($1::int[])", [selectedParentIds.map(n => parseInt(n))]);
+      targetStudents = rows;
+    } else {
+      return res.status(400).json({ success: false, message: 'Invalid target type specified.' });
+    }
+
+    if (targetStudents.length === 0) {
+      return res.status(400).json({ success: false, message: 'No eligible recipients found for selected target option.' });
+    }
+
+    await db.query('BEGIN');
+    for (const stud of targetStudents) {
+      await db.query(
+        `INSERT INTO reminders (studentId, title, message, channel, status) VALUES ($1, $2, $3, $4, 'sent')`,
+        [stud.id, reminderTitle, message, commChannel]
+      );
+      await db.query(
+        `INSERT INTO notifications (type, message) VALUES ($1, $2)`,
+        ['reminder_sent', `Reminder "${reminderTitle}" dispatched to ${stud.studentName || 'Student'} (${commChannel.toUpperCase()}).`]
+      );
+    }
+    await db.query('COMMIT');
+
+    res.status(200).json({
+      success: true,
+      message: `Successfully dispatched reminder to ${targetStudents.length} recipient(s) via ${commChannel.toUpperCase()}.`,
+      count: targetStudents.length
+    });
+  } catch (err) {
+    try {
+      const db = await getDb();
+      await db.query('ROLLBACK');
+    } catch (_) {}
+    console.error('Send Targeted Reminder Error:', err);
+    res.status(500).json({ success: false, message: `Failed to send reminders: ${err.message}` });
+  }
+}
+
 module.exports = {
   sendIndividualReminder,
   sendBulkReminders,
+  sendTargetedReminder,
   getReminderLogs
 };

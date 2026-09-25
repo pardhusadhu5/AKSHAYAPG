@@ -180,7 +180,7 @@ async function getStudentsList(req, res) {
       query += ` AND s.year = $${params.length}`;
     }
 
-    query += ` ORDER BY s.id DESC`;
+    query += ` ORDER BY s.id ASC`;
     
     const { rows: list } = await db.query(query, params);
     res.status(200).json({ success: true, students: list });
@@ -645,7 +645,7 @@ async function getApplications(req, res) {
       query += ` AND UPPER(s.applicationStatus) = $${params.length}`;
     }
 
-    query += ` ORDER BY s.id DESC`;
+    query += ` ORDER BY s.id ASC`;
 
     const { rows: applications } = await db.query(query, params);
     const normalizedApps = applications.map(app => ({

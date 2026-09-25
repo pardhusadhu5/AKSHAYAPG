@@ -752,19 +752,19 @@
         </div>
         
         <div class="table-responsive">
-          <table class="data-table" id="studentsListTable">
+          <table class="data-table" id="studentsListTable" style="width:100%; border-collapse:collapse;">
             <thead>
-              <tr>
-                <th>Student ID</th>
-                <th>Name</th>
-                <th>Phone</th>
-                <th>College</th>
-                <th>Course</th>
-                <th>Room</th>
-                <th>Bed</th>
-                <th>Join Date</th>
-                <th>Fee Status</th>
-                <th style="text-align: center;">Actions</th>
+              <tr style="background:#f8fafc; text-align:left; font-size:0.75rem; text-transform:uppercase; color:var(--primary-deep);">
+                <th style="padding:12px; width:110px; vertical-align:middle;">Student ID</th>
+                <th style="padding:12px; width:160px; vertical-align:middle;">Name</th>
+                <th style="padding:12px; width:130px; vertical-align:middle;">Phone</th>
+                <th style="padding:12px; min-width:180px; vertical-align:middle;">College</th>
+                <th style="padding:12px; min-width:160px; vertical-align:middle;">Course</th>
+                <th style="padding:12px; width:110px; vertical-align:middle;">Room</th>
+                <th style="padding:12px; width:100px; vertical-align:middle;">Bed</th>
+                <th style="padding:12px; width:120px; vertical-align:middle;">Join Date</th>
+                <th style="padding:12px; width:110px; text-align:center; vertical-align:middle;">Fee Status</th>
+                <th style="padding:12px; width:120px; text-align:center; vertical-align:middle;">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -850,44 +850,139 @@
 
     <!-- 5. REPORTS PANEL -->
     <div class="panel-view" id="reportsPanel">
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:24px; margin-bottom:24px;">
-        <div style="background:white; padding:20px; border-radius:var(--radius-md); border:1px solid #E5E7EB;">
-          <h4 style="margin-top:0; margin-bottom:12px; font-weight:800; color:var(--dark-slate);">Student Registry</h4>
-          <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:16px;">Export active student accounts, parental contact info, join dates, and Aadhaar list.</p>
-          <button class="btn btn-primary" onclick="triggerReportDownload('student')" style="width:100%; font-size:0.8rem;">Export Students CSV</button>
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:20px; margin-bottom:24px;">
+        <div style="background:white; padding:20px; border-radius:var(--radius-md); border:1px solid #E5E7EB; display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <h4 style="margin-top:0; margin-bottom:8px; font-weight:800; color:var(--dark-slate);">Student Registry</h4>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:16px;">Export active student accounts, parental contact info, join dates, and details to Google Sheets.</p>
+          </div>
+          <button class="btn btn-primary" onclick="triggerReportDownload('student')" style="width:100%; font-size:0.8rem; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+            <i data-lucide="file-spreadsheet" style="width:15px; height:15px;"></i> Export to Google Sheets
+          </button>
         </div>
-        <div style="background:white; padding:20px; border-radius:var(--radius-md); border:1px solid #E5E7EB;">
-          <h4 style="margin-top:0; margin-bottom:12px; font-weight:800; color:var(--dark-slate);">Rooms Setup</h4>
-          <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:16px;">Export rooms directory list including numbers, capacity, pricing details, and floor mapping.</p>
-          <button class="btn btn-primary" onclick="triggerReportDownload('room')" style="width:100%; font-size:0.8rem;">Export Rooms CSV</button>
+        <div style="background:white; padding:20px; border-radius:var(--radius-md); border:1px solid #E5E7EB; display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <h4 style="margin-top:0; margin-bottom:8px; font-weight:800; color:var(--dark-slate);">Rooms Setup</h4>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:16px;">Export rooms directory list including capacity, pricing details, and floor mapping to Google Sheets.</p>
+          </div>
+          <button class="btn btn-primary" onclick="triggerReportDownload('room')" style="width:100%; font-size:0.8rem; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+            <i data-lucide="file-spreadsheet" style="width:15px; height:15px;"></i> Export to Google Sheets
+          </button>
         </div>
-        <div style="background:white; padding:20px; border-radius:var(--radius-md); border:1px solid #E5E7EB;">
-          <h4 style="margin-top:0; margin-bottom:12px; font-weight:800; color:var(--dark-slate);">Beds Occupancy</h4>
-          <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:16px;">Export live bed occupancy status board showing occupant details, phone numbers, and vacant slots.</p>
-          <button class="btn btn-primary" onclick="triggerReportDownload('occupancy')" style="width:100%; font-size:0.8rem;">Export Occupancy CSV</button>
+        <div style="background:white; padding:20px; border-radius:var(--radius-md); border:1px solid #E5E7EB; display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <h4 style="margin-top:0; margin-bottom:8px; font-weight:800; color:var(--dark-slate);">Beds Occupancy</h4>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:16px;">Export live bed occupancy status board showing occupant details and vacant slots to Google Sheets.</p>
+          </div>
+          <button class="btn btn-primary" onclick="triggerReportDownload('occupancy')" style="width:100%; font-size:0.8rem; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+            <i data-lucide="file-spreadsheet" style="width:15px; height:15px;"></i> Export to Google Sheets
+          </button>
+        </div>
+        <div style="background:white; padding:20px; border-radius:var(--radius-md); border:1px solid #E5E7EB; display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <h4 style="margin-top:0; margin-bottom:8px; font-weight:800; color:var(--dark-slate);">Income & Payments</h4>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:16px;">Export complete financial payment collection audit history to Google Sheets.</p>
+          </div>
+          <button class="btn btn-primary" onclick="triggerReportDownload('income')" style="width:100%; font-size:0.8rem; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+            <i data-lucide="file-spreadsheet" style="width:15px; height:15px;"></i> Export to Google Sheets
+          </button>
+        </div>
+        <div style="background:white; padding:20px; border-radius:var(--radius-md); border:1px solid #E5E7EB; display:flex; flex-direction:column; justify-content:space-between;">
+          <div>
+            <h4 style="margin-top:0; margin-bottom:8px; font-weight:800; color:var(--dark-slate);">Pending Fee Dues</h4>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:16px;">Export list of unpaid student dues and outstanding balances to Google Sheets.</p>
+          </div>
+          <button class="btn btn-primary" onclick="triggerReportDownload('pending')" style="width:100%; font-size:0.8rem; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
+            <i data-lucide="file-spreadsheet" style="width:15px; height:15px;"></i> Export to Google Sheets
+          </button>
         </div>
       </div>
     </div>
 
     <!-- 6. REMINDERS PANEL -->
     <div class="panel-view" id="remindersPanel">
-      <div style="background:white; padding:24px; border-radius:12px; border:1px solid #E5E7EB;">
-        <h3 style="margin-top:0; margin-bottom:16px; font-size:1.1rem; font-weight:800;">Fee Payment Reminders Dispatch</h3>
-        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:20px;">Send direct WhatsApp or SMS alerts to unpaid students and parents.</p>
-        <button class="btn btn-primary" onclick="sendBulkReminders()" style="margin-bottom:20px;">Send Bulk Reminders</button>
-        <div class="table-responsive">
-          <table class="data-table" id="remindersListTable">
+      <div class="card glass-card" style="padding:24px; border-radius:12px; border:1px solid #E5E7EB; background:white;">
+        <div style="margin-bottom:20px;">
+          <h3 style="margin:0; font-size:1.3rem; font-weight:800; color:var(--primary-deep);">Fee Payment & Notice Reminders Dispatch</h3>
+          <p style="margin:4px 0 0 0; font-size:0.85rem; color:var(--text-muted);">Dispatch targeted notifications and payment alerts to students or parents via configured channels.</p>
+        </div>
+
+        <div style="background:#f8fafc; padding:20px; border-radius:10px; border:1px solid #e2e8f0; margin-bottom:24px;">
+          <h4 style="margin-top:0; margin-bottom:14px; font-size:0.95rem; font-weight:800; color:var(--primary-deep);">1. Recipient Target Selection</h4>
+          <div style="display:flex; flex-wrap:wrap; gap:20px; margin-bottom:16px;">
+            <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:700; cursor:pointer;">
+              <input type="radio" name="reminderTarget" value="all_students" checked onchange="toggleReminderTargetInputs()"> All Students
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:700; cursor:pointer;">
+              <input type="radio" name="reminderTarget" value="single_student" onchange="toggleReminderTargetInputs()"> Single Student
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:700; cursor:pointer;">
+              <input type="radio" name="reminderTarget" value="all_parents" onchange="toggleReminderTargetInputs()"> All Parents
+            </label>
+            <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:700; cursor:pointer;">
+              <input type="radio" name="reminderTarget" value="selected_parents" onchange="toggleReminderTargetInputs()"> Selected Parents
+            </label>
+          </div>
+
+          <!-- Single Student Selector -->
+          <div id="singleStudentSelectorContainer" style="display:none; margin-bottom:16px;">
+            <label class="form-label" style="font-weight:700; font-size:0.85rem;">Select Student:</label>
+            <select id="reminderStudentSelect" class="form-input" style="width:100%; max-width:500px;">
+              <option value="">Loading students list...</option>
+            </select>
+          </div>
+
+          <!-- Selected Parents Multi-Select Container -->
+          <div id="selectedParentsContainer" style="display:none; margin-bottom:16px;">
+            <label class="form-label" style="font-weight:700; font-size:0.85rem; margin-bottom:6px; display:block;">Select Parents / Guardians:</label>
+            <input type="text" id="parentSearchInput" class="form-input" placeholder="Search parent name, phone, or student name..." onkeyup="filterParentCheckboxes()" style="margin-bottom:8px; max-width:500px;">
+            <div id="parentsCheckboxList" style="max-height:180px; overflow-y:auto; border:1px solid #cbd5e1; border-radius:6px; padding:10px; background:white; max-width:600px;">
+              <div style="font-size:0.85rem; color:var(--text-muted);">Loading parents list...</div>
+            </div>
+          </div>
+
+          <h4 style="margin-top:16px; margin-bottom:14px; font-size:0.95rem; font-weight:800; color:var(--primary-deep);">2. Message Content & Channel</h4>
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:16px;">
+            <div>
+              <label class="form-label">Reminder Title</label>
+              <input type="text" id="reminderTitleInput" class="form-input" value="Hostel Rent Payment Due" placeholder="e.g. Rent Payment Reminder">
+            </div>
+            <div>
+              <label class="form-label">Communication Channel</label>
+              <select id="reminderChannelSelect" class="form-input">
+                <option value="whatsapp" selected>WhatsApp Message</option>
+                <option value="in_app">In-App Notification</option>
+                <option value="sms">SMS Text Alert</option>
+                <option value="email">Email Alert</option>
+              </select>
+            </div>
+          </div>
+          <div style="margin-bottom:16px;">
+            <label class="form-label">Reminder Message Text</label>
+            <textarea id="reminderMessageInput" class="form-input" rows="3" placeholder="Enter message text...">Hello, this is a reminder regarding your hostel rent payment at Akshaya Deluxe Hostel. Please ensure timely payment. Thank you.</textarea>
+          </div>
+
+          <button id="sendReminderBtn" class="btn btn-primary" onclick="dispatchTargetedReminder()" style="padding:10px 24px; font-size:0.85rem; display:inline-flex; align-items:center; gap:8px;">
+            <i data-lucide="send" style="width:15px; height:15px;"></i> Send Reminder
+          </button>
+        </div>
+
+        <!-- Reminder Audit History Logs -->
+        <h4 style="margin-top:20px; margin-bottom:12px; font-size:1.1rem; font-weight:800; color:var(--primary-deep);">Reminder History Log</h4>
+        <div class="table-responsive" style="max-height:400px; overflow-y:auto; border:1px solid #E5E7EB; border-radius:8px;">
+          <table class="data-table" id="remindersLogsTable" style="width:100%;">
             <thead>
-              <tr>
-                <th>Student Name</th>
-                <th>Room</th>
-                <th>Parent Contact</th>
-                <th>Due Amount</th>
-                <th>Actions</th>
+              <tr style="background:#f8fafc; text-align:left; font-size:0.75rem; text-transform:uppercase; color:var(--primary-deep);">
+                <th style="padding:12px;">Recipient Student</th>
+                <th style="padding:12px;">Parent Contact</th>
+                <th style="padding:12px;">Reminder Title & Message</th>
+                <th style="padding:12px;">Channel</th>
+                <th style="padding:12px;">Sent Time</th>
+                <th style="padding:12px; text-align:center;">Status</th>
               </tr>
             </thead>
-            <tbody>
-              <tr><td colspan="5" style="text-align:center;">Loading unpaid list...</td></tr>
+            <tbody id="reminderLogsBody">
+              <tr><td colspan="6" style="text-align:center; padding:20px;">Loading reminder logs...</td></tr>
             </tbody>
           </table>
         </div>
@@ -927,13 +1022,13 @@
           <table class="data-table" style="width:100%; border-collapse:collapse;">
             <thead>
               <tr style="background:#f8fafc; text-align:left; font-size:0.75rem; text-transform:uppercase; color:var(--primary-deep);">
-                <th style="padding:12px;">App ID</th>
-                <th style="padding:12px;">Applicant Name</th>
-                <th style="padding:12px;">Mobile</th>
-                <th style="padding:12px;">College & Branch</th>
-                <th style="padding:12px;">Preferred Room</th>
-                <th style="padding:12px;">Status</th>
-                <th style="padding:12px; text-align:right;">Actions</th>
+                <th style="padding:12px; width:110px; vertical-align:middle;">APP ID</th>
+                <th style="padding:12px; width:180px; vertical-align:middle;">APPLICANT NAME</th>
+                <th style="padding:12px; width:130px; vertical-align:middle;">MOBILE</th>
+                <th style="padding:12px; min-width:220px; vertical-align:middle;">COLLEGE & BRANCH</th>
+                <th style="padding:12px; width:140px; vertical-align:middle;">PREFERRED ROOM</th>
+                <th style="padding:12px; width:150px; text-align:center; vertical-align:middle;">STATUS</th>
+                <th style="padding:12px; width:160px; text-align:right; vertical-align:middle;">ACTIONS</th>
               </tr>
             </thead>
             <tbody id="applicationsTableBody">
@@ -1828,20 +1923,23 @@
             `;
  
             row.innerHTML = `
-              <td style="font-weight:700; color:var(--primary-deep);">${sId}</td>
-              <td style="font-weight:700;">${stud.studentName}</td>
-              <td>${stud.phone}</td>
-              <td>${stud.collegeName || 'N/A'}</td>
-              <td>${stud.course} (${stud.year})</td>
-              <td>${stud.roomNumber ? `<strong>Room ${stud.roomNumber}</strong>` : '<span style="color:var(--text-muted); font-style:italic;">Unassigned</span>'}</td>
-              <td>${stud.bedId ? `<span class="status-badge active" style="font-size:0.7rem;">${bedStr}</span>` : '<span style="color:var(--text-muted); font-style:italic;">None</span>'}</td>
-              <td>${stud.joinDate}</td>
-              <td>
+              <td style="padding:12px; font-weight:700; color:var(--primary-deep); vertical-align:top; white-space:nowrap;">${sId}</td>
+              <td style="padding:12px; font-weight:700; vertical-align:top; word-break:break-word;">
+                <div>${stud.studentName}</div>
+                <div style="font-size:0.75rem; color:var(--text-muted); word-break:break-all;">${stud.email || ''}</div>
+              </td>
+              <td style="padding:12px; vertical-align:top; white-space:nowrap;">${stud.phone}</td>
+              <td style="padding:12px; vertical-align:top; word-break:break-word;">${stud.collegeName || 'N/A'}</td>
+              <td style="padding:12px; vertical-align:top; word-break:break-word;">${stud.course} (${stud.year})</td>
+              <td style="padding:12px; vertical-align:top; white-space:nowrap;">${stud.roomNumber ? `<strong>Room ${stud.roomNumber}</strong>` : '<span style="color:var(--text-muted); font-style:italic;">Unassigned</span>'}</td>
+              <td style="padding:12px; vertical-align:top; white-space:nowrap;">${stud.bedId ? `<span class="status-badge active" style="font-size:0.7rem;">${bedStr}</span>` : '<span style="color:var(--text-muted); font-style:italic;">None</span>'}</td>
+              <td style="padding:12px; vertical-align:top; white-space:nowrap;">${stud.joinDate}</td>
+              <td style="padding:12px; text-align:center; vertical-align:top;">
                 <span class="status-badge ${stud.paymentStatus === 'paid' ? 'active' : 'inactive'}" style="display:inline-block; text-align:center; font-weight:700; cursor:pointer; padding: 2px 6px; font-size: 0.7rem;" onclick="togglePaymentStatus(${stud.id}, '${stud.paymentStatus}')" title="Click to toggle payment status">
                   ${stud.paymentStatus === 'paid' ? 'Paid' : 'Unpaid'}
                 </span>
               </td>
-              <td style="text-align: center;">${actionsCell}</td>
+              <td style="padding:12px; text-align:center; vertical-align:top;">${actionsCell}</td>
             `;
             tableBody.appendChild(row);
           });
@@ -2686,24 +2784,24 @@
             const appJson = JSON.stringify(app).replace(/"/g, '&quot;');
 
             tr.innerHTML = `
-              <td style="padding:12px; font-weight:700; color:var(--primary-deep);">${app.applicationId || 'AKS-' + app.id}</td>
-              <td style="padding:12px;">
+              <td style="padding:12px; font-weight:700; color:var(--primary-deep); vertical-align:top;">${app.applicationId || 'AKS-' + app.id}</td>
+              <td style="padding:12px; vertical-align:top; word-break:break-word;">
                 <div style="font-weight:700;">${app.studentName}</div>
-                <div style="font-size:0.75rem; color:var(--text-muted);">${app.email || 'No email'}</div>
+                <div style="font-size:0.75rem; color:var(--text-muted); word-break:break-all;">${app.email || 'No email'}</div>
               </td>
-              <td style="padding:12px;">${app.phone}</td>
-              <td style="padding:12px;">
-                <div>${app.collegeName}</div>
+              <td style="padding:12px; vertical-align:top; white-space:nowrap;">${app.phone}</td>
+              <td style="padding:12px; vertical-align:top; word-break:break-word;">
+                <div style="font-weight:700;">${app.collegeName}</div>
                 <div style="font-size:0.75rem; color:var(--text-muted);">${app.branch || app.course || ''} (${app.year || ''})</div>
               </td>
-              <td style="padding:12px; font-weight:600;">${app.preferredRoomType || '3 Sharing'}</td>
-              <td style="padding:12px;">
-                <span style="padding:4px 10px; border-radius:12px; font-size:0.72rem; font-weight:700; text-transform:uppercase; ${statusBadgeStyle}">
+              <td style="padding:12px; font-weight:600; vertical-align:top; white-space:nowrap;">${app.preferredRoomType || '3 Sharing'}</td>
+              <td style="padding:12px; text-align:center; vertical-align:top;">
+                <span style="display:inline-block; padding:4px 10px; border-radius:12px; font-size:0.72rem; font-weight:700; text-transform:uppercase; ${statusBadgeStyle}">
                   ${statusText.replace('_', ' ')}
                 </span>
-                ${app.paymentStatus === 'paid' ? '<span style="margin-left:4px; padding:2px 6px; background:#10b981; color:white; border-radius:8px; font-size:0.65rem; font-weight:700;">FEE PAID</span>' : ''}
+                ${app.paymentStatus === 'paid' ? '<div style="margin-top:4px;"><span style="padding:2px 6px; background:#10b981; color:white; border-radius:8px; font-size:0.65rem; font-weight:700;">FEE PAID</span></div>' : ''}
               </td>
-              <td style="padding:12px; text-align:right;">
+              <td style="padding:12px; text-align:right; vertical-align:top; white-space:nowrap;">
                 <button class="btn btn-outline" onclick="openReviewModalFromBtn('${app.id}')" style="padding:4px 10px; font-size:0.75rem; margin-right:4px;">
                   Review
                 </button>
@@ -3178,22 +3276,225 @@
       alert('Dispatched late fee WhatsApp reminders to all unpaid students and their parents successfully!');
     }
 
-    function triggerReportDownload(type) {
+    // Google Sheets Report Export Handler
+    async function triggerReportDownload(type) {
       const token = localStorage.getItem('token');
-      fetch(`/api/reports/download?type=${type}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      })
-      .then(res => {
-        if (!res.ok) throw new Error('Report compilation failed.');
-        return res.blob();
-      })
-      .then(blob => {
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `${type}_report_${new Date().toISOString().split('T')[0]}.csv`;
-        link.click();
-      })
-      .catch(err => alert(err.message));
+      showToast('Preparing Google Sheet...', 'info');
+
+      try {
+        const res = await fetch(`/api/reports/export-google-sheet?type=${type}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        if (data.success && data.googleSheetUrl) {
+          showToast('Google Sheet created successfully.', 'success');
+          window.open(data.googleSheetUrl, '_blank');
+        } else {
+          const msg = data.message || 'Google Sheets export requires credential configuration.';
+          showToast(msg, 'warning');
+          alert(`Google Sheets Export Notice:\n\n${msg}`);
+        }
+      } catch (err) {
+        showToast(`Failed to export report: ${err.message}`, 'error');
+        alert(`Failed to export report: ${err.message}`);
+      }
+    }
+
+    // Reminders Targeting Module
+    let allStudentsCache = [];
+
+    async function loadReminderRecipients() {
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch('/api/admin/students', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+          allStudentsCache = data.students || [];
+          populateReminderStudentDropdown();
+          populateReminderParentsCheckboxList();
+        }
+      } catch (err) {
+        console.error('Failed to load students for reminders:', err);
+      }
+    }
+
+    function populateReminderStudentDropdown() {
+      const select = document.getElementById('reminderStudentSelect');
+      if (!select) return;
+      select.innerHTML = '<option value="">-- Select Student --</option>';
+      allStudentsCache.forEach(s => {
+        const rStr = s.roomNumber ? ` (Room ${s.roomNumber})` : ' (Unassigned)';
+        const customId = s.studentCustomId || (`AKS${String(s.id).padStart(6, '0')}`);
+        select.innerHTML += `<option value="${s.id}">${s.studentName} (${customId})${rStr}</option>`;
+      });
+    }
+
+    function populateReminderParentsCheckboxList() {
+      const container = document.getElementById('parentsCheckboxList');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const parentMap = {};
+      allStudentsCache.forEach(s => {
+        if (s.parentPhone || s.parentName) {
+          const key = (s.parentPhone || s.phone || '').trim();
+          if (!parentMap[key]) {
+            parentMap[key] = {
+              studentId: s.id,
+              parentName: s.parentName || 'Parent of ' + s.studentName,
+              parentPhone: s.parentPhone || s.phone,
+              studentName: s.studentName
+            };
+          }
+        }
+      });
+
+      const parentList = Object.values(parentMap);
+      if (parentList.length === 0) {
+        container.innerHTML = '<div style="font-size:0.85rem; color:var(--text-muted);">No parent contact records found.</div>';
+        return;
+      }
+
+      parentList.forEach(p => {
+        const label = document.createElement('label');
+        label.className = 'parent-checkbox-item';
+        label.style.display = 'flex';
+        label.style.alignItems = 'center';
+        label.style.gap = '8px';
+        label.style.padding = '4px 0';
+        label.style.fontSize = '0.85rem';
+        label.style.cursor = 'pointer';
+        label.innerHTML = `
+          <input type="checkbox" class="parent-checkbox" value="${p.studentId}">
+          <span><strong>${p.parentName}</strong> (${p.parentPhone}) — <span style="color:var(--text-muted);">Student: ${p.studentName}</span></span>
+        `;
+        container.appendChild(label);
+      });
+    }
+
+    function toggleReminderTargetInputs() {
+      const selected = document.querySelector('input[name="reminderTarget"]:checked')?.value || 'all_students';
+      const singleContainer = document.getElementById('singleStudentSelectorContainer');
+      const selectedParentsContainer = document.getElementById('selectedParentsContainer');
+
+      if (singleContainer) singleContainer.style.display = selected === 'single_student' ? 'block' : 'none';
+      if (selectedParentsContainer) selectedParentsContainer.style.display = selected === 'selected_parents' ? 'block' : 'none';
+
+      if ((selected === 'single_student' || selected === 'selected_parents') && allStudentsCache.length === 0) {
+        loadReminderRecipients();
+      }
+    }
+
+    function filterParentCheckboxes() {
+      const filter = (document.getElementById('parentSearchInput')?.value || '').toLowerCase();
+      const items = document.querySelectorAll('.parent-checkbox-item');
+      items.forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(filter) ? 'flex' : 'none';
+      });
+    }
+
+    async function dispatchTargetedReminder() {
+      const targetType = document.querySelector('input[name="reminderTarget"]:checked')?.value || 'all_students';
+      const title = document.getElementById('reminderTitleInput')?.value || 'Hostel Rent Payment Due';
+      const channel = document.getElementById('reminderChannelSelect')?.value || 'whatsapp';
+      const message = document.getElementById('reminderMessageInput')?.value || '';
+
+      if (!message.trim()) {
+        alert('Please enter reminder message content.');
+        return;
+      }
+
+      let studentId = null;
+      let selectedParentIds = [];
+
+      if (targetType === 'single_student') {
+        studentId = document.getElementById('reminderStudentSelect')?.value;
+        if (!studentId) {
+          alert('Please select a student from the dropdown list.');
+          return;
+        }
+      } else if (targetType === 'selected_parents') {
+        const checked = document.querySelectorAll('.parent-checkbox:checked');
+        checked.forEach(cb => selectedParentIds.push(cb.value));
+        if (selectedParentIds.length === 0) {
+          alert('Please check at least one parent/guardian from the list.');
+          return;
+        }
+      }
+
+      const btn = document.getElementById('sendReminderBtn');
+      if (btn) { btn.disabled = true; btn.innerHTML = 'Sending...'; }
+
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch('/api/reminders/send-targeted', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ targetType, studentId, selectedParentIds, title, message, channel })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          showToast(data.message, 'success');
+          alert(data.message);
+          fetchReminderLogs();
+        } else {
+          showToast(data.message, 'error');
+          alert(data.message);
+        }
+      } catch (err) {
+        alert('Failed to send reminder: ' + err.message);
+      } finally {
+        if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="send" style="width:15px; height:15px;"></i> Send Reminder'; if (typeof lucide !== 'undefined') lucide.createIcons(); }
+      }
+    }
+
+    async function fetchReminderLogs() {
+      const token = localStorage.getItem('token');
+      const tbody = document.getElementById('reminderLogsBody');
+      if (!tbody) return;
+
+      try {
+        const res = await fetch('/api/reminders/logs', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+          const logs = data.logs || [];
+          if (logs.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">No reminder logs found.</td></tr>';
+            return;
+          }
+          tbody.innerHTML = '';
+          logs.forEach(log => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td style="padding:12px; font-weight:700;">${log.studentName || 'Student ID ' + log.studentId}</td>
+              <td style="padding:12px;">
+                <div>${log.parentName || 'Parent'}</div>
+                <div style="font-size:0.75rem; color:var(--text-muted);">${log.parentPhone || log.phone || 'N/A'}</div>
+              </td>
+              <td style="padding:12px;">
+                <div style="font-weight:700; color:var(--primary-deep);">${log.title || 'Notice'}</div>
+                <div style="font-size:0.8rem; color:var(--text-muted);">${log.message}</div>
+              </td>
+              <td style="padding:12px;"><span style="padding:3px 8px; background:#e0f2fe; color:#0369a1; border-radius:10px; font-size:0.7rem; font-weight:700; text-transform:uppercase;">${log.channel || 'whatsapp'}</span></td>
+              <td style="padding:12px; font-size:0.8rem; color:var(--text-muted);">${log.sentAt ? log.sentAt.split('T')[0] : 'Today'}</td>
+              <td style="padding:12px; text-align:center;"><span style="padding:3px 8px; background:#d1fae5; color:#059669; border-radius:10px; font-size:0.7rem; font-weight:700;">SENT</span></td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      } catch (err) {
+        console.error('Fetch logs error:', err);
+      }
     }
 
     async function triggerDbBackup() {

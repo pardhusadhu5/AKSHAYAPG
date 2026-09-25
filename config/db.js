@@ -219,6 +219,16 @@ async function initializeDatabase(db) {
     )
   `);
 
+  // 11. Create Performance Indexes
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_beds_roomid ON beds(roomId);
+    CREATE INDEX IF NOT EXISTS idx_beds_status ON beds(status);
+    CREATE INDEX IF NOT EXISTS idx_beds_userid ON beds(userId);
+    CREATE INDEX IF NOT EXISTS idx_students_roomid ON students(roomId);
+    CREATE INDEX IF NOT EXISTS idx_students_bedid ON students(bedId);
+    CREATE INDEX IF NOT EXISTS idx_students_userid ON students(userId);
+  `).catch((err) => { console.error('Index creation notice:', err.message); });
+
   // Seed default admin
   const defaultAdminEmail = 'joelramireddy@gmail.com';
   const { rows: adminRows } = await db.query('SELECT * FROM users WHERE email = $1', [defaultAdminEmail]);

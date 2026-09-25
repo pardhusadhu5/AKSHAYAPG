@@ -28,18 +28,71 @@ async function getAllRooms(req, res) {
   try {
     const db = await getDb();
     
-    const query = `
+    // 1. Fetch all rooms
+    const roomsPromise = db.query(`
       SELECT r.*,
         (SELECT COUNT(*) FROM beds b WHERE b.roomId = r.id AND b.status = 'occupied') as occupiedBeds,
         (SELECT COUNT(*) FROM beds b WHERE b.roomId = r.id AND b.status = 'vacant') as vacantBeds,
         (SELECT COUNT(*) FROM beds b WHERE b.roomId = r.id AND b.status = 'maintenance') as maintenanceBeds
       FROM rooms r
       ORDER BY r.roomNumber ASC
-    `;
-    
-    const { rows: rooms } = await db.query(query);
-    
+    `);
+
+    // 2. Fetch all beds for all rooms in 1 batch query
+    const bedsPromise = db.query(`
+      SELECT b.id, b.roomId, b.bedNumber, b.bedLabel, b.status, b.userId,
+             s.id as studentId, s.studentCustomId, s.studentName, s.joinDate
+      FROM beds b
+      LEFT JOIN users u ON b.userId = u.id
+      LEFT JOIN students s ON (s.bedId = b.id OR (b.userId IS NOT NULL AND s.userId = u.id))
+      ORDER BY b.roomId ASC, b.bedNumber ASC
+    `);
+
+    // 3. Fetch all assigned students for all rooms in 1 batch query
+    const occupantsPromise = db.query(`
+      SELECT s.id, s.studentCustomId, s.studentName, s.phone, s.year, s.joinDate, s.roomId, b.bedNumber, b.bedLabel
+      FROM students s 
+      LEFT JOIN beds b ON s.bedId = b.id
+      WHERE s.roomId IS NOT NULL
+      ORDER BY s.roomId ASC, b.bedNumber ASC
+    `);
+
+    const [{ rows: rooms }, { rows: allBeds }, { rows: allOccupants }] = await Promise.all([
+      roomsPromise,
+      bedsPromise,
+      occupantsPromise
+    ]);
+
+    // Group beds & occupants by roomId in memory
+    const bedsByRoom = {};
+    for (const b of allBeds) {
+      const rId = b.roomId || b.roomid;
+      if (!bedsByRoom[rId]) bedsByRoom[rId] = [];
+      b.id = b.id;
+      b.bedNumber = b.bedNumber || b.bednumber;
+      b.bedLabel = b.bedLabel || b.bedlabel;
+      b.studentId = b.studentId || b.studentid;
+      b.studentCustomId = b.studentCustomId || b.studentcustomid;
+      b.studentName = b.studentName || b.studentname;
+      b.joinDate = b.joinDate || b.joindate;
+      bedsByRoom[rId].push(b);
+    }
+
+    const occupantsByRoom = {};
+    for (const occ of allOccupants) {
+      const rId = occ.roomId || occ.roomid;
+      if (!occupantsByRoom[rId]) occupantsByRoom[rId] = [];
+      occ.id = occ.id;
+      occ.studentCustomId = occ.studentCustomId || occ.studentcustomid;
+      occ.studentName = occ.studentName || occ.studentname;
+      occ.joinDate = occ.joinDate || occ.joindate;
+      occ.bedNumber = occ.bedNumber || occ.bednumber;
+      occ.bedLabel = occ.bedLabel || occ.bedlabel;
+      occupantsByRoom[rId].push(occ);
+    }
+
     for (let room of rooms) {
+      const roomId = room.id;
       room.roomNumber = room.roomnumber || room.roomNumber;
       room.monthlyFee = parseFloat(room.monthlyfee || room.monthlyFee || 0);
       room.roomType = room.roomtype || room.roomType;
@@ -50,28 +103,8 @@ async function getAllRooms(req, res) {
       room.vacantBeds = parseInt(room.vacantbeds || room.vacantBeds || 0);
       room.maintenanceBeds = parseInt(room.maintenancebeds || room.maintenanceBeds || 0);
       room.displayStatus = calculateRoomStatus(room, room.occupiedBeds);
-      
-      // Get assigned students
-      const { rows: occupants } = await db.query(`
-        SELECT s.id, s.studentCustomId, s.studentName, s.phone, s.year, s.joinDate, b.bedNumber, b.bedLabel
-        FROM students s 
-        LEFT JOIN beds b ON s.bedId = b.id
-        WHERE s.roomId = $1
-        ORDER BY b.bedNumber ASC
-      `, [room.id]);
-      room.currentStudents = occupants;
-
-      // Get beds summary
-      const { rows: beds } = await db.query(`
-        SELECT b.id, b.bedNumber, b.bedLabel, b.status, b.userId,
-               s.id as studentId, s.studentCustomId, s.studentName, s.joinDate
-        FROM beds b
-        LEFT JOIN users u ON b.userId = u.id
-        LEFT JOIN students s ON (s.bedId = b.id OR (b.userId IS NOT NULL AND s.userId = u.id))
-        WHERE b.roomId = $1
-        ORDER BY b.bedNumber ASC
-      `, [room.id]);
-      room.beds = beds;
+      room.currentStudents = occupantsByRoom[roomId] || [];
+      room.beds = bedsByRoom[roomId] || [];
     }
 
     res.status(200).json({ success: true, rooms });
