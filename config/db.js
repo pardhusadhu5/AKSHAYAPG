@@ -53,9 +53,11 @@ async function initializeDatabase(db) {
     )
   `);
 
-  try { await db.query("ALTER TABLE rooms ADD COLUMN floor VARCHAR(255) NOT NULL DEFAULT 'Ground Floor'"); } catch (_) {}
-  try { await db.query("ALTER TABLE rooms ADD COLUMN block VARCHAR(255) NOT NULL DEFAULT 'Block A'"); } catch (_) {}
-  try { await db.query("ALTER TABLE rooms ADD COLUMN roomType VARCHAR(255) NOT NULL DEFAULT 'Triple Sharing'"); } catch (_) {}
+  await db.query(`
+    ALTER TABLE rooms ADD COLUMN IF NOT EXISTS floor VARCHAR(255) NOT NULL DEFAULT 'Ground Floor';
+    ALTER TABLE rooms ADD COLUMN IF NOT EXISTS block VARCHAR(255) NOT NULL DEFAULT 'Block A';
+    ALTER TABLE rooms ADD COLUMN IF NOT EXISTS roomType VARCHAR(255) NOT NULL DEFAULT 'Triple Sharing';
+  `).catch(() => {});
 
   // 3. Beds Table
   await db.query(`
@@ -72,7 +74,7 @@ async function initializeDatabase(db) {
     )
   `);
 
-  try { await db.query("ALTER TABLE beds ADD COLUMN bedLabel VARCHAR(255)"); } catch (_) {}
+  await db.query(`ALTER TABLE beds ADD COLUMN IF NOT EXISTS bedLabel VARCHAR(255)`).catch(() => {});
 
   // 4. Students Table
   await db.query(`
@@ -80,18 +82,30 @@ async function initializeDatabase(db) {
       id SERIAL PRIMARY KEY,
       userId INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE,
       studentCustomId VARCHAR(255) UNIQUE,
+      applicationId VARCHAR(255) UNIQUE,
+      applicationStatus VARCHAR(255) NOT NULL DEFAULT 'PENDING',
+      rejectionReason TEXT,
+      correctionReason TEXT,
       studentName VARCHAR(255) NOT NULL,
       phone VARCHAR(255) NOT NULL,
       parentName VARCHAR(255) NOT NULL,
       parentPhone VARCHAR(255) NOT NULL,
+      guardianRelationship VARCHAR(255),
       emergencyContact VARCHAR(255),
       aadhaarNumber VARCHAR(255) UNIQUE,
       dateOfBirth DATE,
       gender VARCHAR(255),
       collegeName VARCHAR(255) NOT NULL,
       course VARCHAR(255) NOT NULL,
+      branch VARCHAR(255),
+      rollNumber VARCHAR(255),
       year VARCHAR(255) NOT NULL,
       address TEXT,
+      city VARCHAR(255),
+      state VARCHAR(255),
+      pincode VARCHAR(255),
+      preferredRoomType VARCHAR(255),
+      stayDuration INTEGER,
       photo TEXT,
       idProof TEXT,
       joinDate DATE NOT NULL,
@@ -106,10 +120,26 @@ async function initializeDatabase(db) {
     )
   `);
 
-  try { await db.query("ALTER TABLE students ADD COLUMN studentCustomId VARCHAR(255) UNIQUE"); } catch (_) {}
-  try { await db.query("ALTER TABLE students ADD COLUMN dateOfBirth DATE"); } catch (_) {}
-  try { await db.query("ALTER TABLE students ADD COLUMN gender VARCHAR(255)"); } catch (_) {}
-  try { await db.query("ALTER TABLE students ADD COLUMN emergencyContact VARCHAR(255)"); } catch (_) {}
+  await db.query(`
+    ALTER TABLE students 
+      ADD COLUMN IF NOT EXISTS studentCustomId VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS applicationId VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS applicationStatus VARCHAR(255) NOT NULL DEFAULT 'PENDING',
+      ADD COLUMN IF NOT EXISTS rejectionReason TEXT,
+      ADD COLUMN IF NOT EXISTS correctionReason TEXT,
+      ADD COLUMN IF NOT EXISTS guardianRelationship VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS dateOfBirth DATE,
+      ADD COLUMN IF NOT EXISTS gender VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS emergencyContact VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS branch VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS rollNumber VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS city VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS state VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS pincode VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS preferredRoomType VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS stayDuration INTEGER,
+      DROP CONSTRAINT IF EXISTS students_status_check;
+  `).catch((err) => { console.error('Migration notice:', err.message); });
 
   // 5. Allocations Table
   await db.query(`
@@ -178,6 +208,8 @@ async function initializeDatabase(db) {
       createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  await db.query(`ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check`).catch(() => {});
 
   // 10. Hostel Settings Table
   await db.query(`
@@ -268,257 +300,12 @@ async function initializeDatabase(db) {
     }
   }
 
-  // Seed sample students if empty
-  const { rows: existingStudents } = await db.query("SELECT COUNT(*) as count FROM students WHERE studentCustomId LIKE 'AKS%'");
-  if (parseInt(existingStudents[0].count) === 0) {
+  // Seed sample students if empty (DISABLED to start with clean real admission workflow)
+  if (false) {
     await db.query('BEGIN');
     try {
-      const mockStudents = [
-        {
-          studentCustomId: 'AKS2026001',
-          name: 'Rahul Varma',
-          email: 'rahul.varma.demo@gmail.com',
-          password: 'Rahul@123',
-          phone: '9000000001',
-          parentName: 'Srinivas Varma',
-          parentPhone: '9000000010',
-          emergencyContact: '9000000010',
-          aadhaar: '900000000001',
-          dateOfBirth: '2004-05-15',
-          gender: 'Male',
-          college: 'Aurora Deemed University',
-          course: 'B.Tech Computer Science',
-          year: '2nd Year',
-          roomNumber: '101',
-          bedNum: 1,
-          paymentStatus: 'paid'
-        },
-        {
-          studentCustomId: 'AKS2026002',
-          name: 'Karthik Reddy',
-          email: 'karthik.reddy.demo@gmail.com',
-          password: 'Karthik@123',
-          phone: '9000000002',
-          parentName: 'Ramana Reddy',
-          parentPhone: '9000000020',
-          emergencyContact: '9000000020',
-          aadhaar: '900000000002',
-          dateOfBirth: '2005-08-20',
-          gender: 'Male',
-          college: 'Aurora Deemed University',
-          course: 'B.Tech Artificial Intelligence',
-          year: '1st Year',
-          roomNumber: '101',
-          bedNum: 2,
-          paymentStatus: 'paid'
-        },
-        {
-          studentCustomId: 'AKS2026003',
-          name: 'Sai Teja',
-          email: 'sai.teja.demo@gmail.com',
-          password: 'Sai@123',
-          phone: '9000000003',
-          parentName: 'Venkatesh Rao',
-          parentPhone: '9000000030',
-          emergencyContact: '9000000030',
-          aadhaar: '900000000003',
-          dateOfBirth: '2003-11-10',
-          gender: 'Male',
-          college: 'CBR Engineering College',
-          course: 'B.Tech Electronics & Comm',
-          year: '3rd Year',
-          roomNumber: '102',
-          bedNum: 1,
-          paymentStatus: 'paid'
-        },
-        {
-          studentCustomId: 'AKS2026004',
-          name: 'Arjun Kumar',
-          email: 'arjun.kumar.demo@gmail.com',
-          password: 'Arjun@123',
-          phone: '9000000004',
-          parentName: 'Pratap Kumar',
-          parentPhone: '9000000040',
-          emergencyContact: '9000000040',
-          aadhaar: '900000000004',
-          dateOfBirth: '2004-02-28',
-          gender: 'Male',
-          college: 'Aurora Deemed University',
-          course: 'B.Tech Information Tech',
-          year: '2nd Year',
-          roomNumber: '102',
-          bedNum: 2,
-          paymentStatus: 'paid'
-        },
-        {
-          studentCustomId: 'AKS2026005',
-          name: 'Nikhil Reddy',
-          email: 'nikhil.reddy.demo@gmail.com',
-          password: 'Nikhil@123',
-          phone: '9000000005',
-          parentName: 'Rajasekhar Reddy',
-          parentPhone: '9000000050',
-          emergencyContact: '9000000050',
-          aadhaar: '900000000005',
-          dateOfBirth: '2005-01-12',
-          gender: 'Male',
-          college: 'VNR VJIET',
-          course: 'B.Tech Civil Engineering',
-          year: '1st Year',
-          roomNumber: '103',
-          bedNum: 1,
-          paymentStatus: 'paid'
-        },
-        {
-          studentCustomId: 'AKS2026006',
-          name: 'Rohit Varma',
-          email: 'rohit.varma.demo@gmail.com',
-          password: 'Rohit@123',
-          phone: '9000000006',
-          parentName: 'Bhaskar Varma',
-          parentPhone: '9000000060',
-          emergencyContact: '9000000060',
-          aadhaar: '900000000006',
-          dateOfBirth: '2003-07-04',
-          gender: 'Male',
-          college: 'Gokaraju Rangaraju',
-          course: 'B.Tech Mechanical Eng',
-          year: '3rd Year',
-          roomNumber: '103',
-          bedNum: 2,
-          paymentStatus: 'paid'
-        },
-        {
-          studentCustomId: 'AKS2026007',
-          name: 'Abhinav Rao',
-          email: 'abhinav.rao.demo@gmail.com',
-          password: 'Abhinav@123',
-          phone: '9000000007',
-          parentName: 'Madhusudan Rao',
-          parentPhone: '9000000070',
-          emergencyContact: '9000000070',
-          aadhaar: '900000000007',
-          dateOfBirth: '2002-09-19',
-          gender: 'Male',
-          college: 'Aurora Deemed University',
-          course: 'B.Tech Computer Science',
-          year: '4th Year',
-          roomNumber: '201',
-          bedNum: 1,
-          paymentStatus: 'paid'
-        },
-        {
-          studentCustomId: 'AKS2026008',
-          name: 'Vivek Krishna',
-          email: 'vivek.krishna.demo@gmail.com',
-          password: 'Vivek@123',
-          phone: '9000000008',
-          parentName: 'Murali Krishna',
-          parentPhone: '9000000080',
-          emergencyContact: '9000000080',
-          aadhaar: '900000000008',
-          dateOfBirth: '2004-12-01',
-          gender: 'Male',
-          college: 'Aurora Deemed University',
-          course: 'B.Tech Data Science',
-          year: '2nd Year',
-          roomNumber: '301',
-          bedNum: 1,
-          paymentStatus: 'paid'
-        }
-      ];
-
-      for (const stud of mockStudents) {
-        const hashedPassword = await bcrypt.hash(stud.password, 10);
-        
-        // Remove existing user with same email or phone if any
-        const { rows: existingUsers } = await db.query('SELECT id FROM users WHERE email = $1 OR phone = $2', [stud.email, stud.phone]);
-        if (existingUsers.length > 0) {
-          for (const u of existingUsers) {
-            await db.query('DELETE FROM students WHERE userId = $1', [u.id]);
-            await db.query('DELETE FROM users WHERE id = $1', [u.id]);
-          }
-        }
-
-        const { rows: userResult } = await db.query(
-          `INSERT INTO users (name, email, phone, password, role) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-          [stud.name, stud.email, stud.phone, hashedPassword, 'student']
-        );
-        const userId = userResult[0].id;
-        const joinDate = new Date().toISOString().split('T')[0];
-
-        const { rows: roomRows } = await db.query('SELECT id, monthlyFee FROM rooms WHERE roomNumber = $1', [stud.roomNumber]);
-        const roomId = roomRows.length > 0 ? roomRows[0].id : null;
-        const monthlyRent = roomRows.length > 0 ? parseFloat(roomRows[0].monthlyFee) : 8500;
-        
-        let bedId = null;
-        if (roomId) {
-          const { rows: bedRows } = await db.query('SELECT id FROM beds WHERE roomId = $1 AND bedNumber = $2', [roomId, stud.bedNum]);
-          bedId = bedRows.length > 0 ? bedRows[0].id : null;
-        }
-
-        const { rows: studentResult } = await db.query(
-          `INSERT INTO students (
-            userId, studentCustomId, studentName, phone, parentName, parentPhone, emergencyContact,
-            aadhaarNumber, dateOfBirth, gender, collegeName, course, year, address, photo, idProof,
-            joinDate, status, monthlyRent, depositAmount, roomId, bedId, paymentStatus
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23) RETURNING id`,
-          [
-            userId,
-            stud.studentCustomId,
-            stud.name,
-            stud.phone,
-            stud.parentName,
-            stud.parentPhone,
-            stud.emergencyContact,
-            stud.aadhaar,
-            stud.dateOfBirth,
-            stud.gender,
-            stud.college,
-            stud.course,
-            stud.year,
-            'Hyderabad, Telangana',
-            '/assets/avatar-placeholder.png',
-            '',
-            joinDate,
-            'active',
-            monthlyRent,
-            8500,
-            roomId,
-            bedId,
-            stud.paymentStatus
-          ]
-        );
-        const studentId = studentResult[0].id;
-
-        if (bedId && roomId) {
-          await db.query(
-            `UPDATE beds SET status = 'occupied', userId = $1 WHERE id = $2`,
-            [userId, bedId]
-          );
-
-          await db.query(
-            `INSERT INTO allocations (studentId, roomId, bedId, status) VALUES ($1, $2, $3, $4)`,
-            [studentId, roomId, bedId, 'active']
-          );
-        }
-
-        const { rows: paymentResult } = await db.query(
-          `INSERT INTO payments (studentId, billingMonth, amountDue, amountPaid, status) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-          [studentId, '2026-09', monthlyRent, monthlyRent, 'paid']
-        );
-
-        await db.query(
-          `INSERT INTO paymentHistory (paymentId, amount, paymentMode, referenceNumber, notes) VALUES ($1, $2, $3, $4, $5)`,
-          [paymentResult[0].id, monthlyRent, 'upi', `TXN${Math.floor(10000000 + Math.random() * 90000000)}`, 'Monthly Rent Paid']
-        );
-      }
-      await db.query('COMMIT');
-      console.log('Seeded 8 sample students with room allocations.');
-    } catch (err) {
-      await db.query('ROLLBACK');
-      console.error('Student Seeding Error:', err);
-    }
+      const mockStudents = [];
+    } catch (_) {}
   }
 
   // Seed default hostel settings if empty

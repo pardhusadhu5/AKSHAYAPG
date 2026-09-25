@@ -434,7 +434,7 @@ async function updateBedStatus(req, res) {
   }
 }
 
-// Allocate a student to a room and bed
+// Allocate a student to a room and bed (with race-condition double-booking safety)
 async function allocateStudent(req, res) {
   try {
     const { studentId, roomId, bedId } = req.body;
@@ -445,14 +445,18 @@ async function allocateStudent(req, res) {
 
     const db = await getDb();
 
-    // 1. Verify Student
-    const { rows: studentRows } = await db.query('SELECT * FROM students WHERE id = $1', [studentId]);
+    await db.query('BEGIN');
+
+    // 1. Verify Student inside transaction
+    const { rows: studentRows } = await db.query('SELECT * FROM students WHERE id = $1 FOR UPDATE', [studentId]);
     const student = studentRows[0];
     if (!student) {
+      await db.query('ROLLBACK');
       return res.status(404).json({ success: false, message: 'Student record not found.' });
     }
 
     if (student.roomId || student.bedId) {
+      await db.query('ROLLBACK');
       return res.status(400).json({ success: false, message: `${student.studentName} is already allocated to a room. Deallocate or transfer first.` });
     }
 
@@ -460,34 +464,44 @@ async function allocateStudent(req, res) {
     const { rows: roomRows } = await db.query('SELECT * FROM rooms WHERE id = $1', [roomId]);
     const room = roomRows[0];
     if (!room) {
+      await db.query('ROLLBACK');
       return res.status(404).json({ success: false, message: 'Selected room not found.' });
     }
     if (room.status === 'inactive' || room.status === 'maintenance') {
+      await db.query('ROLLBACK');
       return res.status(400).json({ success: false, message: 'Cannot allocate to an inactive or maintenance room.' });
     }
 
-    // 3. Verify Bed
-    const { rows: bedRows } = await db.query('SELECT * FROM beds WHERE id = $1 AND roomId = $2', [bedId, roomId]);
+    // 3. Verify & Lock Bed (Double-Booking Prevention)
+    const { rows: bedRows } = await db.query('SELECT * FROM beds WHERE id = $1 AND roomId = $2 FOR UPDATE', [bedId, roomId]);
     const bed = bedRows[0];
     if (!bed) {
+      await db.query('ROLLBACK');
       return res.status(404).json({ success: false, message: 'Selected bed not found in target room.' });
     }
     if (bed.status !== 'vacant') {
-      return res.status(400).json({ success: false, message: 'Selected bed is not available (occupied or maintenance).' });
+      await db.query('ROLLBACK');
+      return res.status(400).json({ success: false, message: 'Selected bed is no longer available (occupied or maintenance).' });
     }
 
-    await db.query('BEGIN');
+    const studentNameVal = student.studentName || student.studentname;
+    const studentUserIdVal = student.userId || student.userid;
+    const roomNumberVal = room.roomNumber || room.roomnumber;
+    const bedLabelVal = bed.bedLabel || bed.bedlabel || `Bed ${bed.bedNumber || bed.bednumber}`;
+    const monthlyRentFee = room.monthlyfee || room.monthlyFee || student.monthlyRent || student.monthlyrent || 8500;
 
-    // Update Student
+    // Update Student to active resident
     await db.query(
-      `UPDATE students SET roomId = $1, bedId = $2, monthlyRent = $3, updatedAt = CURRENT_TIMESTAMP WHERE id = $4`,
-      [roomId, bedId, room.monthlyfee || room.monthlyFee || 8500, studentId]
+      `UPDATE students 
+       SET roomId = $1, bedId = $2, monthlyRent = $3, status = 'active', applicationStatus = 'ADMISSION_CONFIRMED', updatedAt = CURRENT_TIMESTAMP 
+       WHERE id = $4`,
+      [roomId, bedId, parseFloat(monthlyRentFee), studentId]
     );
 
-    // Update Bed
+    // Update Bed to occupied
     await db.query(
       `UPDATE beds SET status = 'occupied', userId = $1, updatedAt = CURRENT_TIMESTAMP WHERE id = $2`,
-      [student.userId, bedId]
+      [studentUserIdVal, bedId]
     );
 
     // Record Allocation
@@ -496,12 +510,17 @@ async function allocateStudent(req, res) {
       [studentId, roomId, bedId, 'active']
     );
 
+    // Add Notification
+    await db.query(
+      `INSERT INTO notifications (type, message) VALUES ($1, $2)`,
+      ['bed_allocated', `Allocated ${studentNameVal} to Room ${roomNumberVal} (${bedLabelVal}).`]
+    );
+
     await db.query('COMMIT');
 
-    const bedName = bed.bedLabel || `Bed ${bed.bedNumber}`;
     res.status(200).json({
       success: true,
-      message: `Allocated ${student.studentName} successfully to Room ${room.roomNumber} (${bedName}).`
+      message: `Allocated ${studentNameVal} successfully to Room ${roomNumberVal} (${bedLabelVal}).`
     });
   } catch (err) {
     try {

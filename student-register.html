@@ -122,36 +122,48 @@
           <!-- Profile Photo Upload -->
           <div class="form-group" style="margin-bottom: 20px;">
             <label class="form-label" for="regPhoto">Profile Photo</label>
-            <input type="file" id="regPhoto" class="form-input" accept="image/*" required style="padding: 10px;">
+            <input type="file" id="regPhoto" class="form-input" accept="image/*" style="padding: 10px;">
           </div>
 
           <div class="form-grid">
             <div class="form-group">
-              <label class="form-label" for="regName">Full Name</label>
+              <label class="form-label" for="regName">Full Name *</label>
               <input type="text" id="regName" class="form-input" placeholder="e.g. Rahul Sharma" required>
             </div>
             
             <div class="form-group">
-              <label class="form-label" for="regPhone">Mobile Number</label>
+              <label class="form-label" for="regPhone">Mobile Number (Login ID) *</label>
               <input type="tel" id="regPhone" class="form-input" placeholder="e.g. 9848022338" required pattern="[0-9]{10,15}">
             </div>
           </div>
           
           <div class="form-grid">
             <div class="form-group">
-              <label class="form-label" for="regAadhaar">Aadhaar Number</label>
+              <label class="form-label" for="regAadhaar">Aadhaar Number *</label>
               <input type="text" id="regAadhaar" class="form-input" placeholder="e.g. 543210987654" required pattern="[0-9]{12}">
             </div>
             
             <div class="form-group">
-              <label class="form-label" for="regCollege">College Name</label>
-              <input type="text" id="regCollege" class="form-input" placeholder="e.g. Aurora College" required>
+              <label class="form-label" for="regCollege">College Name *</label>
+              <input type="text" id="regCollege" class="form-input" placeholder="e.g. Aurora Deemed University" required>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="regBranch">Academic Branch / Course</label>
+              <input type="text" id="regBranch" class="form-input" placeholder="e.g. B.Tech CSE / AI & ML">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="regRoll">College Roll / Hall Ticket No.</label>
+              <input type="text" id="regRoll" class="form-input" placeholder="e.g. 22AUR0501">
             </div>
           </div>
           
           <div class="form-grid">
             <div class="form-group">
-              <label class="form-label" for="regYear">Year of Study</label>
+              <label class="form-label" for="regYear">Year of Study *</label>
               <select id="regYear" class="form-input">
                 <option value="1st Year">1st Year</option>
                 <option value="2nd Year">2nd Year</option>
@@ -161,40 +173,90 @@
             </div>
             
             <div class="form-group">
-              <label class="form-label" for="regParentName">Parent Name</label>
+              <label class="form-label" for="regParentName">Parent / Guardian Name *</label>
               <input type="text" id="regParentName" class="form-input" placeholder="e.g. Suresh Sharma" required>
             </div>
           </div>
 
           <div class="form-grid">
             <div class="form-group">
-              <label class="form-label" for="regParentPhone">Parent Mobile Number</label>
+              <label class="form-label" for="regGuardianRel">Guardian Relationship</label>
+              <select id="regGuardianRel" class="form-input">
+                <option value="Father">Father</option>
+                <option value="Mother">Mother</option>
+                <option value="Guardian" selected>Guardian</option>
+                <option value="Relative">Relative</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="regParentPhone">Parent Mobile Number *</label>
               <input type="tel" id="regParentPhone" class="form-input" placeholder="e.g. 9000123457" required pattern="[0-9]{10,15}">
             </div>
-            
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="regPreferredRoom">Preferred Room Type *</label>
+              <select id="regPreferredRoom" class="form-input" required>
+                <option value="2 Sharing">2 Sharing</option>
+                <option value="3 Sharing" selected>3 Sharing</option>
+                <option value="4 Sharing">4 Sharing</option>
+                <option value="5 Sharing">5 Sharing</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="regDuration">Stay Duration (Months)</label>
+              <select id="regDuration" class="form-input">
+                <option value="6">6 Months</option>
+                <option value="12" selected>12 Months</option>
+                <option value="24">24 Months</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label" for="regCity">City</label>
+              <input type="text" id="regCity" class="form-input" placeholder="e.g. Hyderabad">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="regState">State</label>
+              <input type="text" id="regState" class="form-input" placeholder="e.g. Telangana">
+            </div>
+          </div>
+
+          <div class="form-grid">
             <div class="form-group">
               <label class="form-label" for="regEmail">Email Address (Optional)</label>
               <input type="email" id="regEmail" class="form-input" placeholder="e.g. rahul@mail.com">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="regEmergency">Emergency Contact</label>
+              <input type="tel" id="regEmergency" class="form-input" placeholder="e.g. 9848011223">
             </div>
           </div>
           
           <div class="form-grid">
             <div class="form-group">
-              <label class="form-label" for="regPass">Password</label>
+              <label class="form-label" for="regPass">Password *</label>
               <input type="password" id="regPass" class="form-input" placeholder="••••••••" required>
             </div>
             
             <div class="form-group">
-              <label class="form-label" for="regPassConfirm">Confirm Password</label>
+              <label class="form-label" for="regPassConfirm">Confirm Password *</label>
               <input type="password" id="regPassConfirm" class="form-input" placeholder="••••••••" required>
             </div>
           </div>
           
-          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Register & Create Account</button>
+          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Submit Admission Application</button>
         </form>
         
         <div class="auth-actions-footer">
-          <p>Already have an account? <a href="student-login.html">Login Here</a></p>
+          <p>Already applied or have an account? <a href="student-login.html">Login Here</a></p>
         </div>
       </div>
     </div>
@@ -229,9 +291,17 @@
         const phone = document.getElementById('regPhone').value;
         const aadhaarNumber = document.getElementById('regAadhaar').value;
         const collegeName = document.getElementById('regCollege').value;
+        const branch = document.getElementById('regBranch').value;
+        const rollNumber = document.getElementById('regRoll').value;
         const year = document.getElementById('regYear').value;
         const parentName = document.getElementById('regParentName').value;
+        const guardianRelationship = document.getElementById('regGuardianRel').value;
         const parentPhone = document.getElementById('regParentPhone').value;
+        const preferredRoomType = document.getElementById('regPreferredRoom').value;
+        const stayDuration = document.getElementById('regDuration').value;
+        const city = document.getElementById('regCity').value;
+        const state = document.getElementById('regState').value;
+        const emergencyContact = document.getElementById('regEmergency').value;
         const email = document.getElementById('regEmail').value;
         const p1 = document.getElementById('regPass').value;
         const p2 = document.getElementById('regPassConfirm').value;
@@ -245,21 +315,29 @@
         }
 
         const formData = new FormData();
-        formData.append('photo', photoFile);
+        if (photoFile) formData.append('photo', photoFile);
         formData.append('name', name);
         formData.append('phone', phone);
         formData.append('aadhaarNumber', aadhaarNumber);
         formData.append('collegeName', collegeName);
+        formData.append('branch', branch);
+        formData.append('rollNumber', rollNumber);
         formData.append('year', year);
         formData.append('parentName', parentName);
+        formData.append('guardianRelationship', guardianRelationship);
         formData.append('parentPhone', parentPhone);
+        formData.append('preferredRoomType', preferredRoomType);
+        formData.append('stayDuration', stayDuration);
+        formData.append('city', city);
+        formData.append('state', state);
+        formData.append('emergencyContact', emergencyContact);
         formData.append('email', email);
         formData.append('password', p1);
         formData.append('confirmPassword', p2);
 
         try {
           submitBtn.disabled = true;
-          submitBtn.innerText = 'Creating Account...';
+          submitBtn.innerText = 'Submitting Application...';
 
           const response = await fetch('/api/auth/register', {
             method: 'POST',
@@ -269,7 +347,7 @@
           const data = await response.json();
 
           if (data.success) {
-            alert("Registration completed successfully.");
+            alert(`Admission application submitted successfully!\n\nYour Application ID: ${data.applicationId}\n\nPlease login to track your application status.`);
             window.location.href = 'student-login.html';
           } else {
             alert(data.message || 'Registration failed.');

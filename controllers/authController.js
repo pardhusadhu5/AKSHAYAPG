@@ -81,6 +81,11 @@ async function login(req, res) {
   }
 }
 
+function generateApplicationId() {
+  const randNum = Math.floor(100000 + Math.random() * 900000);
+  return `AKS-${randNum}`;
+}
+
 async function register(req, res) {
   try {
     const {
@@ -89,143 +94,135 @@ async function register(req, res) {
       phone,
       aadhaarNumber,
       collegeName,
+      course,
+      branch,
+      rollNumber,
       year,
       parentName,
+      guardianRelationship,
       parentPhone,
+      emergencyContact,
+      address,
+      city,
+      state,
+      pincode,
+      preferredRoomType,
+      stayDuration,
       password,
       confirmPassword
     } = req.body;
 
-    // Check basic parameters
     if (!name || !phone || !aadhaarNumber || !collegeName || !year || !parentName || !parentPhone || !password || !confirmPassword) {
-      return res.status(400).json({ success: false, message: 'All registration fields are required.' });
+      return res.status(400).json({ success: false, message: 'All required registration fields must be filled.' });
     }
 
-    // Validation: Passwords match
     if (password !== confirmPassword) {
       return res.status(400).json({ success: false, message: 'Passwords do not match.' });
     }
 
     const db = await getDb();
 
-    // Validation: Mobile Number uniqueness
-    const existingPhone = (await (async () => { let args = ['SELECT * FROM users WHERE phone = $1', [phone]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
-    if (existingPhone) {
+    // Check unique phone
+    const { rows: phoneRows } = await db.query('SELECT id FROM users WHERE phone = $1', [phone.trim()]);
+    if (phoneRows.length > 0) {
       return res.status(400).json({ success: false, message: 'This mobile number is already registered.' });
     }
 
-    // Validation: Email uniqueness
-    const mockEmail = email || `student_${phone}@akshayadeluxepg.com`; // fallback email for user record
-    const existingEmail = (await (async () => { let args = ['SELECT * FROM users WHERE email = $1', [mockEmail]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
-    if (existingEmail) {
+    // Email handling
+    const userEmail = email ? email.trim() : `student_${phone.trim()}@akshayadeluxepg.com`;
+    const { rows: emailRows } = await db.query('SELECT id FROM users WHERE email = $1', [userEmail]);
+    if (emailRows.length > 0) {
       return res.status(400).json({ success: false, message: 'This email is already registered.' });
     }
 
-    // Validation: Aadhaar uniqueness
-    const existingAadhaar = (await (async () => { let args = ['SELECT * FROM students WHERE aadhaarNumber = $1', [aadhaarNumber]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
-    if (existingAadhaar) {
+    // Check unique Aadhaar
+    const { rows: aadhaarRows } = await db.query('SELECT id FROM students WHERE aadhaarNumber = $1', [aadhaarNumber.trim()]);
+    if (aadhaarRows.length > 0) {
       return res.status(400).json({ success: false, message: 'This Aadhaar number is already registered.' });
     }
 
-    // Handle Photo upload
-    let photoPath = '/assets/avatar-placeholder.png'; // fallback placeholder
+    // Handle Photo upload / placeholder
+    let photoPath = '/assets/avatar-placeholder.png';
     if (req.file) {
       photoPath = `/uploads/${req.file.filename}`;
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Start transaction
-    (await (async () => {
-         let args = ['BEGIN TRANSACTION'];
-         let sql = args[0];
-         let params = args.slice(1).length ? args.slice(1)[0] : [];
-         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
-            sql += ' RETURNING id';
-         }
-         const { rows, rowCount } = await db.query(sql, params);
-         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
-      })());
-
-    const userResult = (await (async () => {
-         let args = [
-      `INSERT INTO users (name, email, phone, password, role) VALUES ($1, $2, $3, $4, $5)`,
-      [name, mockEmail, phone, hashedPassword, 'student']
-    ];
-         let sql = args[0];
-         let params = args.slice(1).length ? args.slice(1)[0] : [];
-         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
-            sql += ' RETURNING id';
-         }
-         const { rows, rowCount } = await db.query(sql, params);
-         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
-      })());
-
-    const userId = userResult.lastID;
+    const appId = generateApplicationId();
     const joinDate = new Date().toISOString().split('T')[0];
 
-    (await (async () => {
-         let args = [
-      `INSERT INTO students (userId, studentName, phone, parentName, parentPhone, aadhaarNumber, collegeName, course, year, address, photo, idProof, joinDate, monthlyRent, depositAmount, roomId, bedId, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
+    await db.query('BEGIN');
+
+    // 1. Insert User
+    const { rows: userResult } = await db.query(
+      `INSERT INTO users (name, email, phone, password, role) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [name.trim(), userEmail, phone.trim(), hashedPassword, 'student']
+    );
+    const userId = userResult[0].id;
+
+    // 2. Insert Student Application
+    const { rows: studentResult } = await db.query(
+      `INSERT INTO students (
+        userId, studentCustomId, applicationId, applicationStatus, studentName, phone, parentName, parentPhone,
+        guardianRelationship, emergencyContact, aadhaarNumber, dateOfBirth, gender, collegeName, course, branch,
+        rollNumber, year, address, city, state, pincode, preferredRoomType, stayDuration, photo, idProof,
+        joinDate, status, monthlyRent, depositAmount, roomId, bedId, paymentStatus
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33) RETURNING id`,
       [
         userId,
-        name,
-        phone,
-        parentName,
-        parentPhone,
-        aadhaarNumber,
-        collegeName,
-        'N/A', // course placeholder
-        year,
-        '', // address placeholder
+        appId, // initial custom id set to appId
+        appId,
+        'PENDING',
+        name.trim(),
+        phone.trim(),
+        parentName.trim(),
+        parentPhone.trim(),
+        guardianRelationship || 'Parent',
+        emergencyContact || parentPhone.trim(),
+        aadhaarNumber.trim(),
+        req.body.dateOfBirth || null,
+        req.body.gender || 'Male',
+        collegeName.trim(),
+        course || 'B.Tech',
+        branch || '',
+        rollNumber || '',
+        year.trim(),
+        address || '',
+        city || '',
+        state || '',
+        pincode || '',
+        preferredRoomType || '3 Sharing',
+        stayDuration ? parseInt(stayDuration) : 12,
         photoPath,
-        '', // idProof placeholder
+        '',
         joinDate,
-        8500, // default monthly rent placeholder
-        8500, // default deposit placeholder
-        null, // default room placeholder
-        null, // default bed placeholder
-        'active'
+        'APPLICANT',
+        8500,
+        8500,
+        null,
+        null,
+        'unpaid'
       ]
-    ];
-         let sql = args[0];
-         let params = args.slice(1).length ? args.slice(1)[0] : [];
-         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
-            sql += ' RETURNING id';
-         }
-         const { rows, rowCount } = await db.query(sql, params);
-         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
-      })());
+    );
 
-    (await (async () => {
-         let args = ['COMMIT'];
-         let sql = args[0];
-         let params = args.slice(1).length ? args.slice(1)[0] : [];
-         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
-            sql += ' RETURNING id';
-         }
-         const { rows, rowCount } = await db.query(sql, params);
-         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
-      })());
+    // 3. Notification for Admin
+    await db.query(
+      `INSERT INTO notifications (type, message) VALUES ($1, $2)`,
+      ['new_application', `New student admission application submitted by ${name.trim()} (Application ID: ${appId}).`]
+    );
+
+    await db.query('COMMIT');
 
     res.status(201).json({
       success: true,
-      message: 'Registration completed successfully.'
+      message: `Admission application submitted successfully. Application ID: ${appId}`,
+      applicationId: appId,
+      studentId: studentResult[0].id
     });
   } catch (err) {
     try {
       const db = await getDb();
-      (await (async () => {
-         let args = ['ROLLBACK'];
-         let sql = args[0];
-         let params = args.slice(1).length ? args.slice(1)[0] : [];
-         if (sql.trim().toUpperCase().startsWith('INSERT') && !sql.toUpperCase().includes('RETURNING')) {
-            sql += ' RETURNING id';
-         }
-         const { rows, rowCount } = await db.query(sql, params);
-         return { lastID: rows.length > 0 ? rows[0].id : null, changes: rowCount };
-      })());
+      await db.query('ROLLBACK');
     } catch (_) {}
     console.error('Registration Error:', err);
     res.status(500).json({ success: false, message: `Registration failed: ${err.message}` });
@@ -404,13 +401,37 @@ async function getMe(req, res) {
 
     let studentProfile = null;
     if (user.role === 'student') {
-      studentProfile = (await (async () => { let args = [`
+      const profileRow = (await (async () => { let args = [`
         SELECT s.*, r.roomNumber, r.floor, b.bedNumber
         FROM students s
         LEFT JOIN rooms r ON s.roomId = r.id
         LEFT JOIN beds b ON s.bedId = b.id
         WHERE s.userId = $1
       `, [user.id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
+      if (profileRow) {
+        studentProfile = {
+          ...profileRow,
+          applicationStatus: profileRow.applicationstatus || profileRow.applicationStatus,
+          applicationId: profileRow.applicationid || profileRow.applicationId,
+          studentName: profileRow.studentname || profileRow.studentName,
+          studentCustomId: profileRow.studentcustomid || profileRow.studentCustomId,
+          parentName: profileRow.parentname || profileRow.parentName,
+          parentPhone: profileRow.parentphone || profileRow.parentPhone,
+          collegeName: profileRow.collegename || profileRow.collegeName,
+          preferredRoomType: profileRow.preferredroomtype || profileRow.preferredRoomType,
+          stayDuration: profileRow.stayduration || profileRow.stayDuration,
+          monthlyRent: profileRow.monthlyrent || profileRow.monthlyRent,
+          depositAmount: profileRow.depositamount || profileRow.depositAmount,
+          rejectionReason: profileRow.rejectionreason || profileRow.rejectionReason,
+          correctionReason: profileRow.correctionreason || profileRow.correctionReason,
+          aadhaarNumber: profileRow.aadhaarnumber || profileRow.aadhaarNumber,
+          dateOfBirth: profileRow.dateofbirth || profileRow.dateOfBirth,
+          emergencyContact: profileRow.emergencycontact || profileRow.emergencyContact,
+          rollNumber: profileRow.rollnumber || profileRow.rollNumber,
+          roomNumber: profileRow.roomnumber || profileRow.roomNumber,
+          bedNumber: profileRow.bednumber || profileRow.bedNumber
+        };
+      }
     }
 
     res.status(200).json({
@@ -515,6 +536,68 @@ async function deleteDocument(req, res) {
   }
 }
 
+async function updateStudentApplication(req, res) {
+  try {
+    const db = await getDb();
+    const { rows: students } = await db.query('SELECT * FROM students WHERE userId = $1', [req.user.id]);
+    const student = students[0];
+
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Application record not found.' });
+    }
+
+    const currentAppStatus = student.applicationStatus || student.applicationstatus;
+    if (currentAppStatus !== 'CORRECTION_REQUIRED' && currentAppStatus !== 'PENDING') {
+      return res.status(400).json({ success: false, message: 'Application cannot be updated at this status.' });
+    }
+
+    const {
+      studentName, phone, parentName, parentPhone, guardianRelationship, emergencyContact,
+      aadhaarNumber, dateOfBirth, gender, collegeName, course, branch, rollNumber, year,
+      address, city, state, pincode, preferredRoomType, stayDuration
+    } = req.body;
+
+    await db.query(
+      `UPDATE students SET
+        studentName = COALESCE($1, studentName),
+        phone = COALESCE($2, phone),
+        parentName = COALESCE($3, parentName),
+        parentPhone = COALESCE($4, parentPhone),
+        guardianRelationship = COALESCE($5, guardianRelationship),
+        emergencyContact = COALESCE($6, emergencyContact),
+        aadhaarNumber = COALESCE($7, aadhaarNumber),
+        dateOfBirth = COALESCE($8, dateOfBirth),
+        gender = COALESCE($9, gender),
+        collegeName = COALESCE($10, collegeName),
+        course = COALESCE($11, course),
+        branch = COALESCE($12, branch),
+        rollNumber = COALESCE($13, rollNumber),
+        year = COALESCE($14, year),
+        address = COALESCE($15, address),
+        city = COALESCE($16, city),
+        state = COALESCE($17, state),
+        pincode = COALESCE($18, pincode),
+        preferredRoomType = COALESCE($19, preferredRoomType),
+        stayDuration = COALESCE($20, stayDuration),
+        applicationStatus = 'PENDING',
+        correctionReason = NULL,
+        updatedAt = CURRENT_TIMESTAMP
+       WHERE id = $21`,
+      [
+        studentName || null, phone || null, parentName || null, parentPhone || null, guardianRelationship || null, emergencyContact || null,
+        aadhaarNumber || null, dateOfBirth || null, gender || null, collegeName || null, course || null, branch || null, rollNumber || null, year || null,
+        address || null, city || null, state || null, pincode || null, preferredRoomType || null, stayDuration ? parseInt(stayDuration) : null,
+        student.id
+      ]
+    );
+
+    res.status(200).json({ success: true, message: 'Application resubmitted successfully for admin review.' });
+  } catch (err) {
+    console.error('Update Application Error:', err);
+    res.status(500).json({ success: false, message: `Failed to update application: ${err.message}` });
+  }
+}
+
 module.exports = {
   login,
   register,
@@ -525,5 +608,6 @@ module.exports = {
   getMe,
   uploadDocument,
   getMyDocuments,
-  deleteDocument
+  deleteDocument,
+  updateStudentApplication
 };

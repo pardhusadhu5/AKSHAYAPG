@@ -44,6 +44,8 @@ router.use(requireRole(['admin', 'manager']));
 
 router.get('/stats', dashboardController.getStats);
 router.get('/students', dashboardController.getStudentsList);
+router.get('/applications', dashboardController.getApplications);
+router.post('/applications/:id/review', dashboardController.reviewApplication);
 router.get('/filters', dashboardController.getFilterOptions);
 router.put('/students/:id/payment', dashboardController.updatePaymentStatus);
 

@@ -512,6 +512,11 @@
         <i data-lucide="users"></i>
         <span>Students</span>
       </div>
+      <div class="menu-item" data-panel="applicationsPanel" id="applicationsMenuLink">
+        <i data-lucide="clipboard-list"></i>
+        <span>Applications</span>
+        <span id="pendingBadge" style="margin-left:auto; background:#ef4444; color:white; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:10px; display:none;">0</span>
+      </div>
       <div class="menu-item" data-panel="roomsPanel">
         <i data-lucide="door-closed"></i>
         <span>Rooms & Beds</span>
@@ -897,11 +902,81 @@
       </div>
     </div>
 
+    <!-- APPLICATIONS PANEL -->
+    <div class="panel-view" id="applicationsPanel">
+      <div class="card glass-card" style="padding:24px; border-radius:12px; border:1px solid #E5E7EB; background:white;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h3 style="margin:0; font-size:1.3rem; font-weight:800; color:var(--primary-deep);">Student Admission Applications</h3>
+            <p style="margin:4px 0 0 0; font-size:0.85rem; color:var(--text-muted);">Review new student registration applications and take decision (Approve, Reject, Request Correction).</p>
+          </div>
+          <div style="display:flex; gap:10px;">
+            <select id="appStatusFilter" class="form-input" style="height:38px; font-size:0.85rem; padding:0 12px; width:auto;" onchange="fetchApplications()">
+              <option value="all">All Applications</option>
+              <option value="PENDING" selected>Pending Review</option>
+              <option value="APPROVED">Approved</option>
+              <option value="CORRECTION_REQUIRED">Correction Requested</option>
+              <option value="REJECTED">Rejected</option>
+              <option value="ADMISSION_CONFIRMED">Admission Confirmed</option>
+            </select>
+            <button class="btn btn-primary" onclick="fetchApplications()" style="padding:8px 14px; font-size:0.85rem;"><i data-lucide="refresh-cw" style="width:14px; height:14px;"></i> Refresh</button>
+          </div>
+        </div>
+
+        <div class="table-responsive" style="max-height:600px; overflow-y:auto; border:1px solid #E5E7EB; border-radius:8px;">
+          <table class="data-table" style="width:100%; border-collapse:collapse;">
+            <thead>
+              <tr style="background:#f8fafc; text-align:left; font-size:0.75rem; text-transform:uppercase; color:var(--primary-deep);">
+                <th style="padding:12px;">App ID</th>
+                <th style="padding:12px;">Applicant Name</th>
+                <th style="padding:12px;">Mobile</th>
+                <th style="padding:12px;">College & Branch</th>
+                <th style="padding:12px;">Preferred Room</th>
+                <th style="padding:12px;">Status</th>
+                <th style="padding:12px; text-align:right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="applicationsTableBody">
+              <tr>
+                <td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">Loading applications...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
   </main>
 
   <!-- ==========================================
        MODAL DIALOGS
        ========================================== -->
+
+  <!-- Application Review Modal -->
+  <div class="modal-overlay" id="appReviewModal">
+    <div class="modal-card glass-card" style="width:100%; max-width:650px; background:white; border-radius:12px; padding:28px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom:1px solid #E5E7EB; padding-bottom:12px;">
+        <h3 style="margin:0; font-size:1.25rem; font-weight:800; color:var(--primary-deep);" id="reviewModalTitle">Review Application</h3>
+        <button onclick="closeModal('appReviewModal')" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:var(--text-muted);">&times;</button>
+      </div>
+
+      <div id="reviewModalBody" style="display:grid; grid-template-columns:1fr 1fr; gap:16px; font-size:0.9rem; margin-bottom:20px;">
+        <!-- Filled dynamically -->
+      </div>
+
+      <div style="margin-bottom:20px; display:none;" id="reviewReasonGroup">
+        <label style="display:block; font-weight:700; margin-bottom:6px; font-size:0.85rem;" id="reviewReasonLabel">Reason / Notes for Applicant</label>
+        <textarea id="reviewReasonInput" class="form-input" rows="3" placeholder="Enter reason or instructions for student..."></textarea>
+      </div>
+
+      <div style="display:flex; justify-content:flex-end; gap:12px; border-top:1px solid #E5E7EB; padding-top:16px; flex-wrap:wrap;">
+        <button type="button" class="btn btn-outline" onclick="closeModal('appReviewModal')">Cancel</button>
+        <button type="button" class="btn btn-secondary" style="background:#f59e0b; border-color:#f59e0b; color:white;" onclick="submitAppReview('REQUEST_CORRECTION')">Request Correction</button>
+        <button type="button" class="btn btn-secondary" style="background:#ef4444; border-color:#ef4444; color:white;" onclick="submitAppReview('REJECT')">Reject</button>
+        <button type="button" class="btn btn-primary" style="background:#10b981; border-color:#10b981; color:white;" onclick="submitAppReview('APPROVE')">Approve Application</button>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal 1: Create Room Modal -->
   <div class="modal-overlay" id="createRoomModal">
@@ -1435,6 +1510,7 @@
       paymentsPanel: { title: 'Payments & Revenue Ledger', sub: 'Generate payment audit sheets and verify pending transactions.' },
       reportsPanel: { title: 'Occupancy & Revenue Reports', sub: 'Generate financial worksheets and occupancy logs.' },
       remindersPanel: { title: 'Fee Payment Reminders', sub: 'Schedule automatic notifications and send direct WhatsApp late notices.' },
+      applicationsPanel: { title: 'Admission Applications', sub: 'Review pending registration applications, approve admissions, or request corrections.' },
       settingsPanel: { title: 'Console Settings', sub: 'Manage API secret keys, system variables, and data backups.' }
     };
 
@@ -1465,6 +1541,8 @@
       } else if (panelId === 'studentsPanel') {
         loadFilterDropdowns();
         fetchStudentsDatabase();
+      } else if (panelId === 'applicationsPanel') {
+        fetchApplications();
       } else if (panelId === 'roomsPanel') {
         fetchRoomsDatabase();
       } else if (panelId === 'paymentsPanel') {
@@ -2551,6 +2629,171 @@
     async function openAllocateModalWithStudent(studentId) {
       await openAllocateModal();
       document.getElementById('allocStudent').value = studentId;
+    }
+
+    let currentReviewAppId = null;
+    let currentReviewAppObj = null;
+
+    async function fetchApplications() {
+      const token = localStorage.getItem('token');
+      const statusFilterEl = document.getElementById('appStatusFilter');
+      const statusFilter = statusFilterEl ? statusFilterEl.value : 'PENDING';
+      const tbody = document.getElementById('applicationsTableBody');
+      if (!tbody) return;
+
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px;">Loading applications...</td></tr>`;
+
+      try {
+        const res = await fetch(`/api/admin/applications?status=${statusFilter}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          const apps = data.applications || [];
+          
+          // Update badge count for pending review
+          const pendingCount = apps.filter(a => a.applicationStatus === 'PENDING').length;
+          const badge = document.getElementById('pendingBadge');
+          if (badge) {
+            badge.innerText = pendingCount;
+            badge.style.display = pendingCount > 0 ? 'inline-block' : 'none';
+          }
+
+          if (apps.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">No applications found for filter "${statusFilter}".</td></tr>`;
+            return;
+          }
+
+          tbody.innerHTML = '';
+          apps.forEach(app => {
+            const tr = document.createElement('tr');
+            
+            let statusBadgeStyle = 'background:#fef3c7; color:#d97706;'; // PENDING
+            let statusText = app.applicationStatus || 'PENDING';
+            if (statusText === 'APPROVED') {
+              statusBadgeStyle = 'background:#dbeafe; color:#2563eb;';
+            } else if (statusText === 'ADMISSION_CONFIRMED') {
+              statusBadgeStyle = 'background:#d1fae5; color:#059669;';
+            } else if (statusText === 'CORRECTION_REQUIRED') {
+              statusBadgeStyle = 'background:#ffedd5; color:#c2410c;';
+            } else if (statusText === 'REJECTED') {
+              statusBadgeStyle = 'background:#fee2e2; color:#dc2626;';
+            }
+
+            const isAllocated = !!app.roomId;
+            const canAllocate = (statusText === 'APPROVED' || statusText === 'ADMISSION_CONFIRMED' || app.paymentStatus === 'paid') && !isAllocated;
+            const appJson = JSON.stringify(app).replace(/"/g, '&quot;');
+
+            tr.innerHTML = `
+              <td style="padding:12px; font-weight:700; color:var(--primary-deep);">${app.applicationId || 'AKS-' + app.id}</td>
+              <td style="padding:12px;">
+                <div style="font-weight:700;">${app.studentName}</div>
+                <div style="font-size:0.75rem; color:var(--text-muted);">${app.email || 'No email'}</div>
+              </td>
+              <td style="padding:12px;">${app.phone}</td>
+              <td style="padding:12px;">
+                <div>${app.collegeName}</div>
+                <div style="font-size:0.75rem; color:var(--text-muted);">${app.branch || app.course || ''} (${app.year || ''})</div>
+              </td>
+              <td style="padding:12px; font-weight:600;">${app.preferredRoomType || '3 Sharing'}</td>
+              <td style="padding:12px;">
+                <span style="padding:4px 10px; border-radius:12px; font-size:0.72rem; font-weight:700; text-transform:uppercase; ${statusBadgeStyle}">
+                  ${statusText.replace('_', ' ')}
+                </span>
+                ${app.paymentStatus === 'paid' ? '<span style="margin-left:4px; padding:2px 6px; background:#10b981; color:white; border-radius:8px; font-size:0.65rem; font-weight:700;">FEE PAID</span>' : ''}
+              </td>
+              <td style="padding:12px; text-align:right;">
+                <button class="btn btn-outline" onclick="openReviewModalFromBtn('${app.id}')" style="padding:4px 10px; font-size:0.75rem; margin-right:4px;">
+                  Review
+                </button>
+                ${canAllocate ? `<button class="btn btn-primary" onclick="openAllocateModalWithStudent(${app.id})" style="padding:4px 10px; font-size:0.75rem; background:#10b981; border-color:#10b981;">Allocate Bed</button>` : ''}
+              </td>
+            `;
+            tbody.appendChild(tr);
+            tr.dataset.appData = JSON.stringify(app);
+          });
+        }
+      } catch (err) {
+        console.error('Fetch apps error:', err);
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:#ef4444;">Failed to load applications: ${err.message}</td></tr>`;
+      }
+    }
+
+    function openReviewModalFromBtn(appId) {
+      const rows = document.querySelectorAll('#applicationsTableBody tr');
+      for (const row of rows) {
+        if (row.dataset.appData) {
+          const app = JSON.parse(row.dataset.appData);
+          if (String(app.id) === String(appId)) {
+            openReviewModal(app);
+            return;
+          }
+        }
+      }
+    }
+
+    function openReviewModal(app) {
+      currentReviewAppId = app.id;
+      currentReviewAppObj = app;
+      document.getElementById('reviewModalTitle').innerText = `Review Application: ${app.applicationId || 'AKS-' + app.id}`;
+      
+      const body = document.getElementById('reviewModalBody');
+      body.innerHTML = `
+        <div><strong>Applicant Name:</strong> ${app.studentName}</div>
+        <div><strong>Mobile Number:</strong> ${app.phone}</div>
+        <div><strong>Aadhaar Number:</strong> ${app.aadhaarNumber || 'N/A'}</div>
+        <div><strong>College:</strong> ${app.collegeName}</div>
+        <div><strong>Branch / Course:</strong> ${app.branch || app.course || 'N/A'}</div>
+        <div><strong>Roll / Hall Ticket:</strong> ${app.rollNumber || 'N/A'}</div>
+        <div><strong>Year of Study:</strong> ${app.year}</div>
+        <div><strong>Parent / Guardian:</strong> ${app.parentName} (${app.guardianRelationship || 'Parent'})</div>
+        <div><strong>Parent Phone:</strong> ${app.parentPhone}</div>
+        <div><strong>Preferred Room:</strong> ${app.preferredRoomType || '3 Sharing'}</div>
+        <div><strong>Stay Duration:</strong> ${app.stayDuration || 12} Months</div>
+        <div><strong>City / State:</strong> ${app.city || 'N/A'}, ${app.state || 'N/A'}</div>
+        <div><strong>Current Status:</strong> <span style="font-weight:700; color:var(--primary-brand);">${app.applicationStatus}</span></div>
+        <div><strong>Fee Payment Status:</strong> <span style="font-weight:700;">${app.paymentStatus === 'paid' ? 'PAID' : 'UNPAID'}</span></div>
+        ${app.rejectionReason ? `<div style="grid-column:span 2; color:#ef4444;"><strong>Rejection Reason:</strong> ${app.rejectionReason}</div>` : ''}
+        ${app.correctionReason ? `<div style="grid-column:span 2; color:#f59e0b;"><strong>Correction Requested:</strong> ${app.correctionReason}</div>` : ''}
+      `;
+
+      document.getElementById('reviewReasonInput').value = '';
+      document.getElementById('reviewReasonGroup').style.display = 'block';
+      openModal('appReviewModal');
+    }
+
+    async function submitAppReview(action) {
+      if (!currentReviewAppId) return;
+      const token = localStorage.getItem('token');
+      const reason = document.getElementById('reviewReasonInput').value;
+
+      if ((action === 'REJECT' || action === 'REQUEST_CORRECTION') && !reason.trim()) {
+        alert(`Please enter a reason or instructions for setting status to ${action}.`);
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/admin/applications/${currentReviewAppId}/review`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ action, reason })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          alert(data.message);
+          closeModal('appReviewModal');
+          fetchApplications();
+        } else {
+          alert('Review Submission Failed: ' + data.message);
+        }
+      } catch (err) {
+        alert('Server Error: ' + err.message);
+      }
     }
 
     async function onAllocationRoomChange() {

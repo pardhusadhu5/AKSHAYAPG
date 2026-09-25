@@ -625,6 +625,135 @@ async function downloadDbBackup(req, res) {
   }
 }
 
+async function getApplications(req, res) {
+  try {
+    const { status } = req.query;
+    const db = await getDb();
+    
+    let query = `
+      SELECT s.*, u.email, r.roomNumber, b.bedNumber, b.bedLabel
+      FROM students s
+      JOIN users u ON s.userId = u.id
+      LEFT JOIN rooms r ON s.roomId = r.id
+      LEFT JOIN beds b ON s.bedId = b.id
+      WHERE 1=1
+    `;
+    const params = [];
+
+    if (status && status !== 'all') {
+      params.push(status.toUpperCase());
+      query += ` AND UPPER(s.applicationStatus) = $${params.length}`;
+    }
+
+    query += ` ORDER BY s.id DESC`;
+
+    const { rows: applications } = await db.query(query, params);
+    const normalizedApps = applications.map(app => ({
+      ...app,
+      applicationStatus: app.applicationstatus || app.applicationStatus,
+      applicationId: app.applicationid || app.applicationId,
+      studentName: app.studentname || app.studentName,
+      studentCustomId: app.studentcustomid || app.studentCustomId,
+      parentName: app.parentname || app.parentName,
+      parentPhone: app.parentphone || app.parentPhone,
+      collegeName: app.collegename || app.collegeName,
+      preferredRoomType: app.preferredroomtype || app.preferredRoomType,
+      stayDuration: app.stayduration || app.stayDuration,
+      monthlyRent: app.monthlyrent || app.monthlyRent,
+      depositAmount: app.depositamount || app.depositAmount,
+      rejectionReason: app.rejectionreason || app.rejectionReason,
+      correctionReason: app.correctionreason || app.correctionReason,
+      aadhaarNumber: app.aadhaarnumber || app.aadhaarNumber,
+      dateOfBirth: app.dateofbirth || app.dateOfBirth,
+      emergencyContact: app.emergencycontact || app.emergencyContact,
+      rollNumber: app.rollnumber || app.rollNumber,
+      roomNumber: app.roomnumber || app.roomNumber,
+      bedNumber: app.bednumber || app.bedNumber,
+      bedLabel: app.bedlabel || app.bedLabel
+    }));
+    res.status(200).json({ success: true, applications: normalizedApps });
+  } catch (err) {
+    console.error('Get Applications Error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+async function reviewApplication(req, res) {
+  try {
+    const { id } = req.params;
+    const { action, reason, admissionFee } = req.body;
+
+    if (!['APPROVE', 'REJECT', 'REQUEST_CORRECTION'].includes(action)) {
+      return res.status(400).json({ success: false, message: 'Invalid action. Must be APPROVE, REJECT, or REQUEST_CORRECTION.' });
+    }
+
+    const db = await getDb();
+    const { rows: students } = await db.query('SELECT * FROM students WHERE id = $1', [id]);
+    const student = students[0];
+
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student application record not found.' });
+    }
+
+    let targetAppStatus = 'PENDING';
+    let rejectionReason = null;
+    let correctionReason = null;
+
+    if (action === 'APPROVE') {
+      targetAppStatus = 'APPROVED';
+      const feeAmount = admissionFee ? parseFloat(admissionFee) : (parseFloat(student.monthlyRent) || 8500);
+
+      // Check if admission invoice already generated in payments table
+      const { rows: existingFee } = await db.query(
+        "SELECT id FROM payments WHERE studentId = $1 AND billingMonth = 'ADMISSION'",
+        [id]
+      );
+
+      if (existingFee.length === 0) {
+        await db.query(
+          `INSERT INTO payments (studentId, billingMonth, amountDue, amountPaid, status) VALUES ($1, $2, $3, 0, 'pending')`,
+          [id, 'ADMISSION', feeAmount]
+        );
+      }
+
+      await db.query(
+        `INSERT INTO notifications (type, message) VALUES ($1, $2)`,
+        ['application_approved', `Application ${student.applicationId || student.id} approved for ${student.studentName}. Initial fee invoice generated.`]
+      );
+    } else if (action === 'REJECT') {
+      targetAppStatus = 'REJECTED';
+      rejectionReason = reason || 'Application rejected by hostel administration.';
+      await db.query(
+        `INSERT INTO notifications (type, message) VALUES ($1, $2)`,
+        ['application_rejected', `Application ${student.applicationId || student.id} rejected for ${student.studentName}.`]
+      );
+    } else if (action === 'REQUEST_CORRECTION') {
+      targetAppStatus = 'CORRECTION_REQUIRED';
+      correctionReason = reason || 'Please review and update your application details.';
+      await db.query(
+        `INSERT INTO notifications (type, message) VALUES ($1, $2)`,
+        ['application_correction', `Correction requested for application ${student.applicationId || student.id} (${student.studentName}).`]
+      );
+    }
+
+    await db.query(
+      `UPDATE students 
+       SET applicationStatus = $1, rejectionReason = $2, correctionReason = $3, updatedAt = CURRENT_TIMESTAMP 
+       WHERE id = $4`,
+      [targetAppStatus, rejectionReason, correctionReason, id]
+    );
+
+    res.status(200).json({
+      success: true,
+      message: `Application status updated to ${targetAppStatus}.`,
+      applicationStatus: targetAppStatus
+    });
+  } catch (err) {
+    console.error('Review Application Error:', err);
+    res.status(500).json({ success: false, message: `Failed to review application: ${err.message}` });
+  }
+}
+
 module.exports = {
   getStats,
   getStudentsList,
@@ -636,5 +765,7 @@ module.exports = {
   deleteStudent,
   getSettings,
   updateSettings,
-  downloadDbBackup
+  downloadDbBackup,
+  getApplications,
+  reviewApplication
 };

@@ -646,7 +646,7 @@ async function downloadReceiptPdf(req, res) {
 async function getStudentFees(req, res) {
   try {
     const db = await getDb();
-    const student = (await (async () => { let args = [
+    const { rows: studentRows } = await db.query(
       `SELECT s.*, u.email, r.roomNumber, r.floor, r.monthlyFee as roomRent, b.bedNumber 
        FROM students s 
        JOIN users u ON s.userId = u.id 
@@ -654,22 +654,25 @@ async function getStudentFees(req, res) {
        LEFT JOIN beds b ON s.bedId = b.id 
        WHERE s.userId = $1`,
       [req.user.id]
-    ]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
+    );
+    const student = studentRows[0];
 
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student record not found.' });
     }
 
     // Fetch all fees for student
-    const fees = (await (async () => { let args = [
+    const { rows: fees } = await db.query(
       `SELECT p.*, r.receiptNumber, pt.gatewayOrderId, pt.gatewayPaymentId, pt.status as gatewayStatus
        FROM payments p
        LEFT JOIN receipts r ON r.feeId = p.id
        LEFT JOIN paymentTransactions pt ON pt.feeId = p.id AND pt.status = 'SUCCESS'
        WHERE p.studentId = $1
-       ORDER BY p.billingMonth DESC`,
+       ORDER BY p.billingMonth DESC, p.id DESC`,
       [student.id]
-    ]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
+    );
+
+    const admissionFeeInvoice = fees.find(f => f.billingMonth === 'ADMISSION');
 
     // Current month identifier e.g. '2026-09'
     const now = new Date();
@@ -712,14 +715,20 @@ async function getStudentFees(req, res) {
       success: true,
       studentInfo: {
         id: student.id,
-        name: student.studentName,
+        name: student.studentName || student.studentname,
         email: student.email,
         phone: student.phone,
-        roomNumber: student.roomNumber || 'Unassigned',
-        bedNumber: student.bedNumber || 'Unassigned',
+        applicationId: student.applicationId || student.applicationid || student.studentCustomId || student.studentcustomid,
+        applicationStatus: student.applicationStatus || student.applicationstatus || 'PENDING',
+        rejectionReason: student.rejectionReason || student.rejectionreason,
+        correctionReason: student.correctionReason || student.correctionreason,
+        preferredRoomType: student.preferredRoomType || student.preferredroomtype,
+        roomNumber: student.roomNumber || student.roomnumber || 'Unassigned',
+        bedNumber: student.bedNumber || student.bednumber || 'Unassigned',
         floor: student.floor || 'Ground Floor',
-        monthlyRent: student.monthlyRent
+        monthlyRent: student.monthlyRent || student.monthlyrent
       },
+      admissionFeeInvoice,
       currentFee,
       previousDues,
       history

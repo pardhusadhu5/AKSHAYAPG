@@ -42,6 +42,7 @@ const upload = multer({
 router.post('/register', upload.single('photo'), authController.register);
 router.post('/login', authController.login);
 router.put('/update-profile-picture', verifyToken, upload.single('photo'), authController.updateProfilePicture);
+router.put('/update-application', verifyToken, authController.updateStudentApplication);
 router.put('/change-password', verifyToken, authController.changePassword);
 
 // Student Documents

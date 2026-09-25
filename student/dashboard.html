@@ -398,6 +398,10 @@
         <i data-lucide="bell"></i>
         <span>Announcements</span>
       </div>
+      <div class="menu-item" data-panel="foodMenuPanel">
+        <i data-lucide="utensils"></i>
+        <span>Weekly Food Menu</span>
+      </div>
       <div class="menu-item" data-panel="complaintsPanel">
         <i data-lucide="message-square"></i>
         <span>Complaints Desk</span>
@@ -439,6 +443,7 @@
 
     <!-- 1. MY PROFILE STAY PANEL -->
     <div class="panel-view active" id="dashboardPanel">
+      <div id="applicationStatusBanner" style="margin-bottom:24px;"></div>
       <!-- Short Stats Grid -->
       <div class="stats-grid">
         <div class="stat-widget">
@@ -777,6 +782,37 @@
       </div>
     </div>
 
+    <!-- 5. WEEKLY FOOD MENU PANEL -->
+    <div class="panel-view" id="foodMenuPanel">
+      <div class="card-container">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h3 style="margin:0; border:none; padding:0; font-size:1.3rem; color:var(--primary-deep);">Weekly Food Menu</h3>
+            <p style="margin:4px 0 0 0; font-size:0.85rem; color:var(--text-muted);">Freshly prepared 3-course South Indian meals served daily.</p>
+          </div>
+          <span id="currentDayBadge" style="background:var(--primary-brand); color:white; font-size:0.8rem; font-weight:700; padding:6px 14px; border-radius:20px;">
+            Today: Monday
+          </span>
+        </div>
+
+        <!-- Days Selector Tabs -->
+        <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:12px; margin-bottom:20px; border-bottom:1px solid #e2e8f0;">
+          <button class="btn btn-outline day-tab-btn" onclick="selectFoodMenuDay('Monday')" id="tabMonday">Monday</button>
+          <button class="btn btn-outline day-tab-btn" onclick="selectFoodMenuDay('Tuesday')" id="tabTuesday">Tuesday</button>
+          <button class="btn btn-outline day-tab-btn" onclick="selectFoodMenuDay('Wednesday')" id="tabWednesday">Wednesday</button>
+          <button class="btn btn-outline day-tab-btn" onclick="selectFoodMenuDay('Thursday')" id="tabThursday">Thursday</button>
+          <button class="btn btn-outline day-tab-btn" onclick="selectFoodMenuDay('Friday')" id="tabFriday">Friday</button>
+          <button class="btn btn-outline day-tab-btn" onclick="selectFoodMenuDay('Saturday')" id="tabSaturday">Saturday</button>
+          <button class="btn btn-outline day-tab-btn" onclick="selectFoodMenuDay('Sunday')" id="tabSunday">Sunday</button>
+        </div>
+
+        <!-- Meals Display Grid -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:20px;" id="foodMenuContent">
+          <!-- Populated dynamically based on selected day -->
+        </div>
+      </div>
+    </div>
+
     <!-- 6. PROFILE SETTINGS PANEL -->
     <div class="panel-view" id="settingsPanel">
       <div class="profile-layout-grid">
@@ -869,6 +905,7 @@
       announcementsPanel: { title: 'Announcements Board', sub: 'Stay updated with meal alerts, notices, and utilities repair logs.' },
       complaintsPanel: { title: 'Complaints Ticket Desk', sub: 'Raise maintenance concerns and track resolution status.' },
       documentsPanel: { title: 'My Documents Archive', sub: 'Upload and manage student identity proofs.' },
+      foodMenuPanel: { title: 'Weekly Hostel Food Menu', sub: 'Inspect daily breakfast, lunch, and dinner schedules.' },
       settingsPanel: { title: 'Profile Settings', sub: 'Update your dashboard profile picture or secure your portal credentials.' }
     };
 
@@ -904,6 +941,8 @@
         fetchMyComplaints();
       } else if (panelId === 'documentsPanel') {
         fetchMyDocuments();
+      } else if (panelId === 'foodMenuPanel') {
+        initFoodMenu();
       }
     }
 
@@ -940,7 +979,74 @@
           const avatarUrl = (profile && profile.photo) ? profile.photo : '/assets/avatar-placeholder.png';
           document.getElementById('headerAvatar').src = avatarUrl;
           document.getElementById('profileAvatarLarge').src = avatarUrl;
-          
+
+          // Application Status Banner
+          const appBanner = document.getElementById('applicationStatusBanner');
+          if (appBanner && profile) {
+            const appStatus = profile.applicationStatus || 'PENDING';
+            const appId = profile.applicationId || profile.studentCustomId || ('AKS-' + profile.id);
+            
+            if (appStatus === 'PENDING') {
+              appBanner.innerHTML = `
+                <div style="background:#eff6ff; border:1px solid #93c5fd; border-left:5px solid #2563eb; border-radius:12px; padding:20px; font-size:0.95rem;">
+                  <h4 style="margin:0 0 6px 0; font-weight:800; color:#1e40af; font-size:1.1rem;">⏳ Application Under Review</h4>
+                  <p style="margin:0 0 4px 0; color:#1e3a8a;">Your admission application (Application ID: <strong>${appId}</strong>) is currently being reviewed by hostel management.</p>
+                  <span style="font-size:0.8rem; color:#3b82f6;">Preferred Room: ${profile.preferredRoomType || '3 Sharing'} | Status: Pending Admin Review</span>
+                </div>
+              `;
+            } else if (appStatus === 'REJECTED') {
+              appBanner.innerHTML = `
+                <div style="background:#fef2f2; border:1px solid #fca5a5; border-left:5px solid #ef4444; border-radius:12px; padding:20px; font-size:0.95rem;">
+                  <h4 style="margin:0 0 6px 0; font-weight:800; color:#991b1b; font-size:1.1rem;">❌ Application Rejected</h4>
+                  <p style="margin:0 0 8px 0; color:#7f1d1d;"><strong>Reason:</strong> ${profile.rejectionReason || 'Application rejected by administration.'}</p>
+                  <p style="margin:0; font-size:0.85rem; color:#b91c1c;">Please contact hostel admin at 98852 97517 for assistance.</p>
+                </div>
+              `;
+            } else if (appStatus === 'CORRECTION_REQUIRED') {
+              appBanner.innerHTML = `
+                <div style="background:#fff7ed; border:1px solid #fdba74; border-left:5px solid #f97316; border-radius:12px; padding:20px; font-size:0.95rem;">
+                  <h4 style="margin:0 0 6px 0; font-weight:800; color:#9a3412; font-size:1.1rem;">⚠️ Action Required: Correct Application Details</h4>
+                  <p style="margin:0 0 12px 0; color:#7c2d12;"><strong>Admin Notes:</strong> ${profile.correctionReason || 'Please review your application details.'}</p>
+                  <div style="background:white; padding:16px; border-radius:8px; border:1px solid #fed7aa; margin-bottom:12px;">
+                    <h5 style="margin:0 0 8px 0; font-weight:700;">Resubmit Details:</h5>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
+                      <input type="text" id="corrName" class="form-input" placeholder="Full Name" value="${user.name}">
+                      <input type="text" id="corrCollege" class="form-input" placeholder="College Name" value="${profile.collegeName || ''}">
+                      <input type="text" id="corrBranch" class="form-input" placeholder="Branch" value="${profile.branch || ''}">
+                      <input type="text" id="corrParent" class="form-input" placeholder="Parent Name" value="${profile.parentName || ''}">
+                      <input type="text" id="corrParentPhone" class="form-input" placeholder="Parent Phone" value="${profile.parentPhone || ''}">
+                      <select id="corrRoomPref" class="form-input">
+                        <option value="2 Sharing" ${profile.preferredRoomType === '2 Sharing' ? 'selected' : ''}>2 Sharing</option>
+                        <option value="3 Sharing" ${profile.preferredRoomType === '3 Sharing' ? 'selected' : ''}>3 Sharing</option>
+                        <option value="4 Sharing" ${profile.preferredRoomType === '4 Sharing' ? 'selected' : ''}>4 Sharing</option>
+                        <option value="5 Sharing" ${profile.preferredRoomType === '5 Sharing' ? 'selected' : ''}>5 Sharing</option>
+                      </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="submitCorrection()" style="padding:8px 16px; font-size:0.85rem; background:#f97316; border-color:#f97316;">Resubmit Application</button>
+                  </div>
+                </div>
+              `;
+            } else if (appStatus === 'APPROVED' && profile.paymentStatus !== 'paid') {
+              appBanner.innerHTML = `
+                <div style="background:#f0fdf4; border:1px solid #86efac; border-left:5px solid #22c55e; border-radius:12px; padding:20px; font-size:0.95rem;">
+                  <h4 style="margin:0 0 6px 0; font-weight:800; color:#166534; font-size:1.1rem;">🎉 Application Approved!</h4>
+                  <p style="margin:0 0 12px 0; color:#14532d;">Your admission application (Application ID: <strong>${appId}</strong>) has been approved! Pay initial admission fee to enable room & bed allocation.</p>
+                  <button class="btn btn-primary" onclick="switchPanel('paymentsPanel')" style="padding:10px 18px; font-size:0.85rem; background:#16a34a; border-color:#16a34a;">Pay Admission Fee Now</button>
+                </div>
+              `;
+            } else if (appStatus === 'ADMISSION_CONFIRMED' || profile.roomId) {
+              appBanner.innerHTML = `
+                <div style="background:#ecfdf5; border:1px solid #6ee7b7; border-left:5px solid #10b981; border-radius:12px; padding:16px; font-size:0.9rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+                  <div>
+                    <h4 style="margin:0 0 4px 0; font-weight:800; color:#065f46; font-size:1rem;">✅ Admission Confirmed & Active Resident</h4>
+                    <span style="color:#047857;">Application ID: <strong>${appId}</strong> | Room: <strong>${profile.roomNumber || 'Assigned'}</strong></span>
+                  </div>
+                  <span class="status-badge active">CONFIRMED</span>
+                </div>
+              `;
+            }
+          }
+
           // Bind stay badge statistics
           document.getElementById('roomBadge').innerText = (profile && profile.roomNumber) ? `Room ${profile.roomNumber}` : 'Room --';
           document.getElementById('bedBadge').innerText = (profile && profile.bedNumber) ? `Bed ${profile.bedNumber}` : 'Bed --';
@@ -987,6 +1093,130 @@
         }
       } catch (err) {
         console.error('Failed to load student stay profile:', err);
+      }
+    }
+
+    async function submitCorrection() {
+      const token = localStorage.getItem('token');
+      const payload = {
+        studentName: document.getElementById('corrName').value,
+        collegeName: document.getElementById('corrCollege').value,
+        branch: document.getElementById('corrBranch').value,
+        parentName: document.getElementById('corrParent').value,
+        parentPhone: document.getElementById('corrParentPhone').value,
+        preferredRoomType: document.getElementById('corrRoomPref').value
+      };
+
+      try {
+        const res = await fetch('/api/auth/update-application', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(data.message);
+          loadStudentProfile();
+        } else {
+          alert('Correction Submission Failed: ' + data.message);
+        }
+      } catch (err) {
+        alert('Server Error: ' + err.message);
+      }
+    }
+
+    const foodSchedule = {
+      Monday: {
+        breakfast: 'Idli & Vada with Sambhar & Coconut Chutney',
+        lunch: 'Steamed Rice, Tomato Dal, Potato Fry, Curd & Papad',
+        dinner: 'Rice, Sambhar, Mixed Veg Curry, Curd & Pickle'
+      },
+      Tuesday: {
+        breakfast: 'Puri & Potato Bhaji with Chutney',
+        lunch: 'Steamed Rice, Sambhar, Bhendi Fry, Curd & Pickle',
+        dinner: 'Hot Chapatis, Special Chicken Curry / Paneer Curry, Steamed Rice, Curd'
+      },
+      Wednesday: {
+        breakfast: 'Crispy Dosa with Allam Chutney & Sambhar',
+        lunch: 'Steamed Rice, Leafy Veg Pappu, Brinjal Curry, Curd',
+        dinner: 'Steamed Rice, Egg Curry / Veg Curry, Pepper Rasam, Curd'
+      },
+      Thursday: {
+        breakfast: 'Mysore Bonda with Ginger Chutney',
+        lunch: 'Steamed Rice, Tomato Pappu, Beerakaya Fry, Curd',
+        dinner: 'Steamed Rice, Sambhar, Potato Kurma, Curd & Papad'
+      },
+      Friday: {
+        breakfast: 'Uggani / Upma with Chutney',
+        lunch: 'Steamed Rice, Pappu Charu, Aratikaya Fry, Curd',
+        dinner: 'Chapatis, Egg Masala / Veg Kurma, Steamed Rice, Curd'
+      },
+      Saturday: {
+        breakfast: 'Hot Poha / Chapatis with Curry',
+        lunch: 'Steamed Rice, Mudda Pappu, Avakaya Mango Pickle, Ghee & Curd',
+        dinner: 'Steamed Rice, Sambhar, Meal Maker Curry, Curd'
+      },
+      Sunday: {
+        breakfast: 'Onion Dosa with Sambhar & Chutney',
+        lunch: 'Special Chicken Biryani / Veg Paneer Biryani, Raitha & Salan',
+        dinner: 'Steamed Rice, Pepper Rasam, Aloo Fry, Curd'
+      }
+    };
+
+    function getCurrentISTDay() {
+      try {
+        return new Date().toLocaleDateString('en-US', { timeZone: 'Asia/Kolkata', weekday: 'long' });
+      } catch (_) {
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        return days[new Date().getDay()];
+      }
+    }
+
+    function initFoodMenu() {
+      const istDay = getCurrentISTDay();
+      const badge = document.getElementById('currentDayBadge');
+      if (badge) badge.innerText = `Today: ${istDay}`;
+      selectFoodMenuDay(istDay);
+    }
+
+    function selectFoodMenuDay(dayName) {
+      document.querySelectorAll('.day-tab-btn').forEach(btn => {
+        btn.style.background = 'white';
+        btn.style.color = 'var(--primary-brand)';
+        btn.style.borderColor = 'var(--primary-brand)';
+      });
+
+      const activeTab = document.getElementById(`tab${dayName}`);
+      if (activeTab) {
+        activeTab.style.background = 'var(--primary-brand)';
+        activeTab.style.color = 'white';
+      }
+
+      const menu = foodSchedule[dayName] || foodSchedule['Monday'];
+      const container = document.getElementById('foodMenuContent');
+      if (container) {
+        container.innerHTML = `
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:20px;">
+            <div style="font-size:0.75rem; font-weight:700; color:var(--primary-brand); text-transform:uppercase; margin-bottom:8px;">Breakfast (7:30 AM - 9:30 AM)</div>
+            <h4 style="margin:0 0 8px 0; font-size:1.1rem; color:var(--dark-slate); font-weight:800;">${menu.breakfast}</h4>
+            <p style="margin:0; font-size:0.8rem; color:var(--text-muted);">Freshly prepared hot breakfast served with tea & coffee.</p>
+          </div>
+
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:20px;">
+            <div style="font-size:0.75rem; font-weight:700; color:var(--primary-brand); text-transform:uppercase; margin-bottom:8px;">Lunch (12:30 PM - 2:30 PM)</div>
+            <h4 style="margin:0 0 8px 0; font-size:1.1rem; color:var(--dark-slate); font-weight:800;">${menu.lunch}</h4>
+            <p style="margin:0; font-size:0.8rem; color:var(--text-muted);">Unlimited steamed rice, dal fry, curry & fresh curd.</p>
+          </div>
+
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:20px;">
+            <div style="font-size:0.75rem; font-weight:700; color:var(--primary-brand); text-transform:uppercase; margin-bottom:8px;">Dinner (7:30 PM - 9:30 PM)</div>
+            <h4 style="margin:0 0 8px 0; font-size:1.1rem; color:var(--dark-slate); font-weight:800;">${menu.dinner}</h4>
+            <p style="margin:0; font-size:0.8rem; color:var(--text-muted);">Delicious dinner served hot with curd & rasam.</p>
+          </div>
+        `;
       }
     }
 
