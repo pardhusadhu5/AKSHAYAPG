@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Student Registration | Akshaya Deluxe Boys Hostel</title>
-  <meta name="description" content="Register to Akshaya Deluxe Boys Hostel and book a room. Enter your details to get started.">
+  <title>Student Admission Registration | Akshaya Deluxe Boys Hostel</title>
+  <meta name="description" content="Complete your admission registration for Akshaya Deluxe Boys Hostel. Enter your details to submit your application.">
   <link rel="stylesheet" href="style.css">
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
@@ -20,7 +20,7 @@
     }
     .auth-container {
       width: 100%;
-      max-width: 500px;
+      max-width: 540px;
       position: relative;
       z-index: 2;
     }
@@ -34,7 +34,7 @@
       margin-bottom: 30px;
     }
     .auth-header h2 {
-      font-size: 2rem;
+      font-size: 1.8rem;
       font-weight: 800;
       color: var(--primary-deep);
       margin-bottom: 8px;
@@ -42,6 +42,24 @@
     .auth-header p {
       color: var(--text-muted);
       font-size: 0.95rem;
+    }
+    .verified-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: #ecfdf5;
+      color: #059669;
+      border: 1px solid #a7f3d0;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-left: 8px;
+    }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
     }
     .auth-actions-footer {
       text-align: center;
@@ -57,11 +75,6 @@
     .auth-actions-footer a:hover {
       color: var(--primary-deep);
       text-decoration: underline;
-    }
-    .form-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
     }
     @media (max-width: 576px) {
       .form-grid {
@@ -114,14 +127,17 @@
     <div class="container auth-container">
       <div class="auth-card glass-card">
         <div class="auth-header">
-          <h2>Registration</h2>
-          <p>Create an account to join Akshaya Deluxe Boys Hostel</p>
+          <h2>Admission Registration</h2>
+          <p>Fill out your details to submit your hostel admission application</p>
         </div>
         
         <form id="studentRegisterForm" enctype="multipart/form-data">
+          <!-- Hidden Verified Token -->
+          <input type="hidden" id="regVerificationToken">
+
           <!-- Profile Photo Upload -->
           <div class="form-group" style="margin-bottom: 20px;">
-            <label class="form-label" for="regPhoto">Profile Photo</label>
+            <label class="form-label" for="regPhoto">Profile Photo (Optional)</label>
             <input type="file" id="regPhoto" class="form-input" accept="image/*" style="padding: 10px;">
           </div>
 
@@ -132,20 +148,23 @@
             </div>
             
             <div class="form-group">
-              <label class="form-label" for="regPhone">Mobile Number (Login ID) *</label>
-              <input type="tel" id="regPhone" class="form-input" placeholder="e.g. 9848022338" required pattern="[0-9]{10,15}">
+              <label class="form-label" for="regPhone">
+                Mobile Number *
+                <span class="verified-badge">Verified ✓</span>
+              </label>
+              <input type="tel" id="regPhone" class="form-input" readonly style="background: rgba(0,0,0,0.04); font-weight: 700; cursor: not-allowed;">
             </div>
           </div>
           
           <div class="form-grid">
             <div class="form-group">
               <label class="form-label" for="regAadhaar">Aadhaar Number *</label>
-              <input type="text" id="regAadhaar" class="form-input" placeholder="e.g. 543210987654" required pattern="[0-9]{12}">
+              <input type="text" id="regAadhaar" class="form-input" placeholder="e.g. 543210987654" required pattern="[0-9]{12}" maxlength="12">
             </div>
             
             <div class="form-group">
               <label class="form-label" for="regCollege">College Name *</label>
-              <input type="text" id="regCollege" class="form-input" placeholder="e.g. Aurora Deemed University" required>
+              <input type="text" id="regCollege" class="form-input" placeholder="e.g. Aurora Engineering College" required>
             </div>
           </div>
 
@@ -191,7 +210,7 @@
 
             <div class="form-group">
               <label class="form-label" for="regParentPhone">Parent Mobile Number *</label>
-              <input type="tel" id="regParentPhone" class="form-input" placeholder="e.g. 9000123457" required pattern="[0-9]{10,15}">
+              <input type="tel" id="regParentPhone" class="form-input" placeholder="e.g. 9000123457" required pattern="[0-9]{10}">
             </div>
           </div>
 
@@ -239,24 +258,12 @@
               <input type="tel" id="regEmergency" class="form-input" placeholder="e.g. 9848011223">
             </div>
           </div>
-          
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label" for="regPass">Password *</label>
-              <input type="password" id="regPass" class="form-input" placeholder="••••••••" required>
-            </div>
-            
-            <div class="form-group">
-              <label class="form-label" for="regPassConfirm">Confirm Password *</label>
-              <input type="password" id="regPassConfirm" class="form-input" placeholder="••••••••" required>
-            </div>
-          </div>
-          
-          <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 10px;">Submit Admission Application</button>
+
+          <button type="submit" class="btn btn-primary" id="submitAppBtn" style="width: 100%; margin-top: 16px; padding: 14px; font-size: 1rem;">Submit Admission Application</button>
         </form>
         
         <div class="auth-actions-footer">
-          <p>Already applied or have an account? <a href="student-login.html">Login Here</a></p>
+          <p>Already verified or signed in? <a href="student-login.html">Login via Phone OTP</a></p>
         </div>
       </div>
     </div>
@@ -282,42 +289,52 @@
       };
     })();
 
+    // On Load: Ensure OTP verification was completed
+    window.addEventListener('DOMContentLoaded', () => {
+      const verificationToken = sessionStorage.getItem('verificationToken');
+      const verifiedPhone = sessionStorage.getItem('verifiedPhone');
+
+      if (!verificationToken || !verifiedPhone) {
+        alert('Please verify your mobile number using OTP first.');
+        window.location.href = 'student-login.html';
+        return;
+      }
+
+      document.getElementById('regVerificationToken').value = verificationToken;
+      document.getElementById('regPhone').value = verifiedPhone;
+    });
+
     const form = document.getElementById('studentRegisterForm');
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
-        const name = document.getElementById('regName').value;
+
+        const verificationToken = document.getElementById('regVerificationToken').value;
         const phone = document.getElementById('regPhone').value;
-        const aadhaarNumber = document.getElementById('regAadhaar').value;
-        const collegeName = document.getElementById('regCollege').value;
-        const branch = document.getElementById('regBranch').value;
-        const rollNumber = document.getElementById('regRoll').value;
+        const name = document.getElementById('regName').value.trim();
+        const aadhaarNumber = document.getElementById('regAadhaar').value.trim();
+        const collegeName = document.getElementById('regCollege').value.trim();
+        const branch = document.getElementById('regBranch').value.trim();
+        const rollNumber = document.getElementById('regRoll').value.trim();
         const year = document.getElementById('regYear').value;
-        const parentName = document.getElementById('regParentName').value;
+        const parentName = document.getElementById('regParentName').value.trim();
         const guardianRelationship = document.getElementById('regGuardianRel').value;
-        const parentPhone = document.getElementById('regParentPhone').value;
+        const parentPhone = document.getElementById('regParentPhone').value.trim();
         const preferredRoomType = document.getElementById('regPreferredRoom').value;
         const stayDuration = document.getElementById('regDuration').value;
-        const city = document.getElementById('regCity').value;
-        const state = document.getElementById('regState').value;
-        const emergencyContact = document.getElementById('regEmergency').value;
-        const email = document.getElementById('regEmail').value;
-        const p1 = document.getElementById('regPass').value;
-        const p2 = document.getElementById('regPassConfirm').value;
+        const city = document.getElementById('regCity').value.trim();
+        const state = document.getElementById('regState').value.trim();
+        const emergencyContact = document.getElementById('regEmergency').value.trim();
+        const email = document.getElementById('regEmail').value.trim();
         const photoFile = document.getElementById('regPhoto').files[0];
-        const submitBtn = form.querySelector('button[type="submit"]');
+
+        const submitBtn = document.getElementById('submitAppBtn');
         const originalText = submitBtn.innerText;
-        
-        if (p1 !== p2) {
-          alert("Passwords do not match.");
-          return;
-        }
 
         const formData = new FormData();
-        if (photoFile) formData.append('photo', photoFile);
-        formData.append('name', name);
+        formData.append('verificationToken', verificationToken);
         formData.append('phone', phone);
+        formData.append('name', name);
         formData.append('aadhaarNumber', aadhaarNumber);
         formData.append('collegeName', collegeName);
         formData.append('branch', branch);
@@ -332,29 +349,41 @@
         formData.append('state', state);
         formData.append('emergencyContact', emergencyContact);
         formData.append('email', email);
-        formData.append('password', p1);
-        formData.append('confirmPassword', p2);
+        if (photoFile) formData.append('photo', photoFile);
 
         try {
           submitBtn.disabled = true;
           submitBtn.innerText = 'Submitting Application...';
 
-          const response = await fetch('/api/auth/register', {
+          const response = await fetch('/api/auth/register-with-otp', {
             method: 'POST',
             body: formData
           });
 
-          const data = await response.json();
+          let data;
+          try {
+            data = await response.json();
+          } catch (_) {
+            throw new Error('Unable to connect to server. Please try again.');
+          }
 
-          if (data.success) {
-            alert(`Admission application submitted successfully!\n\nYour Application ID: ${data.applicationId}\n\nPlease login to track your application status.`);
-            window.location.href = 'student-login.html';
+          if (response.ok && data.success) {
+            sessionStorage.removeItem('verificationToken');
+            sessionStorage.removeItem('verifiedPhone');
+
+            if (data.token) {
+              localStorage.setItem('token', data.token);
+              localStorage.setItem('user', JSON.stringify(data.user));
+            }
+
+            alert(`Admission application submitted successfully!\n\nYour Application ID: ${data.applicationId}\n\nYour application is now under admin review.`);
+            window.location.href = 'student/dashboard.html';
           } else {
-            alert(data.message || 'Registration failed.');
+            alert(data.message || 'Registration failed. Please try again.');
           }
         } catch (err) {
-          console.error('Error:', err);
-          alert('Connection Error: ' + err.message);
+          console.error('Registration Error:', err);
+          alert(err.message || 'Connection error. Please try again.');
         } finally {
           submitBtn.disabled = false;
           submitBtn.innerText = originalText;

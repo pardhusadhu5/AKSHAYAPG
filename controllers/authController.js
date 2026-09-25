@@ -2,8 +2,10 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { getDb } = require('../config/db');
 const { JWT_SECRET } = require('../middleware/authMiddleware');
+const otpService = require('../services/otpService');
 
 async function login(req, res) {
   try {
@@ -598,9 +600,343 @@ async function updateStudentApplication(req, res) {
   }
 }
 
+async function sendOtp(req, res) {
+  try {
+    const { phone } = req.body;
+    if (!phone) {
+      return res.status(400).json({ success: false, message: 'Please enter a valid mobile number.' });
+    }
+
+    const normalizedPhone = otpService.normalizePhone(phone);
+    if (!normalizedPhone || !/^\d{10}$/.test(normalizedPhone)) {
+      return res.status(400).json({ success: false, message: 'Please enter a valid 10-digit mobile number.' });
+    }
+
+    const db = await getDb();
+
+    // Check cooldown (45 seconds) using SQL extract(epoch)
+    const { rows: cooldownRows } = await db.query(
+      `SELECT extract(epoch from (CURRENT_TIMESTAMP - updatedAt)) as elapsed_seconds FROM otps WHERE phone = $1`,
+      [normalizedPhone]
+    );
+
+    if (cooldownRows.length > 0 && cooldownRows[0].elapsed_seconds !== null) {
+      const elapsed = parseFloat(cooldownRows[0].elapsed_seconds);
+      if (elapsed < 45) {
+        const remaining = Math.ceil(45 - elapsed);
+        return res.status(429).json({
+          success: false,
+          message: `Please wait ${remaining} seconds before requesting a new OTP.`,
+          cooldown: remaining
+        });
+      }
+    }
+
+    const rawOtp = otpService.generateOtp();
+    const otpHash = await bcrypt.hash(rawOtp, 10);
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes validity
+
+    // Upsert into otps table
+    await db.query(
+      `INSERT INTO otps (phone, otpHash, expiresAt, attempts, verified, verifiedToken, updatedAt)
+       VALUES ($1, $2, $3, 0, FALSE, NULL, CURRENT_TIMESTAMP)
+       ON CONFLICT (phone) DO UPDATE SET
+         otpHash = EXCLUDED.otpHash,
+         expiresAt = EXCLUDED.expiresAt,
+         attempts = 0,
+         verified = FALSE,
+         verifiedToken = NULL,
+         updatedAt = CURRENT_TIMESTAMP`,
+      [normalizedPhone, otpHash, expiresAt]
+    );
+
+    // Send SMS via service
+    await otpService.sendSms(normalizedPhone, rawOtp);
+
+    const maskedPhone = `+91 ******${normalizedPhone.slice(-4)}`;
+    return res.status(200).json({
+      success: true,
+      message: `OTP sent successfully to ${maskedPhone}.`,
+      phone: normalizedPhone,
+      cooldown: 45
+    });
+  } catch (err) {
+    console.error('Send OTP Error:', err);
+    return res.status(500).json({ success: false, message: `Failed to send OTP: ${err.message}` });
+  }
+}
+
+async function verifyOtp(req, res) {
+  try {
+    const { phone, otp } = req.body;
+    if (!phone || !otp) {
+      return res.status(400).json({ success: false, message: 'Phone number and OTP are required.' });
+    }
+
+    const normalizedPhone = otpService.normalizePhone(phone);
+    const db = await getDb();
+
+    const { rows: otpRows } = await db.query(
+      `SELECT * FROM otps WHERE phone = $1`,
+      [normalizedPhone]
+    );
+
+    if (otpRows.length === 0) {
+      return res.status(400).json({ success: false, message: 'OTP not found. Please click Send OTP first.' });
+    }
+
+    const otpRecord = otpRows[0];
+    const expiresAt = new Date(otpRecord.expiresat || otpRecord.expiresAt).getTime();
+    const attempts = parseInt(otpRecord.attempts || 0);
+
+    if (Date.now() > expiresAt) {
+      return res.status(400).json({ success: false, message: 'OTP expired. Please request a new OTP.' });
+    }
+
+    if (attempts >= 3) {
+      return res.status(400).json({ success: false, message: 'Too many incorrect attempts. Please request a new OTP.' });
+    }
+
+    const isMatch = await bcrypt.compare(otp.trim(), otpRecord.otphash || otpRecord.otpHash);
+    if (!isMatch) {
+      await db.query(`UPDATE otps SET attempts = attempts + 1 WHERE phone = $1`, [normalizedPhone]);
+      return res.status(400).json({ success: false, message: 'Invalid OTP. Please try again.' });
+    }
+
+    // OTP Verified! Generate short-lived verification token
+    const verificationToken = jwt.sign(
+      { phone: normalizedPhone, verified: true, type: 'OTP_VERIFIED' },
+      JWT_SECRET,
+      { expiresIn: '15m' }
+    );
+
+    await db.query(
+      `UPDATE otps SET verified = TRUE, verifiedToken = $1, updatedAt = CURRENT_TIMESTAMP WHERE phone = $2`,
+      [verificationToken, normalizedPhone]
+    );
+
+    // Check if phone belongs to an existing student user
+    const { rows: userRows } = await db.query(
+      `SELECT * FROM users WHERE phone = $1 AND role = 'student'`,
+      [normalizedPhone]
+    );
+
+    if (userRows.length > 0) {
+      const user = userRows[0];
+      const { rows: studentRows } = await db.query(
+        `SELECT * FROM students WHERE userId = $1 OR phone = $2`,
+        [user.id, normalizedPhone]
+      );
+
+      const student = studentRows[0] || null;
+      const token = jwt.sign(
+        { id: user.id, name: user.name, email: user.email, role: user.role },
+        JWT_SECRET,
+        { expiresIn: '24h' }
+      );
+
+      return res.status(200).json({
+        success: true,
+        userExists: true,
+        token,
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role
+        },
+        applicationStatus: student ? (student.applicationstatus || student.applicationStatus) : 'PENDING',
+        redirectUrl: 'student/dashboard.html',
+        message: 'OTP verified. Welcome back!'
+      });
+    }
+
+    // New student phone number
+    return res.status(200).json({
+      success: true,
+      userExists: false,
+      verifiedPhone: normalizedPhone,
+      verificationToken,
+      message: 'Mobile number verified successfully. Please complete your registration.'
+    });
+  } catch (err) {
+    console.error('Verify OTP Error:', err);
+    return res.status(500).json({ success: false, message: `Failed to verify OTP: ${err.message}` });
+  }
+}
+
+async function registerWithOtp(req, res) {
+  try {
+    const {
+      verificationToken,
+      name,
+      phone,
+      aadhaarNumber,
+      collegeName,
+      course,
+      branch,
+      rollNumber,
+      year,
+      parentName,
+      guardianRelationship,
+      parentPhone,
+      emergencyContact,
+      address,
+      city,
+      state,
+      pincode,
+      preferredRoomType,
+      stayDuration,
+      email
+    } = req.body;
+
+    if (!verificationToken) {
+      return res.status(400).json({ success: false, message: 'Phone verification is required before submitting.' });
+    }
+
+    // Verify token
+    let decoded;
+    try {
+      decoded = jwt.verify(verificationToken, JWT_SECRET);
+    } catch (e) {
+      return res.status(400).json({ success: false, message: 'Verification session expired. Please verify mobile number again.' });
+    }
+
+    const normalizedPhone = otpService.normalizePhone(phone || decoded.phone);
+    if (decoded.phone !== normalizedPhone) {
+      return res.status(400).json({ success: false, message: 'Verified mobile number mismatch.' });
+    }
+
+    if (!name || !aadhaarNumber || !collegeName || !year || !parentName || !parentPhone) {
+      return res.status(400).json({ success: false, message: 'All required registration fields must be filled.' });
+    }
+
+    const db = await getDb();
+
+    // Check unique phone in users
+    const { rows: phoneRows } = await db.query('SELECT id FROM users WHERE phone = $1', [normalizedPhone]);
+    if (phoneRows.length > 0) {
+      return res.status(400).json({ success: false, message: 'This mobile number is already registered. Please log in.' });
+    }
+
+    // Check unique Aadhaar in students
+    const { rows: aadhaarRows } = await db.query('SELECT id FROM students WHERE aadhaarNumber = $1', [aadhaarNumber.trim()]);
+    if (aadhaarRows.length > 0) {
+      return res.status(400).json({ success: false, message: 'This Aadhaar number is already registered.' });
+    }
+
+    const userEmail = email ? email.trim() : `student_${normalizedPhone}@akshayadeluxepg.com`;
+    const { rows: emailRows } = await db.query('SELECT id FROM users WHERE email = $1', [userEmail]);
+    if (emailRows.length > 0) {
+      return res.status(400).json({ success: false, message: 'This email address is already registered.' });
+    }
+
+    // Handle Photo upload / placeholder
+    let photoPath = '/assets/avatar-placeholder.png';
+    if (req.file) {
+      photoPath = `/uploads/${req.file.filename}`;
+    }
+
+    // Random secure password for user record (login will use OTP)
+    const randomPass = crypto.randomBytes(16).toString('hex');
+    const hashedPassword = await bcrypt.hash(randomPass, 10);
+    const appId = generateApplicationId();
+    const joinDate = new Date().toISOString().split('T')[0];
+
+    await db.query('BEGIN');
+
+    // 1. Insert User
+    const { rows: userResult } = await db.query(
+      `INSERT INTO users (name, email, phone, password, role) VALUES ($1, $2, $3, $4, $5) RETURNING id`,
+      [name.trim(), userEmail, normalizedPhone, hashedPassword, 'student']
+    );
+    const userId = userResult[0].id;
+
+    // 2. Insert Student Application
+    const { rows: studentResult } = await db.query(
+      `INSERT INTO students (
+        userId, studentCustomId, applicationId, applicationStatus, studentName, phone, parentName, parentPhone,
+        guardianRelationship, emergencyContact, aadhaarNumber, dateOfBirth, gender, collegeName, course, branch,
+        rollNumber, year, address, city, state, pincode, preferredRoomType, stayDuration, photo, idProof,
+        joinDate, status, monthlyRent, depositAmount, roomId, bedId, paymentStatus
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32, $33) RETURNING id`,
+      [
+        userId,
+        appId,
+        appId,
+        'PENDING',
+        name.trim(),
+        normalizedPhone,
+        parentName.trim(),
+        parentPhone.trim(),
+        guardianRelationship || 'Parent',
+        emergencyContact || parentPhone.trim(),
+        aadhaarNumber.trim(),
+        req.body.dateOfBirth || null,
+        req.body.gender || 'Male',
+        collegeName.trim(),
+        course || 'B.Tech',
+        branch || '',
+        rollNumber || '',
+        year.trim(),
+        address || '',
+        city || '',
+        state || '',
+        pincode || '',
+        preferredRoomType || '3 Sharing',
+        stayDuration ? parseInt(stayDuration) : 12,
+        photoPath,
+        '',
+        joinDate,
+        'APPLICANT',
+        8500,
+        8500,
+        null,
+        null,
+        'unpaid'
+      ]
+    );
+
+    // 3. Insert Admin Notification
+    await db.query(
+      `INSERT INTO notifications (type, message) VALUES ($1, $2)`,
+      ['new_application', `New student admission application submitted by ${name.trim()} (Application ID: ${appId}).`]
+    );
+
+    await db.query('COMMIT');
+
+    // Create session token for student
+    const token = jwt.sign(
+      { id: userId, name: name.trim(), email: userEmail, role: 'student' },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    return res.status(200).json({
+      success: true,
+      applicationId: appId,
+      token,
+      user: {
+        id: userId,
+        name: name.trim(),
+        email: userEmail,
+        role: 'student'
+      },
+      message: 'Admission application submitted successfully.'
+    });
+  } catch (err) {
+    try { const db = await getDb(); await db.query('ROLLBACK'); } catch (_) {}
+    console.error('Register With OTP Error:', err);
+    return res.status(500).json({ success: false, message: `Registration failed: ${err.message}` });
+  }
+}
+
 module.exports = {
   login,
   register,
+  sendOtp,
+  verifyOtp,
+  registerWithOtp,
   updateProfilePicture,
   changePassword,
   forgotPassword,

@@ -219,6 +219,21 @@ async function initializeDatabase(db) {
     )
   `);
 
+  // 11. OTP Verification Table
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS otps (
+      id SERIAL PRIMARY KEY,
+      phone VARCHAR(255) UNIQUE NOT NULL,
+      otpHash VARCHAR(255) NOT NULL,
+      expiresAt TIMESTAMP NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      verified BOOLEAN NOT NULL DEFAULT FALSE,
+      verifiedToken VARCHAR(512),
+      createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
   // 11. Create Performance Indexes
   await db.query(`
     CREATE INDEX IF NOT EXISTS idx_beds_roomid ON beds(roomId);

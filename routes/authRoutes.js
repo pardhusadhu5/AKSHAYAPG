@@ -39,6 +39,9 @@ const upload = multer({
 });
 
 // Routes
+router.post('/send-otp', authController.sendOtp);
+router.post('/verify-otp', authController.verifyOtp);
+router.post('/register-with-otp', upload.single('photo'), authController.registerWithOtp);
 router.post('/register', upload.single('photo'), authController.register);
 router.post('/login', authController.login);
 router.put('/update-profile-picture', verifyToken, upload.single('photo'), authController.updateProfilePicture);

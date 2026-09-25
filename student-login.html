@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Student Login | Akshaya Deluxe Boys Hostel</title>
-  <meta name="description" content="Access the Akshaya Deluxe Boys Hostel student portal. Manage your stay, check weekly food menus, make payments, and raise maintenance tickets.">
+  <title>Student Login / Registration | Akshaya Deluxe Boys Hostel</title>
+  <meta name="description" content="Access the Akshaya Deluxe Boys Hostel student portal. Verify phone with OTP to sign in or submit a new admission application.">
   <link rel="stylesheet" href="style.css">
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
@@ -34,14 +34,14 @@
       margin-bottom: 30px;
     }
     .auth-header h2 {
-      font-size: 2rem;
+      font-size: 1.8rem;
       font-weight: 800;
       color: var(--primary-deep);
       margin-bottom: 8px;
     }
     .auth-header p {
       color: var(--text-muted);
-      font-size: 0.95rem;
+      font-size: 0.92rem;
     }
     .auth-actions-footer {
       text-align: center;
@@ -55,19 +55,6 @@
       transition: var(--transition-fast);
     }
     .auth-actions-footer a:hover {
-      color: var(--primary-deep);
-      text-decoration: underline;
-    }
-    .forgot-link {
-      display: block;
-      text-align: right;
-      font-size: 0.85rem;
-      color: var(--primary-brand);
-      margin-top: -12px;
-      margin-bottom: 24px;
-      font-weight: 500;
-    }
-    .forgot-link:hover {
       color: var(--primary-deep);
       text-decoration: underline;
     }
@@ -110,7 +97,7 @@
     </div>
   </header>
 
-  <!-- Login Area -->
+  <!-- Login / Verification Area -->
   <section class="auth-section">
     <div class="hero-blob hero-blob-1"></div>
     <div class="hero-blob hero-blob-2"></div>
@@ -118,29 +105,50 @@
     <div class="container auth-container">
       <div class="auth-card glass-card">
         <div class="auth-header">
-          <h2>Student Portal</h2>
-          <p>Sign in to manage your hostel room & stay</p>
+          <h2 id="cardTitle">Student Login / Register</h2>
+          <p id="cardSubtitle">Enter your mobile number to sign in or apply for hostel admission</p>
         </div>
         
-        <form id="studentLoginForm">
-          <div class="form-group">
-            <label class="form-label" for="studPhone">Mobile Number</label>
-            <input type="tel" id="studPhone" class="form-input" placeholder="e.g. 9848022338" required pattern="[0-9]{10,15}">
-          </div>
-          
-          <div class="form-group" style="margin-bottom: 24px;">
-            <label class="form-label" for="studPass">Password</label>
-            <input type="password" id="studPass" class="form-input" placeholder="••••••••" required>
-          </div>
-          
-          <a href="forgot-password.html" class="forgot-link">Forgot Password?</a>
-          
-          <button type="submit" class="btn btn-primary" style="width: 100%;">Sign In to Portal</button>
-        </form>
+        <!-- STEP 1: Phone Entry -->
+        <div id="phoneStep">
+          <form id="sendOtpForm">
+            <div class="form-group" style="margin-bottom: 24px;">
+              <label class="form-label" for="studPhone">Mobile Number</label>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <span style="padding: 12px 14px; background: rgba(0, 0, 0, 0.04); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); font-weight: 700; color: var(--dark-slate);">+91</span>
+                <input type="tel" id="studPhone" class="form-input" placeholder="Enter 10-digit mobile number" required pattern="[0-9]{10}" maxlength="10" style="flex-grow: 1;">
+              </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" id="sendOtpBtn" style="width: 100%;">SEND OTP</button>
+          </form>
+        </div>
+
+        <!-- STEP 2: OTP Verification -->
+        <div id="otpStep" style="display: none;">
+          <form id="verifyOtpForm">
+            <div style="text-align: center; background: var(--primary-ultra-light); border: 1px solid rgba(0,77,71,0.08); border-radius: 12px; padding: 14px; margin-bottom: 20px;">
+              <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 4px;">OTP sent to mobile number:</p>
+              <h4 id="maskedPhoneDisplay" style="font-size: 1.15rem; font-weight: 800; color: var(--primary-deep); font-family: monospace;">+91 ******3210</h4>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 24px;">
+              <label class="form-label" for="otpInput" style="text-align: center; display: block;">Enter 6-Digit OTP</label>
+              <input type="text" id="otpInput" class="form-input" placeholder="••••••" required pattern="[0-9]{6}" maxlength="6" style="text-align: center; letter-spacing: 8px; font-size: 1.5rem; font-weight: 800; font-family: monospace;">
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="verifyOtpBtn" style="width: 100%;">VERIFY OTP</button>
+
+            <div style="text-align: center; margin-top: 20px;">
+              <p id="cooldownText" style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 8px;">Resend OTP in <span id="cooldownTimer" style="font-weight: 700; color: var(--primary-brand);">45</span> seconds</p>
+              <button type="button" id="resendOtpBtn" class="btn btn-outline" style="padding: 6px 16px; font-size: 0.8rem; display: none; margin: 0 auto;">RESEND OTP</button>
+              <button type="button" id="changePhoneBtn" style="background: none; border: none; color: var(--primary-brand); font-size: 0.82rem; margin-top: 12px; cursor: pointer; text-decoration: underline; display: block; width: 100%;">Change Mobile Number</button>
+            </div>
+          </form>
+        </div>
         
         <div class="auth-actions-footer">
-          <p>New to Akshaya Deluxe? <a href="student-register.html">Register Here</a></p>
-          <p style="margin-top: 10px; font-size: 0.8rem;"><a href="admin-login.html" style="color: var(--text-muted);">Admin Dashboard Login</a></p>
+          <p style="font-size: 0.8rem;"><a href="admin-login.html" style="color: var(--text-muted);">Admin Dashboard Login</a></p>
         </div>
       </div>
     </div>
@@ -166,47 +174,181 @@
       };
     })();
 
-    const form = document.getElementById('studentLoginForm');
-    if (form) {
-      form.addEventListener('submit', async (e) => {
+    let currentPhone = '';
+    let countdownInterval = null;
+
+    function startCooldownTimer(seconds = 45) {
+      clearInterval(countdownInterval);
+      const cooldownText = document.getElementById('cooldownText');
+      const cooldownTimer = document.getElementById('cooldownTimer');
+      const resendBtn = document.getElementById('resendOtpBtn');
+
+      let remaining = seconds;
+      cooldownText.style.display = 'block';
+      resendBtn.style.display = 'none';
+      cooldownTimer.innerText = remaining;
+
+      countdownInterval = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) {
+          clearInterval(countdownInterval);
+          cooldownText.style.display = 'none';
+          resendBtn.style.display = 'inline-block';
+        } else {
+          cooldownTimer.innerText = remaining;
+        }
+      }, 1000);
+    }
+
+    // Handle Send OTP
+    const sendOtpForm = document.getElementById('sendOtpForm');
+    if (sendOtpForm) {
+      sendOtpForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const phone = document.getElementById('studPhone').value;
-        const password = document.getElementById('studPass').value;
-        const submitBtn = form.querySelector('button[type="submit"]');
-        const originalText = submitBtn.innerText;
+        const rawPhone = document.getElementById('studPhone').value.trim();
+        if (!/^\d{10}$/.test(rawPhone)) {
+          alert('Please enter a valid 10-digit mobile number.');
+          return;
+        }
+
+        const sendBtn = document.getElementById('sendOtpBtn');
+        const originalText = sendBtn.innerText;
 
         try {
-          submitBtn.disabled = true;
-          submitBtn.innerText = 'Signing In...';
+          sendBtn.disabled = true;
+          sendBtn.innerText = 'Sending OTP...';
 
-          const response = await fetch('/api/auth/login', {
+          const response = await fetch('/api/auth/send-otp', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone, password })
+            body: JSON.stringify({ phone: rawPhone })
           });
 
-          const data = await response.json();
+          // Handle server JSON response safely
+          let data;
+          try {
+            data = await response.json();
+          } catch (_) {
+            throw new Error('Unable to connect to server. Please try again.');
+          }
 
-          if (data.success) {
-            localStorage.setItem('token', data.token);
-            localStorage.setItem('user', JSON.stringify(data.user));
-            
-            // Redirect based on role
-            if (data.user.role === 'admin' || data.user.role === 'manager') {
-              window.location.href = 'admin/dashboard.html';
-            } else {
-              window.location.href = 'student/dashboard.html';
-            }
+          if (response.ok && data.success) {
+            currentPhone = rawPhone;
+            document.getElementById('maskedPhoneDisplay').innerText = `+91 ******${rawPhone.slice(-4)}`;
+            document.getElementById('phoneStep').style.display = 'none';
+            document.getElementById('otpStep').style.display = 'block';
+            document.getElementById('cardTitle').innerText = 'Verify Your Mobile';
+            document.getElementById('cardSubtitle').innerText = 'Enter the 6-digit OTP code sent to your phone';
+            startCooldownTimer(data.cooldown || 45);
           } else {
-            alert(data.message || 'Login failed. Invalid credentials.');
+            alert(data.message || 'Unable to send OTP. Please try again.');
           }
         } catch (err) {
-          console.error('Error:', err);
-          alert('Connection Error: ' + err.message);
+          console.error('Send OTP Error:', err);
+          alert(err.message || 'Connection Error. Please check your internet connection.');
         } finally {
-          submitBtn.disabled = false;
-          submitBtn.innerText = originalText;
+          sendBtn.disabled = false;
+          sendBtn.innerText = originalText;
         }
+      });
+    }
+
+    // Handle Verify OTP
+    const verifyOtpForm = document.getElementById('verifyOtpForm');
+    if (verifyOtpForm) {
+      verifyOtpForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const otpVal = document.getElementById('otpInput').value.trim();
+        if (!/^\d{6}$/.test(otpVal)) {
+          alert('Please enter a valid 6-digit OTP.');
+          return;
+        }
+
+        const verifyBtn = document.getElementById('verifyOtpBtn');
+        const originalText = verifyBtn.innerText;
+
+        try {
+          verifyBtn.disabled = true;
+          verifyBtn.innerText = 'Verifying OTP...';
+
+          const response = await fetch('/api/auth/verify-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: currentPhone, otp: otpVal })
+          });
+
+          let data;
+          try {
+            data = await response.json();
+          } catch (_) {
+            throw new Error('Unable to connect to server. Please try again.');
+          }
+
+          if (response.ok && data.success) {
+            if (data.userExists) {
+              // Existing Student -> Log in & open Student Portal
+              localStorage.setItem('token', data.token);
+              localStorage.setItem('user', JSON.stringify(data.user));
+              window.location.href = data.redirectUrl || 'student/dashboard.html';
+            } else {
+              // New Student -> Save verification token & open Registration Form
+              sessionStorage.setItem('verificationToken', data.verificationToken);
+              sessionStorage.setItem('verifiedPhone', data.verifiedPhone);
+              window.location.href = 'student-register.html';
+            }
+          } else {
+            alert(data.message || 'Invalid OTP. Please try again.');
+          }
+        } catch (err) {
+          console.error('Verify OTP Error:', err);
+          alert(err.message || 'Connection Error. Please try again.');
+        } finally {
+          verifyBtn.disabled = false;
+          verifyBtn.innerText = originalText;
+        }
+      });
+    }
+
+    // Handle Resend OTP
+    const resendOtpBtn = document.getElementById('resendOtpBtn');
+    if (resendOtpBtn) {
+      resendOtpBtn.addEventListener('click', async () => {
+        if (!currentPhone) return;
+        resendOtpBtn.disabled = true;
+        resendOtpBtn.innerText = 'Sending...';
+
+        try {
+          const response = await fetch('/api/auth/send-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: currentPhone })
+          });
+          const data = await response.json();
+          if (response.ok && data.success) {
+            alert(`New OTP sent to +91 ******${currentPhone.slice(-4)}`);
+            startCooldownTimer(data.cooldown || 45);
+          } else {
+            alert(data.message || 'Failed to resend OTP.');
+          }
+        } catch (err) {
+          alert('Failed to resend OTP. Please try again.');
+        } finally {
+          resendOtpBtn.disabled = false;
+          resendOtpBtn.innerText = 'RESEND OTP';
+        }
+      });
+    }
+
+    // Handle Change Phone Number
+    const changePhoneBtn = document.getElementById('changePhoneBtn');
+    if (changePhoneBtn) {
+      changePhoneBtn.addEventListener('click', () => {
+        clearInterval(countdownInterval);
+        document.getElementById('otpStep').style.display = 'none';
+        document.getElementById('phoneStep').style.display = 'block';
+        document.getElementById('cardTitle').innerText = 'Student Login / Register';
+        document.getElementById('cardSubtitle').innerText = 'Enter your mobile number to sign in or apply for hostel admission';
+        document.getElementById('otpInput').value = '';
       });
     }
   </script>

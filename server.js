@@ -38,6 +38,21 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/reminders', reminderRoutes);
 app.use('/api/notifications', notificationRoutes);
 
+// Catch-all 404 handler for API routes (Returns JSON, preventing HTML fallback errors!)
+app.all('/api/*', (req, res) => {
+  res.status(404).json({ success: false, message: `API endpoint ${req.originalUrl} not found.` });
+});
+
+// Global API Error Handling Middleware (Ensures errors return JSON, NOT HTML!)
+app.use((err, req, res, next) => {
+  console.error('API Error:', err);
+  const statusCode = err.status || err.statusCode || 500;
+  res.status(statusCode).json({
+    success: false,
+    message: err.message || 'An unexpected error occurred on the server.'
+  });
+});
+
 // Fallback HTML router for single page application routing if requested
 app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
