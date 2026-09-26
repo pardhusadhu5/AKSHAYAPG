@@ -346,10 +346,10 @@ async function addStudent(req, res) {
 
     if (req.files) {
       if (req.files.photo && req.files.photo[0]) {
-        photoPath = '/uploads/' + req.files.photo[0].filename;
+        photoPath = req.files.photo[0].path;
       }
       if (req.files.idProof && req.files.idProof[0]) {
-        idProofPath = '/uploads/' + req.files.idProof[0].filename;
+        idProofPath = req.files.idProof[0].path;
       }
     }
 
@@ -477,10 +477,10 @@ async function editStudent(req, res) {
 
     if (req.files) {
       if (req.files.photo && req.files.photo[0]) {
-        photoPath = '/uploads/' + req.files.photo[0].filename;
+        photoPath = req.files.photo[0].path;
       }
       if (req.files.idProof && req.files.idProof[0]) {
-        idProofPath = '/uploads/' + req.files.idProof[0].filename;
+        idProofPath = req.files.idProof[0].path;
       }
     }
 

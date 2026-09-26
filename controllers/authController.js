@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const { deleteFile } = require('../services/uploadService');
 const jwt = require('jsonwebtoken');
 const fs = require('fs');
 const path = require('path');
@@ -146,7 +147,7 @@ async function register(req, res) {
     // Handle Photo upload / placeholder
     let photoPath = '/assets/avatar-placeholder.png';
     if (req.file) {
-      photoPath = `/uploads/${req.file.filename}`;
+      photoPath = req.file.path;
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -237,16 +238,14 @@ async function updateProfilePicture(req, res) {
       return res.status(400).json({ success: false, message: 'No photo uploaded.' });
     }
 
-    const photoPath = `/uploads/${req.file.filename}`;
+    const photoPath = req.file.path;
     const db = await getDb();
 
     // Check old photo to delete it (prevent disk clutter)
     const currentStudent = (await (async () => { let args = ['SELECT photo FROM students WHERE userId = $1', [req.user.id]]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
     if (currentStudent && currentStudent.photo && currentStudent.photo.startsWith('/uploads/')) {
       const oldFilePath = path.join(__dirname, '..', currentStudent.photo);
-      fs.unlink(oldFilePath, (err) => {
-        if (err) console.error('Failed to delete old photo:', err);
-      });
+      await deleteFile(currentStudent.photo);
     }
 
     (await (async () => {
@@ -460,7 +459,7 @@ async function uploadDocument(req, res) {
       return res.status(403).json({ success: false, message: 'Only students can upload documents.' });
     }
 
-    const filePath = '/uploads/' + req.file.filename;
+    const filePath = req.file.path;
     const fileType = path.extname(req.file.originalname).substring(1).toLowerCase();
 
     (await (async () => {
@@ -526,10 +525,7 @@ async function deleteDocument(req, res) {
       })());
 
     try {
-      const absolutePath = path.join(__dirname, '..', doc.filePath);
-      if (fs.existsSync(absolutePath)) {
-        fs.unlinkSync(absolutePath);
-      }
+      await deleteFile(doc.filePath);
     } catch (_) {}
 
     res.status(200).json({ success: true, message: 'Document deleted successfully.' });
