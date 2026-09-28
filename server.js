@@ -39,7 +39,7 @@ app.use('/api/reminders', reminderRoutes);
 app.use('/api/notifications', notificationRoutes);
 
 // Catch-all 404 handler for API routes (Returns JSON, preventing HTML fallback errors!)
-app.all('/api/*', (req, res) => {
+app.use('/api', (req, res) => {
   res.status(404).json({ success: false, message: `API endpoint ${req.originalUrl} not found.` });
 });
 
