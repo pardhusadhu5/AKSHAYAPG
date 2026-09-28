@@ -754,6 +754,138 @@ async function reviewApplication(req, res) {
   }
 }
 
+async function getStudentDocuments(req, res) {
+  try {
+    const { id } = req.params;
+    const db = await getDb();
+    const { rows: docs } = await db.query('SELECT * FROM documents WHERE studentId = $1 ORDER BY id ASC', [id]);
+    res.status(200).json({ success: true, documents: docs });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+async function verifyDocument(req, res) {
+  try {
+    const { id } = req.params;
+    const { status, remarks } = req.body;
+    if (!['APPROVED', 'REJECTED', 'PENDING'].includes(status)) {
+      return res.status(400).json({ success: false, message: 'Invalid document status.' });
+    }
+    const db = await getDb();
+    await db.query(
+      'UPDATE documents SET verificationStatus = $1, adminRemarks = $2, updatedAt = CURRENT_TIMESTAMP WHERE id = $3',
+      [status, remarks || null, id]
+    );
+    res.status(200).json({ success: true, message: `Document verification status updated to ${status}.` });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+async function allocateRoomToStudent(req, res) {
+  try {
+    const { id } = req.params;
+    const { roomId, bedId } = req.body;
+
+    if (!roomId || !bedId) {
+      return res.status(400).json({ success: false, message: 'Room ID and Bed ID are required.' });
+    }
+
+    const db = await getDb();
+    const { rows: studentRows } = await db.query('SELECT * FROM students WHERE id = $1', [id]);
+    const student = studentRows[0];
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student record not found.' });
+    }
+
+    const { rows: bedRows } = await db.query('SELECT * FROM beds WHERE id = $1 AND roomId = $2', [bedId, roomId]);
+    const bed = bedRows[0];
+    if (!bed) {
+      return res.status(404).json({ success: false, message: 'Bed not found in the specified room.' });
+    }
+    if (bed.status !== 'vacant' && bed.userId !== student.userId) {
+      return res.status(400).json({ success: false, message: 'Selected bed is already occupied or under maintenance.' });
+    }
+
+    await db.query('BEGIN');
+
+    if (student.bedId && student.bedId !== parseInt(bedId)) {
+      await db.query(`UPDATE beds SET status = 'vacant', userId = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = $1`, [student.bedId]);
+    }
+
+    await db.query(`UPDATE beds SET status = 'occupied', userId = $1, updatedAt = CURRENT_TIMESTAMP WHERE id = $2`, [student.userId, bedId]);
+
+    await db.query(
+      `UPDATE students 
+       SET roomId = $1, bedId = $2, status = 'active', applicationStatus = 'APPROVED', updatedAt = CURRENT_TIMESTAMP 
+       WHERE id = $3`,
+      [roomId, bedId, id]
+    );
+
+    await db.query(`UPDATE users SET status = 'active' WHERE id = $1`, [student.userId]);
+
+    await db.query(
+      `INSERT INTO allocations (studentId, roomId, bedId, status) VALUES ($1, $2, $3, 'active')`,
+      [id, roomId, bedId]
+    );
+
+    await db.query('COMMIT');
+
+    res.status(200).json({
+      success: true,
+      message: `Room and bed allocated successfully. Student account is now active.`
+    });
+  } catch (err) {
+    try { const db = await getDb(); await db.query('ROLLBACK'); } catch (_) {}
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+async function getPasswordResetRequests(req, res) {
+  try {
+    const db = await getDb();
+    const { rows: requests } = await db.query(`
+      SELECT pr.*, s.studentName, s.studentCustomId
+      FROM password_reset_requests pr
+      LEFT JOIN students s ON pr.studentId = s.id
+      ORDER BY pr.id DESC
+    `);
+    res.status(200).json({ success: true, requests });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+async function adminResetPassword(req, res) {
+  try {
+    const { id } = req.params;
+    const { temporaryPassword } = req.body;
+
+    if (!temporaryPassword || temporaryPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'Temporary password must be at least 6 characters long.' });
+    }
+
+    const db = await getDb();
+    const { rows: studentRows } = await db.query('SELECT userId, studentName, phone FROM students WHERE id = $1', [id]);
+    const student = studentRows[0];
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found.' });
+    }
+
+    const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
+    await db.query('UPDATE users SET password = $1, updatedAt = CURRENT_TIMESTAMP WHERE id = $2', [hashedPassword, student.userId]);
+    await db.query("UPDATE password_reset_requests SET status = 'RESOLVED' WHERE studentId = $1", [id]);
+
+    res.status(200).json({
+      success: true,
+      message: `Password for ${student.studentName} updated successfully to: ${temporaryPassword}`
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
 module.exports = {
   getStats,
   getStudentsList,
@@ -767,5 +899,11 @@ module.exports = {
   updateSettings,
   downloadDbBackup,
   getApplications,
-  reviewApplication
+  reviewApplication,
+  getStudentDocuments,
+  verifyDocument,
+  allocateRoomToStudent,
+  getPasswordResetRequests,
+  adminResetPassword
 };
+

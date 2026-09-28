@@ -14,10 +14,28 @@ async function getDb() {
     connectionString: process.env.DATABASE_URL,
     ssl: {
       rejectUnauthorized: false
-    }
+    },
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000
   });
 
-  await initializeDatabase(pool);
+  pool.on('error', (err) => {
+    console.error('Unexpected pool error:', err.message);
+  });
+
+  let retries = 5;
+  while (retries > 0) {
+    try {
+      await initializeDatabase(pool);
+      break;
+    } catch (err) {
+      retries--;
+      console.warn(`Database connection attempt failed (${err.message}). Retrying in 2 seconds... (${retries} attempts left)`);
+      if (retries === 0) throw err;
+      await new Promise(res => setTimeout(res, 2000));
+    }
+  }
 
   return pool;
 }
@@ -32,10 +50,13 @@ async function initializeDatabase(db) {
       phone VARCHAR(255) UNIQUE NOT NULL,
       password VARCHAR(255) NOT NULL,
       role VARCHAR(255) NOT NULL CHECK(role IN ('admin', 'student', 'manager')),
+      status VARCHAR(255) DEFAULT 'active',
       createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  await db.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS status VARCHAR(255) DEFAULT 'active'`).catch(() => {});
 
   // 2. Rooms Table
   await db.query(`
@@ -130,16 +151,76 @@ async function initializeDatabase(db) {
       ADD COLUMN IF NOT EXISTS guardianRelationship VARCHAR(255),
       ADD COLUMN IF NOT EXISTS dateOfBirth DATE,
       ADD COLUMN IF NOT EXISTS gender VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS bloodGroup VARCHAR(50),
       ADD COLUMN IF NOT EXISTS emergencyContact VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS emergencyName VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS emergencyRelationship VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS emergencyMobile VARCHAR(255),
       ADD COLUMN IF NOT EXISTS branch VARCHAR(255),
       ADD COLUMN IF NOT EXISTS rollNumber VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS academicYear VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS collegeAddress TEXT,
+      ADD COLUMN IF NOT EXISTS guardianEmail VARCHAR(255),
       ADD COLUMN IF NOT EXISTS city VARCHAR(255),
       ADD COLUMN IF NOT EXISTS state VARCHAR(255),
       ADD COLUMN IF NOT EXISTS pincode VARCHAR(255),
       ADD COLUMN IF NOT EXISTS preferredRoomType VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS preferredFloor VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS preferredSharingType VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS foodPreference VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS expectedDuration INTEGER,
       ADD COLUMN IF NOT EXISTS stayDuration INTEGER,
+      ADD COLUMN IF NOT EXISTS applicationRemarks TEXT,
       DROP CONSTRAINT IF EXISTS students_status_check;
   `).catch((err) => { console.error('Migration notice:', err.message); });
+
+  // 5. Documents Table
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS documents (
+      id SERIAL PRIMARY KEY,
+      studentId INTEGER REFERENCES students(id) ON DELETE CASCADE,
+      documentType VARCHAR(255) NOT NULL,
+      fileName VARCHAR(255) NOT NULL,
+      storagePath TEXT NOT NULL,
+      mimeType VARCHAR(255),
+      fileSize INTEGER,
+      verificationStatus VARCHAR(255) NOT NULL DEFAULT 'PENDING',
+      adminRemarks TEXT,
+      uploadedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await db.query(`
+    ALTER TABLE documents
+      ADD COLUMN IF NOT EXISTS studentId INTEGER,
+      ADD COLUMN IF NOT EXISTS documentType VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS name VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS fileName VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS filePath TEXT,
+      ADD COLUMN IF NOT EXISTS fileType VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS storagePath TEXT,
+      ADD COLUMN IF NOT EXISTS mimeType VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS fileSize INTEGER,
+      ADD COLUMN IF NOT EXISTS verificationStatus VARCHAR(255) DEFAULT 'PENDING',
+      ADD COLUMN IF NOT EXISTS adminRemarks TEXT;
+  `).catch(() => {});
+
+  await db.query(`ALTER TABLE documents ALTER COLUMN name DROP NOT NULL;`).catch(() => {});
+
+  // 6. Password Reset Requests Table (Non-OTP)
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS password_reset_requests (
+      id SERIAL PRIMARY KEY,
+      studentId INTEGER REFERENCES students(id) ON DELETE CASCADE,
+      phone VARCHAR(255) NOT NULL,
+      status VARCHAR(255) NOT NULL DEFAULT 'PENDING',
+      requestedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  // Drop legacy OTP table if present (OTP System Completely Removed)
+  await db.query(`DROP TABLE IF EXISTS otps;`).catch(() => {});
 
   // 5. Allocations Table
   await db.query(`

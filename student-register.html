@@ -3,89 +3,135 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Student Admission Registration | Akshaya Deluxe Boys Hostel</title>
-  <meta name="description" content="Complete your admission registration for Akshaya Deluxe Boys Hostel. Enter your details to submit your application.">
+  <title>Student Admission Application | Akshaya Deluxe Boys Hostel</title>
+  <meta name="description" content="Submit your student admission application with document uploads for Akshaya Deluxe Boys Hostel.">
   <link rel="stylesheet" href="style.css">
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
     .auth-section {
       min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 100px 24px 60px 24px;
+      padding: 100px 20px 60px 20px;
       background: linear-gradient(135deg, var(--primary-light) 0%, #ffffff 50%, var(--primary-ultra-light) 100%);
       position: relative;
-      overflow: hidden;
     }
-    .auth-container {
+    .reg-container {
       width: 100%;
-      max-width: 540px;
+      max-width: 820px;
+      margin: 0 auto;
       position: relative;
       z-index: 2;
     }
-    .auth-card {
+    .reg-card {
       padding: 40px;
       border-radius: var(--radius-lg);
       border: 1px solid var(--glass-border);
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(16px);
+      box-shadow: var(--shadow-xl);
     }
-    .auth-header {
+    .reg-header {
       text-align: center;
-      margin-bottom: 30px;
+      margin-bottom: 36px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid var(--primary-light);
     }
-    .auth-header h2 {
-      font-size: 1.8rem;
+    .reg-header h2 {
+      font-size: 2rem;
       font-weight: 800;
       color: var(--primary-deep);
       margin-bottom: 8px;
     }
-    .auth-header p {
+    .reg-header p {
       color: var(--text-muted);
       font-size: 0.95rem;
     }
-    .verified-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-      background: #ecfdf5;
-      color: #059669;
-      border: 1px solid #a7f3d0;
-      padding: 2px 8px;
-      border-radius: 6px;
-      font-size: 0.75rem;
+    .form-section {
+      margin-bottom: 36px;
+      background: #fafbfc;
+      border: 1px solid rgba(0, 77, 71, 0.08);
+      border-radius: var(--radius-md);
+      padding: 24px;
+    }
+    .section-title {
+      font-size: 1.15rem;
       font-weight: 700;
-      margin-left: 8px;
+      color: var(--primary-brand);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border-bottom: 1px dashed rgba(0, 77, 71, 0.15);
+      padding-bottom: 10px;
     }
     .form-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 18px;
     }
-    .auth-actions-footer {
+    .form-grid-full {
+      grid-column: span 2;
+    }
+    .req-star {
+      color: #dc2626;
+      font-weight: 700;
+    }
+    .doc-box {
+      border: 1px dashed var(--primary-brand);
+      background: #ffffff;
+      padding: 16px;
+      border-radius: 8px;
       text-align: center;
-      margin-top: 24px;
-      font-size: 0.9rem;
-      color: var(--text-muted);
     }
-    .auth-actions-footer a {
-      color: var(--primary-brand);
+    .doc-box label {
       font-weight: 600;
-      transition: var(--transition-fast);
+      display: block;
+      margin-bottom: 6px;
+      font-size: 0.9rem;
+      color: var(--dark-slate);
     }
-    .auth-actions-footer a:hover {
-      color: var(--primary-deep);
-      text-decoration: underline;
+    .doc-hint {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 10px;
     }
-    @media (max-width: 576px) {
+    .photo-preview {
+      width: 100px;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 2px solid var(--primary-brand);
+      margin: 10px auto 0 auto;
+      display: none;
+    }
+    .password-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .password-toggle {
+      position: absolute;
+      right: 12px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    @media (max-width: 767px) {
+      .reg-card {
+        padding: 24px 16px;
+      }
+      .form-section {
+        padding: 18px 14px;
+      }
       .form-grid {
         grid-template-columns: 1fr;
-        gap: 0;
       }
-      .auth-section {
-        padding-top: 80px;
-      }
-      .auth-card {
-        padding: 24px 20px;
+      .form-grid-full {
+        grid-column: span 1;
       }
     }
   </style>
@@ -101,169 +147,349 @@
       </a>
       <nav class="nav-menu" id="navMenu">
         <a href="index.html#home" class="nav-link">Home</a>
-        <a href="index.html#about" class="nav-link">About</a>
         <a href="index.html#rooms" class="nav-link">Rooms</a>
         <a href="index.html#facilities" class="nav-link">Facilities</a>
-        <a href="index.html#food" class="nav-link">Food Menu</a>
-        <a href="index.html#gallery" class="nav-link">Gallery</a>
         <a href="index.html#contact" class="nav-link">Contact</a>
       </nav>
       <div class="nav-actions">
-        <a href="index.html" class="btn btn-outline" style="padding: 10px 20px; font-size: 0.85rem;">Back to Home</a>
-        <button class="menu-toggle" id="menuToggle" aria-label="Toggle Menu">
-          <span></span>
-          <span></span>
-          <span></span>
-        </button>
+        <a href="student-login.html" class="btn btn-outline" style="padding: 10px 20px; font-size: 0.85rem;">Login to Portal</a>
       </div>
     </div>
   </header>
 
-  <!-- Register Area -->
   <section class="auth-section">
-    <div class="hero-blob hero-blob-1"></div>
-    <div class="hero-blob hero-blob-2"></div>
-    
-    <div class="container auth-container">
-      <div class="auth-card glass-card">
-        <div class="auth-header">
-          <h2>Admission Registration</h2>
-          <p>Fill out your details to submit your hostel admission application</p>
+    <div class="reg-container">
+      <div class="reg-card">
+        <div class="reg-header">
+          <h2>Student Admission Application</h2>
+          <p>Please complete all required fields and upload your verification documents to apply for hostel admission.</p>
         </div>
-        
-        <form id="studentRegisterForm" enctype="multipart/form-data">
-          <!-- Hidden Verified Token -->
-          <input type="hidden" id="regVerificationToken">
 
-          <!-- Profile Photo Upload -->
-          <div class="form-group" style="margin-bottom: 20px;">
-            <label class="form-label" for="regPhoto">Profile Photo (Optional)</label>
-            <input type="file" id="regPhoto" class="form-input" accept="image/*" style="padding: 10px;">
+        <form id="studentApplicationForm" enctype="multipart/form-data">
+
+          <!-- SECTION 1: PERSONAL INFORMATION -->
+          <div class="form-section">
+            <div class="section-title">
+              <i data-lucide="user"></i> Section 1: Personal Information
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label" for="appName">Full Student Name <span class="req-star">*</span></label>
+                <input type="text" id="appName" name="name" class="form-input" placeholder="e.g. Rahul Varma" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="appDob">Date of Birth <span class="req-star">*</span></label>
+                <input type="date" id="appDob" name="dateOfBirth" class="form-input" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="appGender">Gender <span class="req-star">*</span></label>
+                <select id="appGender" name="gender" class="form-input" required>
+                  <option value="Male" selected>Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="appBlood">Blood Group</label>
+                <select id="appBlood" name="bloodGroup" class="form-input">
+                  <option value="">Select Blood Group</option>
+                  <option value="A+">A+</option>
+                  <option value="A-">A-</option>
+                  <option value="B+">B+</option>
+                  <option value="B-">B-</option>
+                  <option value="O+">O+</option>
+                  <option value="O-">O-</option>
+                  <option value="AB+">AB+</option>
+                  <option value="AB-">AB-</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="appPhone">Mobile Number (Login ID) <span class="req-star">*</span></label>
+                <div style="display: flex; gap: 8px; align-items: center;">
+                  <span style="padding: 12px; background: rgba(0,0,0,0.05); border-radius: 6px; font-weight: 700;">+91</span>
+                  <input type="tel" id="appPhone" name="phone" class="form-input" placeholder="10-digit mobile number" required pattern="[0-9]{10}" maxlength="10" style="flex-grow: 1;">
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="appEmail">Email Address</label>
+                <input type="email" id="appEmail" name="email" class="form-input" placeholder="e.g. rahul@example.com">
+              </div>
+
+              <div class="form-group form-grid-full">
+                <label class="form-label" for="appAadhaar">Aadhaar Card Number (12 Digits) <span class="req-star">*</span></label>
+                <input type="text" id="appAadhaar" name="aadhaarNumber" class="form-input" placeholder="e.g. 543210987654" required pattern="[0-9]{12}" maxlength="12">
+              </div>
+            </div>
           </div>
 
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label" for="regName">Full Name *</label>
-              <input type="text" id="regName" class="form-input" placeholder="e.g. Rahul Sharma" required>
+          <!-- SECTION 2: EDUCATIONAL / COLLEGE DETAILS -->
+          <div class="form-section">
+            <div class="section-title">
+              <i data-lucide="graduation-cap"></i> Section 2: Educational & College Details
             </div>
-            
-            <div class="form-group">
-              <label class="form-label" for="regPhone">
-                Mobile Number *
-                <span class="verified-badge">Verified ✓</span>
+            <div class="form-grid">
+              <div class="form-group form-grid-full">
+                <label class="form-label" for="appCollege">College / University Name <span class="req-star">*</span></label>
+                <input type="text" id="appCollege" name="collegeName" class="form-input" placeholder="e.g. Aurora Deemed University, Ghatkesar" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="appCourse">Course / Branch <span class="req-star">*</span></label>
+                <input type="text" id="appCourse" name="course" class="form-input" placeholder="e.g. B.Tech Computer Science" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="appYear">Year of Study <span class="req-star">*</span></label>
+                <select id="appYear" name="year" class="form-input" required>
+                  <option value="1st Year">1st Year</option>
+                  <option value="2nd Year">2nd Year</option>
+                  <option value="3rd Year" selected>3rd Year</option>
+                  <option value="4th Year">4th Year</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="appRoll">College Roll Number / Hall Ticket <span class="req-star">*</span></label>
+                <input type="text" id="appRoll" name="rollNumber" class="form-input" placeholder="e.g. 22AUR0501" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="appAcademicYear">Academic Year</label>
+                <input type="text" id="appAcademicYear" name="academicYear" class="form-input" placeholder="e.g. 2025-2026">
+              </div>
+
+              <div class="form-group form-grid-full">
+                <label class="form-label" for="appCollegeAddr">College Address</label>
+                <input type="text" id="appCollegeAddr" name="collegeAddress" class="form-input" placeholder="e.g. Parvathapur, Ghatkesar, Hyderabad">
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 3: PARENT / GUARDIAN DETAILS -->
+          <div class="form-section">
+            <div class="section-title">
+              <i data-lucide="users"></i> Section 3: Parent / Guardian Details
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label" for="appParentName">Parent / Guardian Name <span class="req-star">*</span></label>
+                <input type="text" id="appParentName" name="parentName" class="form-input" placeholder="e.g. Suresh Varma" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="appGuardianRel">Guardian Relationship <span class="req-star">*</span></label>
+                <select id="appGuardianRel" name="guardianRelationship" class="form-input" required>
+                  <option value="Father" selected>Father</option>
+                  <option value="Mother">Mother</option>
+                  <option value="Guardian">Guardian</option>
+                  <option value="Relative">Relative</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="appParentPhone">Parent Mobile Number <span class="req-star">*</span></label>
+                <input type="tel" id="appParentPhone" name="parentPhone" class="form-input" placeholder="10-digit mobile number" required pattern="[0-9]{10}" maxlength="10">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="appGuardianEmail">Guardian Email Address</label>
+                <input type="email" id="appGuardianEmail" name="guardianEmail" class="form-input" placeholder="e.g. suresh@example.com">
+              </div>
+
+              <div class="form-group form-grid-full">
+                <label class="form-label" for="appAddress">Permanent Home Address</label>
+                <input type="text" id="appAddress" name="address" class="form-input" placeholder="e.g. House No. 4-12, Main Road">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="appCity">City / Town</label>
+                <input type="text" id="appCity" name="city" class="form-input" placeholder="e.g. Warangal">
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="appState">State</label>
+                <input type="text" id="appState" name="state" class="form-input" placeholder="e.g. Telangana">
+              </div>
+
+              <div class="form-group form-grid-full">
+                <label class="form-label" for="appPincode">Pincode</label>
+                <input type="text" id="appPincode" name="pincode" class="form-input" placeholder="e.g. 506001" pattern="[0-9]{6}" maxlength="6">
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 4: EMERGENCY CONTACT DETAILS -->
+          <div class="form-section">
+            <div class="section-title">
+              <i data-lucide="phone-call"></i> Section 4: Emergency Contact Details
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label" for="appEmergName">Emergency Contact Person <span class="req-star">*</span></label>
+                <input type="text" id="appEmergName" name="emergencyName" class="form-input" placeholder="e.g. Ramesh Kumar" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="appEmergRel">Relationship to Student <span class="req-star">*</span></label>
+                <input type="text" id="appEmergRel" name="emergencyRelationship" class="form-input" placeholder="e.g. Uncle / Brother" required>
+              </div>
+
+              <div class="form-group form-grid-full">
+                <label class="form-label" for="appEmergMobile">Emergency Mobile Number <span class="req-star">*</span></label>
+                <input type="tel" id="appEmergMobile" name="emergencyMobile" class="form-input" placeholder="10-digit mobile number" required pattern="[0-9]{10}" maxlength="10">
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 5: HOSTEL ADMISSION PREFERENCES -->
+          <div class="form-section">
+            <div class="section-title">
+              <i data-lucide="home"></i> Section 5: Hostel Admission Preferences
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label" for="appJoiningDate">Expected Joining Date <span class="req-star">*</span></label>
+                <input type="date" id="appJoiningDate" name="joiningDate" class="form-input" required>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="appDuration">Expected Stay Duration (Months) <span class="req-star">*</span></label>
+                <select id="appDuration" name="stayDuration" class="form-input" required>
+                  <option value="6">6 Months</option>
+                  <option value="12" selected>12 Months</option>
+                  <option value="24">24 Months</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="appSharing">Preferred Room Type / Sharing <span class="req-star">*</span></label>
+                <select id="appSharing" name="preferredSharingType" class="form-input" required>
+                  <option value="2 Sharing">2 Sharing</option>
+                  <option value="3 Sharing" selected>3 Sharing (₹8,500/mo)</option>
+                  <option value="4 Sharing">4 Sharing (₹9,000/mo)</option>
+                  <option value="5 Sharing">5 Sharing (₹8,500/mo)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="appFloor">Preferred Floor</label>
+                <select id="appFloor" name="preferredFloor" class="form-input">
+                  <option value="Any" selected>Any Available Floor</option>
+                  <option value="Floor 1">Floor 1</option>
+                  <option value="Floor 2">Floor 2</option>
+                  <option value="Floor 3 — Penthouse">Floor 3 — Penthouse</option>
+                </select>
+              </div>
+
+              <div class="form-group form-grid-full">
+                <label class="form-label" for="appFood">Food Preference</label>
+                <select id="appFood" name="foodPreference" class="form-input">
+                  <option value="Both" selected>North & South Indian Food (Both)</option>
+                  <option value="Veg">Pure Vegetarian</option>
+                  <option value="Non-Veg">Non-Vegetarian</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 6: REQUIRED DOCUMENT UPLOADS -->
+          <div class="form-section">
+            <div class="section-title">
+              <i data-lucide="file-text"></i> Section 6: Document Uploads (Max 5MB per file)
+            </div>
+            <div class="form-grid">
+
+              <!-- Passport Photo -->
+              <div class="doc-box form-grid-full">
+                <label for="docPhoto">Passport Size Photograph <span class="req-star">*</span></label>
+                <p class="doc-hint">JPEG or PNG image format. Maximum file size: 5MB</p>
+                <input type="file" id="docPhoto" name="photo" accept="image/jpeg,image/png" required style="width: 100%;">
+                <img id="photoPreviewImg" class="photo-preview" alt="Photo Preview">
+              </div>
+
+              <!-- Student College ID -->
+              <div class="doc-box">
+                <label for="docCollegeId">Student / College ID Card <span class="req-star">*</span></label>
+                <p class="doc-hint">JPEG, PNG, or PDF format (Max 5MB)</p>
+                <input type="file" id="docCollegeId" name="document_collegeId" accept="image/*,application/pdf" required style="width: 100%;">
+              </div>
+
+              <!-- Aadhaar Card -->
+              <div class="doc-box">
+                <label for="docAadhaar">Aadhaar Card <span class="req-star">*</span></label>
+                <p class="doc-hint">JPEG, PNG, or PDF format (Max 5MB)</p>
+                <input type="file" id="docAadhaar" name="document_aadhaar" accept="image/*,application/pdf" required style="width: 100%;">
+              </div>
+
+              <!-- Parent ID Proof -->
+              <div class="doc-box form-grid-full">
+                <label for="docParentId">Parent / Guardian ID Proof <span class="req-star">*</span></label>
+                <p class="doc-hint">Aadhaar, Voter ID, or PAN Card of parent (Max 5MB)</p>
+                <input type="file" id="docParentId" name="document_parentId" accept="image/*,application/pdf" required style="width: 100%;">
+              </div>
+
+              <!-- Optional Documents -->
+              <div class="doc-box">
+                <label for="docBonafide">Bonafide Certificate (Optional)</label>
+                <input type="file" id="docBonafide" name="document_bonafide" accept="image/*,application/pdf" style="width: 100%;">
+              </div>
+
+              <div class="doc-box">
+                <label for="docJoining">Joining Letter (Optional)</label>
+                <input type="file" id="docJoining" name="document_joiningLetter" accept="image/*,application/pdf" style="width: 100%;">
+              </div>
+
+            </div>
+          </div>
+
+          <!-- SECTION 7: CREATE PASSWORD FOR STUDENT PORTAL -->
+          <div class="form-section">
+            <div class="section-title">
+              <i data-lucide="lock"></i> Section 7: Create Student Portal Password
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label" for="appPassword">Create Password <span class="req-star">*</span></label>
+                <div class="password-wrapper">
+                  <input type="password" id="appPassword" name="password" class="form-input" placeholder="Minimum 8 characters" required minlength="8" style="width:100%; padding-right: 44px;">
+                  <button type="button" class="password-toggle" id="togglePassBtn1">
+                    <i data-lucide="eye" id="passIcon1"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="appConfirmPassword">Confirm Password <span class="req-star">*</span></label>
+                <div class="password-wrapper">
+                  <input type="password" id="appConfirmPassword" name="confirmPassword" class="form-input" placeholder="Re-enter password" required minlength="8" style="width:100%; padding-right: 44px;">
+                  <button type="button" class="password-toggle" id="togglePassBtn2">
+                    <i data-lucide="eye" id="passIcon2"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SECTION 8: DECLARATION & SUBMIT -->
+          <div class="form-section" style="margin-bottom: 24px;">
+            <div style="display: flex; gap: 12px; align-items: flex-start;">
+              <input type="checkbox" id="termsCheck" required style="margin-top: 4px; width: 18px; height: 18px;">
+              <label for="termsCheck" style="font-size: 0.88rem; color: var(--dark-slate); line-height: 1.5;">
+                I hereby declare that all the information provided above and uploaded documents are authentic and accurate. I agree to abide by all the rules, regulations, and fee policies of Akshaya Deluxe Boys Hostel.
               </label>
-              <input type="tel" id="regPhone" class="form-input" readonly style="background: rgba(0,0,0,0.04); font-weight: 700; cursor: not-allowed;">
-            </div>
-          </div>
-          
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label" for="regAadhaar">Aadhaar Number *</label>
-              <input type="text" id="regAadhaar" class="form-input" placeholder="e.g. 543210987654" required pattern="[0-9]{12}" maxlength="12">
-            </div>
-            
-            <div class="form-group">
-              <label class="form-label" for="regCollege">College Name *</label>
-              <input type="text" id="regCollege" class="form-input" placeholder="e.g. Aurora Engineering College" required>
             </div>
           </div>
 
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label" for="regBranch">Academic Branch / Course</label>
-              <input type="text" id="regBranch" class="form-input" placeholder="e.g. B.Tech CSE / AI & ML">
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="regRoll">College Roll / Hall Ticket No.</label>
-              <input type="text" id="regRoll" class="form-input" placeholder="e.g. 22AUR0501">
-            </div>
-          </div>
-          
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label" for="regYear">Year of Study *</label>
-              <select id="regYear" class="form-input">
-                <option value="1st Year">1st Year</option>
-                <option value="2nd Year">2nd Year</option>
-                <option value="3rd Year" selected>3rd Year</option>
-                <option value="4th Year">4th Year</option>
-              </select>
-            </div>
-            
-            <div class="form-group">
-              <label class="form-label" for="regParentName">Parent / Guardian Name *</label>
-              <input type="text" id="regParentName" class="form-input" placeholder="e.g. Suresh Sharma" required>
-            </div>
-          </div>
-
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label" for="regGuardianRel">Guardian Relationship</label>
-              <select id="regGuardianRel" class="form-input">
-                <option value="Father">Father</option>
-                <option value="Mother">Mother</option>
-                <option value="Guardian" selected>Guardian</option>
-                <option value="Relative">Relative</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="regParentPhone">Parent Mobile Number *</label>
-              <input type="tel" id="regParentPhone" class="form-input" placeholder="e.g. 9000123457" required pattern="[0-9]{10}">
-            </div>
-          </div>
-
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label" for="regPreferredRoom">Preferred Room Type *</label>
-              <select id="regPreferredRoom" class="form-input" required>
-                <option value="2 Sharing">2 Sharing</option>
-                <option value="3 Sharing" selected>3 Sharing</option>
-                <option value="4 Sharing">4 Sharing</option>
-                <option value="5 Sharing">5 Sharing</option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="regDuration">Stay Duration (Months)</label>
-              <select id="regDuration" class="form-input">
-                <option value="6">6 Months</option>
-                <option value="12" selected>12 Months</option>
-                <option value="24">24 Months</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label" for="regCity">City</label>
-              <input type="text" id="regCity" class="form-input" placeholder="e.g. Hyderabad">
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="regState">State</label>
-              <input type="text" id="regState" class="form-input" placeholder="e.g. Telangana">
-            </div>
-          </div>
-
-          <div class="form-grid">
-            <div class="form-group">
-              <label class="form-label" for="regEmail">Email Address (Optional)</label>
-              <input type="email" id="regEmail" class="form-input" placeholder="e.g. rahul@mail.com">
-            </div>
-
-            <div class="form-group">
-              <label class="form-label" for="regEmergency">Emergency Contact</label>
-              <input type="tel" id="regEmergency" class="form-input" placeholder="e.g. 9848011223">
-            </div>
-          </div>
-
-          <button type="submit" class="btn btn-primary" id="submitAppBtn" style="width: 100%; margin-top: 16px; padding: 14px; font-size: 1rem;">Submit Admission Application</button>
+          <button type="submit" class="btn btn-primary" id="submitAppBtn" style="width: 100%; padding: 16px; font-size: 1.1rem; font-weight: 800;">SUBMIT ADMISSION APPLICATION</button>
         </form>
-        
-        <div class="auth-actions-footer">
-          <p>Already verified or signed in? <a href="student-login.html">Login via Phone OTP</a></p>
+
+        <div style="text-align: center; margin-top: 24px; font-size: 0.9rem; color: var(--text-muted);">
+          Already applied? <a href="student-login.html" style="color: var(--primary-brand); font-weight: 700;">Login to check application status &rarr;</a>
         </div>
       </div>
     </div>
@@ -289,107 +515,105 @@
       };
     })();
 
-    // On Load: Ensure OTP verification was completed
-    window.addEventListener('DOMContentLoaded', () => {
-      const verificationToken = sessionStorage.getItem('verificationToken');
-      const verifiedPhone = sessionStorage.getItem('verifiedPhone');
+    if (window.lucide) lucide.createIcons();
 
-      if (!verificationToken || !verifiedPhone) {
-        alert('Please verify your mobile number using OTP first.');
-        window.location.href = 'student-login.html';
+    // Default Joining Date to today
+    document.getElementById('appJoiningDate').valueAsDate = new Date();
+
+    // Photo Preview & File Size Validation
+    const photoInput = document.getElementById('docPhoto');
+    const photoPreviewImg = document.getElementById('photoPreviewImg');
+
+    photoInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        if (file.size > 5 * 1024 * 1024) {
+          alert('Photo file size exceeds 5MB limit. Please select a smaller image.');
+          photoInput.value = '';
+          photoPreviewImg.style.display = 'none';
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          photoPreviewImg.src = evt.target.result;
+          photoPreviewImg.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+      } else {
+        photoPreviewImg.style.display = 'none';
+      }
+    });
+
+    // Validate 5MB file sizes for all inputs
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    fileInputs.forEach(input => {
+      input.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file && file.size > 5 * 1024 * 1024) {
+          alert(`File "${file.name}" exceeds the 5MB limit. Please select a smaller file.`);
+          e.target.value = '';
+        }
+      });
+    });
+
+    // Password Toggles
+    function setupPasswordToggle(btnId, inputId, iconId) {
+      const btn = document.getElementById(btnId);
+      const input = document.getElementById(inputId);
+      const icon = document.getElementById(iconId);
+      btn.addEventListener('click', () => {
+        const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+        input.setAttribute('type', type);
+        icon.setAttribute('data-lucide', type === 'text' ? 'eye-off' : 'eye');
+        if (window.lucide) lucide.createIcons();
+      });
+    }
+    setupPasswordToggle('togglePassBtn1', 'appPassword', 'passIcon1');
+    setupPasswordToggle('togglePassBtn2', 'appConfirmPassword', 'passIcon2');
+
+    // Submit Application
+    const appForm = document.getElementById('studentApplicationForm');
+    appForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const pass = document.getElementById('appPassword').value;
+      const confirmPass = document.getElementById('appConfirmPassword').value;
+
+      if (pass !== confirmPass) {
+        alert('Passwords do not match. Please re-enter your password correctly.');
         return;
       }
 
-      document.getElementById('regVerificationToken').value = verificationToken;
-      document.getElementById('regPhone').value = verifiedPhone;
-    });
+      const submitBtn = document.getElementById('submitAppBtn');
+      const origText = submitBtn.innerText;
 
-    const form = document.getElementById('studentRegisterForm');
-    if (form) {
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault();
+      try {
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Submitting Application & Documents...';
 
-        const verificationToken = document.getElementById('regVerificationToken').value;
-        const phone = document.getElementById('regPhone').value;
-        const name = document.getElementById('regName').value.trim();
-        const aadhaarNumber = document.getElementById('regAadhaar').value.trim();
-        const collegeName = document.getElementById('regCollege').value.trim();
-        const branch = document.getElementById('regBranch').value.trim();
-        const rollNumber = document.getElementById('regRoll').value.trim();
-        const year = document.getElementById('regYear').value;
-        const parentName = document.getElementById('regParentName').value.trim();
-        const guardianRelationship = document.getElementById('regGuardianRel').value;
-        const parentPhone = document.getElementById('regParentPhone').value.trim();
-        const preferredRoomType = document.getElementById('regPreferredRoom').value;
-        const stayDuration = document.getElementById('regDuration').value;
-        const city = document.getElementById('regCity').value.trim();
-        const state = document.getElementById('regState').value.trim();
-        const emergencyContact = document.getElementById('regEmergency').value.trim();
-        const email = document.getElementById('regEmail').value.trim();
-        const photoFile = document.getElementById('regPhoto').files[0];
+        const formData = new FormData(appForm);
 
-        const submitBtn = document.getElementById('submitAppBtn');
-        const originalText = submitBtn.innerText;
+        const response = await fetch('/api/auth/register-student-application', {
+          method: 'POST',
+          body: formData
+        });
 
-        const formData = new FormData();
-        formData.append('verificationToken', verificationToken);
-        formData.append('phone', phone);
-        formData.append('name', name);
-        formData.append('aadhaarNumber', aadhaarNumber);
-        formData.append('collegeName', collegeName);
-        formData.append('branch', branch);
-        formData.append('rollNumber', rollNumber);
-        formData.append('year', year);
-        formData.append('parentName', parentName);
-        formData.append('guardianRelationship', guardianRelationship);
-        formData.append('parentPhone', parentPhone);
-        formData.append('preferredRoomType', preferredRoomType);
-        formData.append('stayDuration', stayDuration);
-        formData.append('city', city);
-        formData.append('state', state);
-        formData.append('emergencyContact', emergencyContact);
-        formData.append('email', email);
-        if (photoFile) formData.append('photo', photoFile);
+        const data = await response.json();
 
-        try {
-          submitBtn.disabled = true;
-          submitBtn.innerText = 'Submitting Application...';
-
-          const response = await fetch('/api/auth/register-with-otp', {
-            method: 'POST',
-            body: formData
-          });
-
-          let data;
-          try {
-            data = await response.json();
-          } catch (_) {
-            throw new Error('Unable to connect to server. Please try again.');
-          }
-
-          if (response.ok && data.success) {
-            sessionStorage.removeItem('verificationToken');
-            sessionStorage.removeItem('verifiedPhone');
-
-            if (data.token) {
-              localStorage.setItem('token', data.token);
-              localStorage.setItem('user', JSON.stringify(data.user));
-            }
-
-            alert(`Admission application submitted successfully!\n\nYour Application ID: ${data.applicationId}\n\nYour application is now under admin review.`);
-            window.location.href = 'student/dashboard.html';
-          } else {
-            alert(data.message || 'Registration failed. Please try again.');
-          }
-        } catch (err) {
-          console.error('Registration Error:', err);
-          alert(err.message || 'Connection error. Please try again.');
-        } finally {
-          submitBtn.disabled = false;
-          submitBtn.innerText = originalText;
+        if (response.ok && data.success) {
+          alert(`🎉 Application Submitted Successfully!\n\nYour Application ID: ${data.applicationId}\n\nYour application is under review by hostel administration. You will be able to log in to the Student Portal once approved.`);
+          window.location.href = 'student-login.html';
+        } else {
+          alert(data.message || 'Failed to submit application. Please review your details and try again.');
         }
-      });
-    }
+      } catch (err) {
+        console.error('Submission Error:', err);
+        alert('Server or network error. Please try again.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = origText;
+      }
+    });
   </script>
 </body>
 </html>

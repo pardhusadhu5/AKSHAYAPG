@@ -3687,6 +3687,265 @@
 
     // Initial Trigger on start
     fetchStatsAndRecent();
+
+    // ==========================================
+    // APPLICATION REVIEW & DOCUMENT VERIFICATION LOGIC
+    // ==========================================
+    let currentReviewAppId = null;
+
+    function maskAadhaar(aadhaar) {
+      if (!aadhaar) return 'N/A';
+      const clean = String(aadhaar).replace(/\D/g, '');
+      if (clean.length < 4) return 'N/A';
+      return `XXXX XXXX ${clean.slice(-4)}`;
+    }
+
+    async function fetchApplications() {
+      const token = localStorage.getItem('token');
+      const tableBody = document.getElementById('applicationsTableBody');
+      const statusFilter = document.getElementById('appStatusFilter') ? document.getElementById('appStatusFilter').value : 'all';
+      if (!tableBody) return;
+
+      tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">Fetching applications...</td></tr>';
+
+      try {
+        const res = await fetch(`/api/admin/applications?status=${statusFilter}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          const apps = data.applications || [];
+          const pendingCount = apps.filter(a => (a.applicationStatus || a.applicationstatus) === 'PENDING').length;
+          const pendingBadge = document.getElementById('pendingBadge');
+          if (pendingBadge) {
+            if (pendingCount > 0) {
+              pendingBadge.innerText = pendingCount;
+              pendingBadge.style.display = 'inline-block';
+            } else {
+              pendingBadge.style.display = 'none';
+            }
+          }
+
+          if (apps.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">No applications found.</td></tr>';
+            return;
+          }
+
+          tableBody.innerHTML = '';
+          apps.forEach(app => {
+            const appId = app.applicationId || app.applicationid || `AKS-APP-${app.id}`;
+            const name = app.studentName || app.studentname || 'N/A';
+            const phone = app.phone || 'N/A';
+            const college = app.collegeName || app.collegename || 'N/A';
+            const course = app.course || '';
+            const prefRoom = app.preferredSharingType || app.preferredroomtype || app.preferredRoomType || '3 Sharing';
+            const status = (app.applicationStatus || app.applicationstatus || 'PENDING').toUpperCase();
+
+            let statusBadgeClass = 'inactive';
+            if (status === 'APPROVED') statusBadgeClass = 'active';
+            else if (status === 'PENDING') statusBadgeClass = 'partially';
+            else if (status === 'CORRECTION_REQUIRED') statusBadgeClass = 'partially';
+
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid #E5E7EB';
+            tr.innerHTML = `
+              <td style="padding:12px;"><strong>${appId}</strong></td>
+              <td style="padding:12px;"><strong>${name}</strong></td>
+              <td style="padding:12px;">${phone}</td>
+              <td style="padding:12px;">${college} ${course ? `(${course})` : ''}</td>
+              <td style="padding:12px;">${prefRoom}</td>
+              <td style="padding:12px; text-align:center;"><span class="status-badge ${statusBadgeClass}">${status}</span></td>
+              <td style="padding:12px; text-align:right;">
+                <button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem; border-color:var(--primary-brand); color:var(--primary-deep);" onclick="openAppReviewModal(${app.id})">Review Docs</button>
+                <button class="btn btn-primary" style="padding:4px 8px; font-size:0.75rem; margin-left:4px;" onclick="openAllocateModalForApp(${app.id}, '${name.replace(/'/g, "\\'")}')">Allocate</button>
+                <button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem; margin-left:4px; color:#3b82f6; border-color:#3b82f6;" onclick="openResetPasswordModal(${app.id}, '${name.replace(/'/g, "\\'")}')">Reset Pass</button>
+              </td>
+            `;
+            tableBody.appendChild(tr);
+          });
+        }
+      } catch (err) {
+        console.error('Fetch applications error:', err);
+        tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#ef4444;">Failed to load applications.</td></tr>';
+      }
+    }
+
+    async function openAppReviewModal(id) {
+      currentReviewAppId = id;
+      const token = localStorage.getItem('token');
+      const reviewBody = document.getElementById('reviewModalBody');
+      if (!reviewBody) return;
+
+      reviewBody.innerHTML = '<div style="grid-column:span 2; text-align:center; padding:20px;">Loading student profile & documents...</div>';
+      openModal('appReviewModal');
+
+      try {
+        const res = await fetch(`/api/admin/students/${id}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        const docRes = await fetch(`/api/admin/students/${id}/documents`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const docData = await docRes.json();
+        const docs = docData.success ? docData.documents : [];
+
+        if (data.success) {
+          const student = data.student;
+          document.getElementById('reviewModalTitle').innerText = `Review Application: ${student.applicationId || student.studentCustomId || id}`;
+
+          let docsHtml = '<div style="grid-column:span 2; margin-top:16px; border-top:1px solid #E5E7EB; padding-top:12px;"><h4 style="margin:0 0 10px 0; color:var(--primary-deep);">Uploaded Verification Documents</h4>';
+
+          if (docs.length === 0) {
+            docsHtml += '<p style="color:var(--text-muted); font-size:0.85rem;">No document records found.</p>';
+          } else {
+            docsHtml += '<table class="data-table" style="width:100%; font-size:0.85rem;"><thead><tr><th>Document Type</th><th>File</th><th>Verification</th><th>Actions</th></tr></thead><tbody>';
+            docs.forEach(d => {
+              const isImg = d.mimeType && d.mimeType.startsWith('image/');
+              docsHtml += `
+                <tr>
+                  <td><strong>${d.documentType}</strong></td>
+                  <td>
+                    <a href="${d.storagePath}" target="_blank" style="color:var(--primary-brand); font-weight:700; text-decoration:underline;">View File</a>
+                    ${isImg ? `<br><img src="${d.storagePath}" style="width:60px; height:60px; object-fit:cover; border-radius:4px; margin-top:4px;">` : ''}
+                  </td>
+                  <td><span class="status-badge ${d.verificationStatus === 'APPROVED' ? 'active' : (d.verificationStatus === 'REJECTED' ? 'inactive' : 'partially')}">${d.verificationStatus}</span></td>
+                  <td>
+                    <button class="btn btn-outline" style="padding:2px 6px; font-size:0.7rem; color:#10b981; border-color:#10b981;" onclick="verifyDocument(${d.id}, 'APPROVED')">Approve</button>
+                    <button class="btn btn-outline" style="padding:2px 6px; font-size:0.7rem; color:#ef4444; border-color:#ef4444; margin-left:4px;" onclick="verifyDocument(${d.id}, 'REJECTED')">Reject</button>
+                  </td>
+                </tr>
+              `;
+            });
+            docsHtml += '</tbody></table>';
+          }
+          docsHtml += '</div>';
+
+          reviewBody.innerHTML = `
+            <div><strong>Student Name:</strong> ${student.studentName}</div>
+            <div><strong>Mobile Number:</strong> ${student.phone}</div>
+            <div><strong>Date of Birth:</strong> ${student.dateOfBirth ? student.dateOfBirth.split('T')[0] : 'N/A'}</div>
+            <div><strong>Gender:</strong> ${student.gender || 'Male'}</div>
+            <div><strong>Aadhaar Number:</strong> ${maskAadhaar(student.aadhaarNumber)}</div>
+            <div><strong>Blood Group:</strong> ${student.bloodGroup || 'N/A'}</div>
+            <div><strong>College Name:</strong> ${student.collegeName}</div>
+            <div><strong>Course & Branch:</strong> ${student.course || 'N/A'} ${student.branch ? `(${student.branch})` : ''}</div>
+            <div><strong>Roll Number:</strong> ${student.rollNumber || 'N/A'}</div>
+            <div><strong>Year of Study:</strong> ${student.year || '3rd Year'}</div>
+            <div><strong>Parent Name:</strong> ${student.parentName} (${student.guardianRelationship || 'Parent'})</div>
+            <div><strong>Parent Phone:</strong> ${student.parentPhone}</div>
+            <div><strong>Emergency Contact:</strong> ${student.emergencyName || 'N/A'} (${student.emergencyMobile || student.emergencyContact || 'N/A'})</div>
+            <div><strong>Preferred Sharing:</strong> ${student.preferredSharingType || student.preferredRoomType || '3 Sharing'}</div>
+            <div><strong>Preferred Floor:</strong> ${student.preferredFloor || 'Any'}</div>
+            <div><strong>Joining Date:</strong> ${student.joinDate ? student.joinDate.split('T')[0] : 'N/A'}</div>
+            ${docsHtml}
+          `;
+        }
+      } catch (err) {
+        reviewBody.innerHTML = '<div style="grid-column:span 2; color:#ef4444;">Failed to load student details.</div>';
+      }
+    }
+
+    async function verifyDocument(docId, status) {
+      const token = localStorage.getItem('token');
+      const remarks = prompt(`Enter optional remarks for document ${status.toLowerCase()}:`, '');
+      try {
+        const res = await fetch(`/api/admin/documents/${docId}/verify`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ status, remarks })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(data.message);
+          if (currentReviewAppId) openAppReviewModal(currentReviewAppId);
+        } else {
+          alert(data.message);
+        }
+      } catch (err) {
+        alert('Failed to verify document.');
+      }
+    }
+
+    async function submitAppReview(action) {
+      if (!currentReviewAppId) return;
+
+      const token = localStorage.getItem('token');
+      let reason = '';
+
+      if (action === 'REJECT' || action === 'REQUEST_CORRECTION') {
+        reason = prompt(`Enter ${action === 'REJECT' ? 'rejection reason' : 'correction details'} for applicant:`);
+        if (reason === null) return;
+      }
+
+      try {
+        const res = await fetch(`/api/admin/applications/${currentReviewAppId}/review`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ action, reason })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          alert(`Application updated successfully: ${data.message}`);
+          closeModal('appReviewModal');
+          fetchApplications();
+        } else {
+          alert(data.message || 'Action failed.');
+        }
+      } catch (err) {
+        alert('Server error processing review.');
+      }
+    }
+
+    function openAllocateModalForApp(studentId, name) {
+      openAllocateModal();
+      const select = document.getElementById('allocStudentSelect');
+      if (select) {
+        let match = Array.from(select.options).find(o => o.value == studentId);
+        if (!match) {
+          const opt = document.createElement('option');
+          opt.value = studentId;
+          opt.innerText = name;
+          select.appendChild(opt);
+        }
+        select.value = studentId;
+      }
+    }
+
+    async function openResetPasswordModal(studentId, name) {
+      const tempPass = prompt(`Set temporary password for ${name}:`, 'Akshaya@2026');
+      if (!tempPass) return;
+
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch(`/api/admin/students/${studentId}/reset-password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ temporaryPassword: tempPass })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          alert(`Password reset successfully!\n\n${data.message}`);
+        } else {
+          alert(data.message || 'Password reset failed.');
+        }
+      } catch (err) {
+        alert('Server error resetting password.');
+      }
+    }
   </script>
 </body>
 </html>

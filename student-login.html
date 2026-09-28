@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Student Login / Registration | Akshaya Deluxe Boys Hostel</title>
-  <meta name="description" content="Access the Akshaya Deluxe Boys Hostel student portal. Verify phone with OTP to sign in or submit a new admission application.">
+  <title>Student Login | Akshaya Deluxe Boys Hostel</title>
+  <meta name="description" content="Access the Akshaya Deluxe Boys Hostel student portal using your mobile number and password.">
   <link rel="stylesheet" href="style.css">
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
@@ -28,10 +28,13 @@
       padding: 40px;
       border-radius: var(--radius-lg);
       border: 1px solid var(--glass-border);
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(16px);
+      box-shadow: var(--shadow-xl);
     }
     .auth-header {
       text-align: center;
-      margin-bottom: 30px;
+      margin-bottom: 28px;
     }
     .auth-header h2 {
       font-size: 1.8rem;
@@ -43,27 +46,90 @@
       color: var(--text-muted);
       font-size: 0.92rem;
     }
+    .password-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .password-toggle {
+      position: absolute;
+      right: 12px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .password-toggle:hover {
+      color: var(--primary-brand);
+    }
     .auth-actions-footer {
       text-align: center;
       margin-top: 24px;
       font-size: 0.9rem;
       color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
     .auth-actions-footer a {
       color: var(--primary-brand);
       font-weight: 600;
       transition: var(--transition-fast);
+      text-decoration: none;
     }
     .auth-actions-footer a:hover {
       color: var(--primary-deep);
       text-decoration: underline;
+    }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(4px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 20px;
+    }
+    .modal-card {
+      background: #fff;
+      width: 100%;
+      max-width: 420px;
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      box-shadow: var(--shadow-2xl);
+      position: relative;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .modal-header h3 {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--primary-deep);
+    }
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      line-height: 1;
+      cursor: pointer;
+      color: var(--text-muted);
     }
     @media (max-width: 767px) {
       .auth-section {
         padding-top: 80px;
       }
       .auth-card {
-        padding: 24px 20px;
+        padding: 28px 20px;
       }
     }
   </style>
@@ -97,7 +163,7 @@
     </div>
   </header>
 
-  <!-- Login / Verification Area -->
+  <!-- Login Area -->
   <section class="auth-section">
     <div class="hero-blob hero-blob-1"></div>
     <div class="hero-blob hero-blob-2"></div>
@@ -105,54 +171,64 @@
     <div class="container auth-container">
       <div class="auth-card glass-card">
         <div class="auth-header">
-          <h2 id="cardTitle">Student Login / Register</h2>
-          <p id="cardSubtitle">Enter your mobile number to sign in or apply for hostel admission</p>
+          <h2>Student Portal Login</h2>
+          <p>Sign in using your 10-digit mobile number and password</p>
         </div>
         
-        <!-- STEP 1: Phone Entry -->
-        <div id="phoneStep">
-          <form id="sendOtpForm">
-            <div class="form-group" style="margin-bottom: 24px;">
-              <label class="form-label" for="studPhone">Mobile Number</label>
-              <div style="display: flex; gap: 8px; align-items: center;">
-                <span style="padding: 12px 14px; background: rgba(0, 0, 0, 0.04); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); font-weight: 700; color: var(--dark-slate);">+91</span>
-                <input type="tel" id="studPhone" class="form-input" placeholder="Enter 10-digit mobile number" required pattern="[0-9]{10}" maxlength="10" style="flex-grow: 1;">
-              </div>
+        <form id="studentLoginForm">
+          <div class="form-group" style="margin-bottom: 20px;">
+            <label class="form-label" for="phoneInput">Mobile Number <span style="color:red;">*</span></label>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span style="padding: 12px 14px; background: rgba(0, 0, 0, 0.04); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); font-weight: 700; color: var(--dark-slate);">+91</span>
+              <input type="tel" id="phoneInput" class="form-input" placeholder="Enter 10-digit mobile number" required pattern="[0-9]{10}" maxlength="10" style="flex-grow: 1;">
             </div>
-            
-            <button type="submit" class="btn btn-primary" id="sendOtpBtn" style="width: 100%;">SEND OTP</button>
-          </form>
-        </div>
+          </div>
 
-        <!-- STEP 2: OTP Verification -->
-        <div id="otpStep" style="display: none;">
-          <form id="verifyOtpForm">
-            <div style="text-align: center; background: var(--primary-ultra-light); border: 1px solid rgba(0,77,71,0.08); border-radius: 12px; padding: 14px; margin-bottom: 20px;">
-              <p style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 4px;">OTP sent to mobile number:</p>
-              <h4 id="maskedPhoneDisplay" style="font-size: 1.15rem; font-weight: 800; color: var(--primary-deep); font-family: monospace;">+91 ******3210</h4>
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label" for="passwordInput">Password <span style="color:red;">*</span></label>
+            <div class="password-wrapper">
+              <input type="password" id="passwordInput" class="form-input" placeholder="Enter your password" required style="width: 100%; padding-right: 44px;">
+              <button type="button" class="password-toggle" id="togglePasswordBtn" title="Toggle password visibility">
+                <i data-lucide="eye" id="toggleIcon"></i>
+              </button>
             </div>
+          </div>
 
-            <div class="form-group" style="margin-bottom: 24px;">
-              <label class="form-label" for="otpInput" style="text-align: center; display: block;">Enter 6-Digit OTP</label>
-              <input type="text" id="otpInput" class="form-input" placeholder="••••••" required pattern="[0-9]{6}" maxlength="6" style="text-align: center; letter-spacing: 8px; font-size: 1.5rem; font-weight: 800; font-family: monospace;">
-            </div>
+          <div style="text-align: right; margin-bottom: 24px;">
+            <a href="#" id="openForgotPasswordModal" style="font-size: 0.85rem; color: var(--primary-brand); text-decoration: none; font-weight: 600;">Forgot Password?</a>
+          </div>
 
-            <button type="submit" class="btn btn-primary" id="verifyOtpBtn" style="width: 100%;">VERIFY OTP</button>
+          <button type="submit" class="btn btn-primary" id="loginBtn" style="width: 100%; padding: 14px; font-weight: 700; font-size: 1rem;">LOG IN TO PORTAL</button>
+        </form>
 
-            <div style="text-align: center; margin-top: 20px;">
-              <p id="cooldownText" style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 8px;">Resend OTP in <span id="cooldownTimer" style="font-weight: 700; color: var(--primary-brand);">45</span> seconds</p>
-              <button type="button" id="resendOtpBtn" class="btn btn-outline" style="padding: 6px 16px; font-size: 0.8rem; display: none; margin: 0 auto;">RESEND OTP</button>
-              <button type="button" id="changePhoneBtn" style="background: none; border: none; color: var(--primary-brand); font-size: 0.82rem; margin-top: 12px; cursor: pointer; text-decoration: underline; display: block; width: 100%;">Change Mobile Number</button>
-            </div>
-          </form>
-        </div>
-        
         <div class="auth-actions-footer">
-          <p style="font-size: 0.8rem;"><a href="admin-login.html" style="color: var(--text-muted);">Admin Dashboard Login</a></p>
+          <p>Don't have an account? <a href="student-register.html" style="font-weight: 700;">Apply for Admission Here &rarr;</a></p>
+          <hr style="border: 0; border-top: 1px solid var(--glass-border); margin: 12px 0;">
+          <p style="font-size: 0.8rem;"><a href="admin-login.html" style="color: var(--text-muted);">Admin / Manager Login &rarr;</a></p>
         </div>
       </div>
     </div>
   </section>
+
+  <!-- Forgot Password Modal -->
+  <div class="modal-overlay" id="forgotPasswordModal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Request Password Reset</h3>
+        <button class="close-btn" id="closeForgotModal">&times;</button>
+      </div>
+      <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 20px;">
+        Submit your registered 10-digit mobile number. Hostel administration will review your request and issue a temporary login password.
+      </p>
+      <form id="forgotPasswordForm">
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label class="form-label" for="resetPhoneInput">Registered Mobile Number</label>
+          <input type="tel" id="resetPhoneInput" class="form-input" placeholder="Enter 10-digit mobile number" required pattern="[0-9]{10}" maxlength="10">
+        </div>
+        <button type="submit" class="btn btn-primary" id="submitResetBtn" style="width: 100%;">Submit Reset Request</button>
+      </form>
+    </div>
+  </div>
 
   <!-- Footer -->
   <footer class="footer" style="padding: 40px 0 20px 0;">
@@ -174,181 +250,134 @@
       };
     })();
 
-    let currentPhone = '';
-    let countdownInterval = null;
-
-    function startCooldownTimer(seconds = 45) {
-      clearInterval(countdownInterval);
-      const cooldownText = document.getElementById('cooldownText');
-      const cooldownTimer = document.getElementById('cooldownTimer');
-      const resendBtn = document.getElementById('resendOtpBtn');
-
-      let remaining = seconds;
-      cooldownText.style.display = 'block';
-      resendBtn.style.display = 'none';
-      cooldownTimer.innerText = remaining;
-
-      countdownInterval = setInterval(() => {
-        remaining--;
-        if (remaining <= 0) {
-          clearInterval(countdownInterval);
-          cooldownText.style.display = 'none';
-          resendBtn.style.display = 'inline-block';
-        } else {
-          cooldownTimer.innerText = remaining;
-        }
-      }, 1000);
+    if (window.lucide) {
+      lucide.createIcons();
     }
 
-    // Handle Send OTP
-    const sendOtpForm = document.getElementById('sendOtpForm');
-    if (sendOtpForm) {
-      sendOtpForm.addEventListener('submit', async (e) => {
+    // Toggle Password Visibility
+    const togglePasswordBtn = document.getElementById('togglePasswordBtn');
+    const passwordInput = document.getElementById('passwordInput');
+    const toggleIcon = document.getElementById('toggleIcon');
+
+    if (togglePasswordBtn && passwordInput) {
+      togglePasswordBtn.addEventListener('click', () => {
+        const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+        passwordInput.setAttribute('type', type);
+        if (type === 'text') {
+          toggleIcon.setAttribute('data-lucide', 'eye-off');
+        } else {
+          toggleIcon.setAttribute('data-lucide', 'eye');
+        }
+        if (window.lucide) lucide.createIcons();
+      });
+    }
+
+    // Student Login Submission
+    const studentLoginForm = document.getElementById('studentLoginForm');
+    if (studentLoginForm) {
+      studentLoginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const rawPhone = document.getElementById('studPhone').value.trim();
-        if (!/^\d{10}$/.test(rawPhone)) {
+        const phone = document.getElementById('phoneInput').value.trim();
+        const password = passwordInput.value;
+
+        if (!/^\d{10}$/.test(phone)) {
           alert('Please enter a valid 10-digit mobile number.');
           return;
         }
 
-        const sendBtn = document.getElementById('sendOtpBtn');
-        const originalText = sendBtn.innerText;
+        const loginBtn = document.getElementById('loginBtn');
+        const origText = loginBtn.innerText;
 
         try {
-          sendBtn.disabled = true;
-          sendBtn.innerText = 'Sending OTP...';
+          loginBtn.disabled = true;
+          loginBtn.innerText = 'Signing In...';
 
-          const response = await fetch('/api/auth/send-otp', {
+          const res = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: rawPhone })
+            body: JSON.stringify({ phone, password })
           });
 
-          // Handle server JSON response safely
-          let data;
-          try {
-            data = await response.json();
-          } catch (_) {
-            throw new Error('Unable to connect to server. Please try again.');
-          }
+          const data = await res.json();
 
-          if (response.ok && data.success) {
-            currentPhone = rawPhone;
-            document.getElementById('maskedPhoneDisplay').innerText = `+91 ******${rawPhone.slice(-4)}`;
-            document.getElementById('phoneStep').style.display = 'none';
-            document.getElementById('otpStep').style.display = 'block';
-            document.getElementById('cardTitle').innerText = 'Verify Your Mobile';
-            document.getElementById('cardSubtitle').innerText = 'Enter the 6-digit OTP code sent to your phone';
-            startCooldownTimer(data.cooldown || 45);
+          if (res.ok && data.success) {
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('user', JSON.stringify(data.user));
+            window.location.href = 'student/dashboard.html';
           } else {
-            alert(data.message || 'Unable to send OTP. Please try again.');
+            alert(data.message || 'Login failed. Please check your credentials.');
           }
         } catch (err) {
-          console.error('Send OTP Error:', err);
-          alert(err.message || 'Connection Error. Please check your internet connection.');
+          console.error('Login Error:', err);
+          alert('Network or server error. Please try again.');
         } finally {
-          sendBtn.disabled = false;
-          sendBtn.innerText = originalText;
+          loginBtn.disabled = false;
+          loginBtn.innerText = origText;
         }
       });
     }
 
-    // Handle Verify OTP
-    const verifyOtpForm = document.getElementById('verifyOtpForm');
-    if (verifyOtpForm) {
-      verifyOtpForm.addEventListener('submit', async (e) => {
+    // Forgot Password Modal Handlers
+    const forgotModal = document.getElementById('forgotPasswordModal');
+    const openForgotModalBtn = document.getElementById('openForgotPasswordModal');
+    const closeForgotModalBtn = document.getElementById('closeForgotModal');
+    const forgotForm = document.getElementById('forgotPasswordForm');
+
+    if (openForgotModalBtn) {
+      openForgotModalBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        const otpVal = document.getElementById('otpInput').value.trim();
-        if (!/^\d{6}$/.test(otpVal)) {
-          alert('Please enter a valid 6-digit OTP.');
+        forgotModal.style.display = 'flex';
+      });
+    }
+
+    if (closeForgotModalBtn) {
+      closeForgotModalBtn.addEventListener('click', () => {
+        forgotModal.style.display = 'none';
+      });
+    }
+
+    if (forgotModal) {
+      forgotModal.addEventListener('click', (e) => {
+        if (e.target === forgotModal) forgotModal.style.display = 'none';
+      });
+    }
+
+    if (forgotForm) {
+      forgotForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const resetPhone = document.getElementById('resetPhoneInput').value.trim();
+        if (!/^\d{10}$/.test(resetPhone)) {
+          alert('Please enter a valid 10-digit mobile number.');
           return;
         }
 
-        const verifyBtn = document.getElementById('verifyOtpBtn');
-        const originalText = verifyBtn.innerText;
+        const submitBtn = document.getElementById('submitResetBtn');
+        const origText = submitBtn.innerText;
 
         try {
-          verifyBtn.disabled = true;
-          verifyBtn.innerText = 'Verifying OTP...';
+          submitBtn.disabled = true;
+          submitBtn.innerText = 'Submitting Request...';
 
-          const response = await fetch('/api/auth/verify-otp', {
+          const res = await fetch('/api/auth/forgot-password-request', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: currentPhone, otp: otpVal })
+            body: JSON.stringify({ phone: resetPhone })
           });
 
-          let data;
-          try {
-            data = await response.json();
-          } catch (_) {
-            throw new Error('Unable to connect to server. Please try again.');
-          }
-
-          if (response.ok && data.success) {
-            if (data.userExists) {
-              // Existing Student -> Log in & open Student Portal
-              localStorage.setItem('token', data.token);
-              localStorage.setItem('user', JSON.stringify(data.user));
-              window.location.href = data.redirectUrl || 'student/dashboard.html';
-            } else {
-              // New Student -> Save verification token & open Registration Form
-              sessionStorage.setItem('verificationToken', data.verificationToken);
-              sessionStorage.setItem('verifiedPhone', data.verifiedPhone);
-              window.location.href = 'student-register.html';
-            }
+          const data = await res.json();
+          if (res.ok && data.success) {
+            alert(data.message || 'Password reset request submitted successfully. Please contact admin.');
+            forgotModal.style.display = 'none';
+            document.getElementById('resetPhoneInput').value = '';
           } else {
-            alert(data.message || 'Invalid OTP. Please try again.');
+            alert(data.message || 'Failed to submit reset request.');
           }
         } catch (err) {
-          console.error('Verify OTP Error:', err);
-          alert(err.message || 'Connection Error. Please try again.');
+          alert('Failed to connect to server. Please try again.');
         } finally {
-          verifyBtn.disabled = false;
-          verifyBtn.innerText = originalText;
+          submitBtn.disabled = false;
+          submitBtn.innerText = origText;
         }
-      });
-    }
-
-    // Handle Resend OTP
-    const resendOtpBtn = document.getElementById('resendOtpBtn');
-    if (resendOtpBtn) {
-      resendOtpBtn.addEventListener('click', async () => {
-        if (!currentPhone) return;
-        resendOtpBtn.disabled = true;
-        resendOtpBtn.innerText = 'Sending...';
-
-        try {
-          const response = await fetch('/api/auth/send-otp', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: currentPhone })
-          });
-          const data = await response.json();
-          if (response.ok && data.success) {
-            alert(`New OTP sent to +91 ******${currentPhone.slice(-4)}`);
-            startCooldownTimer(data.cooldown || 45);
-          } else {
-            alert(data.message || 'Failed to resend OTP.');
-          }
-        } catch (err) {
-          alert('Failed to resend OTP. Please try again.');
-        } finally {
-          resendOtpBtn.disabled = false;
-          resendOtpBtn.innerText = 'RESEND OTP';
-        }
-      });
-    }
-
-    // Handle Change Phone Number
-    const changePhoneBtn = document.getElementById('changePhoneBtn');
-    if (changePhoneBtn) {
-      changePhoneBtn.addEventListener('click', () => {
-        clearInterval(countdownInterval);
-        document.getElementById('otpStep').style.display = 'none';
-        document.getElementById('phoneStep').style.display = 'block';
-        document.getElementById('cardTitle').innerText = 'Student Login / Register';
-        document.getElementById('cardSubtitle').innerText = 'Enter your mobile number to sign in or apply for hostel admission';
-        document.getElementById('otpInput').value = '';
       });
     }
   </script>
