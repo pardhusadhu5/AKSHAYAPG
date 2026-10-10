@@ -11,7 +11,15 @@ async function getDb() {
   }
 
   pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: (function() {
+      try { 
+        const u = new URL(process.env.DATABASE_URL); 
+        u.searchParams.set('sslmode', 'verify-full'); 
+        return u.toString(); 
+      } catch(e) { 
+        return process.env.DATABASE_URL; 
+      } 
+    })(),
     ssl: {
       rejectUnauthorized: false
     },
