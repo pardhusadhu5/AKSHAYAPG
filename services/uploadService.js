@@ -2,12 +2,10 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-let CloudinaryStorage = null;
 let cloudinary = null;
 let hasCloudinary = false;
 
 try {
-  CloudinaryStorage = require('multer-storage-cloudinary').CloudinaryStorage;
   cloudinary = require('cloudinary').v2;
   hasCloudinary = !!(process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET);
   if (hasCloudinary) {
@@ -27,15 +25,6 @@ if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-const cloudStorage = (hasCloudinary && CloudinaryStorage) ? new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: async (req, file) => ({
-    folder: 'akshaya_pg_uploads',
-    resource_type: 'auto',
-    public_id: Date.now() + '-' + Math.round(Math.random() * 1E9)
-  })
-}) : null;
-
 const localStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => {
@@ -43,39 +32,6 @@ const localStorage = multer.diskStorage({
     cb(null, uniqueSuffix + path.extname(file.originalname));
   }
 });
-
-class ResilientStorage {
-  constructor(cloud, local) {
-    this.cloud = cloud;
-    this.local = local;
-  }
-
-  _handleFile(req, file, cb) {
-    if (this.cloud) {
-      this.cloud._handleFile(req, file, (err, info) => {
-        if (!err && info) {
-          return cb(null, info);
-        }
-        console.warn('Cloudinary upload failed/forbidden, falling back to local storage:', err ? (err.message || err) : 'No info returned');
-        this.local._handleFile(req, file, cb);
-      });
-    } else {
-      this.local._handleFile(req, file, cb);
-    }
-  }
-
-  _removeFile(req, file, cb) {
-    if (this.cloud) {
-      this.cloud._removeFile(req, file, () => {
-        this.local._removeFile(req, file, cb);
-      });
-    } else {
-      this.local._removeFile(req, file, cb);
-    }
-  }
-}
-
-const resilientStorage = new ResilientStorage(cloudStorage, localStorage);
 
 const fileFilter = (req, file, cb) => {
   const filetypes = /jpeg|jpg|png|pdf/;
@@ -89,7 +45,7 @@ const fileFilter = (req, file, cb) => {
 };
 
 const upload = multer({
-  storage: resilientStorage,
+  storage: localStorage,
   fileFilter: fileFilter,
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit per file
 });
@@ -105,6 +61,47 @@ const uploadApplicationFields = upload.fields([
   { name: 'document_marksMemo', maxCount: 1 },
   { name: 'document_other', maxCount: 1 }
 ]);
+
+async function syncFileToCloudinary(fileObj) {
+  if (!hasCloudinary || !cloudinary || !fileObj || !fileObj.path) return fileObj;
+  try {
+    const result = await cloudinary.uploader.upload(fileObj.path, {
+      folder: 'akshaya_pg_uploads',
+      resource_type: 'auto'
+    });
+    if (result && result.secure_url) {
+      fileObj.path = result.secure_url;
+      fileObj.cloudinaryPublicId = result.public_id;
+    }
+  } catch (err) {
+    console.warn('Cloudinary sync upload failed/forbidden (using local disk storage):', err ? (err.message || err) : 'Error');
+  }
+  return fileObj;
+}
+
+async function syncReqFilesToCloudinary(req) {
+  if (!hasCloudinary) return;
+
+  if (req.file) {
+    await syncFileToCloudinary(req.file);
+  }
+
+  if (req.files) {
+    if (Array.isArray(req.files)) {
+      for (const file of req.files) {
+        await syncFileToCloudinary(file);
+      }
+    } else if (typeof req.files === 'object') {
+      for (const key of Object.keys(req.files)) {
+        if (Array.isArray(req.files[key])) {
+          for (const file of req.files[key]) {
+            await syncFileToCloudinary(file);
+          }
+        }
+      }
+    }
+  }
+}
 
 const extractPublicId = (url) => {
   if (!url || !url.includes('cloudinary.com')) return null;
@@ -142,4 +139,4 @@ const deleteFile = async (fileUrl) => {
   }
 };
 
-module.exports = { upload, uploadApplicationFields, deleteFile, cloudinary };
+module.exports = { upload, uploadApplicationFields, syncReqFilesToCloudinary, deleteFile, cloudinary };

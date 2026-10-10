@@ -1,12 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { upload, uploadApplicationFields } = require('../services/uploadService');
+const { upload, uploadApplicationFields, syncReqFilesToCloudinary } = require('../services/uploadService');
 const authController = require('../controllers/authController');
 const { verifyToken } = require('../middleware/authMiddleware');
 
 const handleUploadApplication = (req, res, next) => {
-  uploadApplicationFields(req, res, (err) => {
+  uploadApplicationFields(req, res, async (err) => {
     if (err) {
       console.error('Upload Error during Student Application:', err);
       if (err instanceof multer.MulterError) {
@@ -17,6 +17,13 @@ const handleUploadApplication = (req, res, next) => {
       }
       return res.status(400).json({ success: false, message: err.message || 'Error processing uploaded file.' });
     }
+
+    try {
+      await syncReqFilesToCloudinary(req);
+    } catch (syncErr) {
+      console.warn('Cloudinary sync error ignored, proceeding with local file:', syncErr);
+    }
+
     next();
   });
 };
