@@ -1670,12 +1670,37 @@
   <script>
     (function() {
       const originalFetch = window.fetch;
-      const API_BASE = (window.location.protocol === 'file:') ? 'http://localhost:8080' : '';
-      window.fetch = function(input, init) {
+      const API_BASE = (window.location.hostname === 'localhost' || window.location.protocol === 'file:') ? 'http://localhost:8080' : '';
+      
+      window.fetch = async function(input, init = {}) {
         if (typeof input === 'string' && input.startsWith('/api/')) {
           input = API_BASE + input;
         }
-        return originalFetch(input, init);
+
+        const token = localStorage.getItem('token');
+        if (token) {
+          init.headers = init.headers || {};
+          if (!init.headers['Authorization']) {
+            init.headers['Authorization'] = `Bearer ${token}`;
+          }
+        }
+
+        try {
+          const response = await originalFetch(input, init);
+          
+          if (response.status === 401 || response.status === 403) {
+            console.error('[API Error] Auth Failed (401/403). Redirecting to login.');
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.replace('../admin-login.html');
+            return response;
+          }
+          
+          return response;
+        } catch (err) {
+          console.error(`[Fetch Error] ${input}:`, err);
+          throw err;
+        }
       };
     })();
 
@@ -1937,6 +1962,13 @@
         }
       } catch (err) {
         console.error('Error fetching dashboard stats:', err);
+        document.getElementById('statTotalStudents').innerText = "Err";
+        document.getElementById('statTotalRooms').innerText = "Err";
+        document.getElementById('statTotalBeds').innerText = "Err";
+        document.getElementById('statOccupiedBeds').innerText = "Err";
+        document.getElementById('statVacantBeds').innerText = "Err";
+        const recentTable = document.querySelector('#recentStudentsTable tbody');
+        if (recentTable) recentTable.innerHTML = '<tr><td colspan="4" style="color:#ef4444; text-align:center;">Failed to load data. API might be sleeping.</td></tr>';
       }
     }
 
@@ -2053,7 +2085,7 @@
         }
       } catch (err) {
         console.error('Error loading student database:', err);
-        tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center; color:var(--error);">Connection failed.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center; color:#ef4444;">Failed to load students. Server error.</td></tr>';
       }
     }
 
@@ -3288,6 +3320,8 @@
         }
       } catch (err) {
         console.error('Ledger error:', err);
+        const tbody = document.querySelector('#paymentsTable tbody');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#ef4444;">Failed to load payments. Server error.</td></tr>';
       }
     }
 
@@ -3360,6 +3394,8 @@
         }
       } catch (err) {
         console.error('Reminders list error:', err);
+        const tbody = document.querySelector('#remindersTable tbody');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:#ef4444;">Failed to load reminders. Server error.</td></tr>';
       }
     }
 
