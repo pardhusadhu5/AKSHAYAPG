@@ -3684,7 +3684,7 @@
     document.getElementById('allocRoom').addEventListener('change', onAllocationRoomChange);
 
     // Mobile Sidebar Navigation Handlers
-    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+    const mobileMenuBtnElem = document.getElementById('mobileMenuBtn');
     const adminSidebar = document.getElementById('sidebar');
     const sidebarOverlay = document.getElementById('sidebarOverlay');
 
@@ -3698,8 +3698,8 @@
       if (sidebarOverlay) sidebarOverlay.classList.remove('active');
     }
 
-    if (mobileMenuBtn) {
-      mobileMenuBtn.addEventListener('click', (e) => {
+    if (mobileMenuBtnElem) {
+      mobileMenuBtnElem.addEventListener('click', (e) => {
         e.stopPropagation();
         if (adminSidebar && adminSidebar.classList.contains('open')) {
           closeAdminSidebar();
