@@ -44,6 +44,39 @@ const localStorage = multer.diskStorage({
   }
 });
 
+class ResilientStorage {
+  constructor(cloud, local) {
+    this.cloud = cloud;
+    this.local = local;
+  }
+
+  _handleFile(req, file, cb) {
+    if (this.cloud) {
+      this.cloud._handleFile(req, file, (err, info) => {
+        if (!err && info) {
+          return cb(null, info);
+        }
+        console.warn('Cloudinary upload failed/forbidden, falling back to local storage:', err ? (err.message || err) : 'No info returned');
+        this.local._handleFile(req, file, cb);
+      });
+    } else {
+      this.local._handleFile(req, file, cb);
+    }
+  }
+
+  _removeFile(req, file, cb) {
+    if (this.cloud) {
+      this.cloud._removeFile(req, file, () => {
+        this.local._removeFile(req, file, cb);
+      });
+    } else {
+      this.local._removeFile(req, file, cb);
+    }
+  }
+}
+
+const resilientStorage = new ResilientStorage(cloudStorage, localStorage);
+
 const fileFilter = (req, file, cb) => {
   const filetypes = /jpeg|jpg|png|pdf/;
   const mimetype = filetypes.test(file.mimetype) || file.mimetype === 'application/pdf';
@@ -56,7 +89,7 @@ const fileFilter = (req, file, cb) => {
 };
 
 const upload = multer({
-  storage: hasCloudinary ? cloudStorage : localStorage,
+  storage: resilientStorage,
   fileFilter: fileFilter,
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit per file
 });
