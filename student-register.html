@@ -252,21 +252,6 @@
                   <option value="4th Year">4th Year</option>
                 </select>
               </div>
-
-              <div class="form-group">
-                <label class="form-label" for="appRoll">College Roll Number / Hall Ticket <span class="req-star">*</span></label>
-                <input type="text" id="appRoll" name="rollNumber" class="form-input" placeholder="e.g. 22AUR0501" required>
-              </div>
-
-              <div class="form-group">
-                <label class="form-label" for="appAcademicYear">Academic Year</label>
-                <input type="text" id="appAcademicYear" name="academicYear" class="form-input" placeholder="e.g. 2025-2026">
-              </div>
-
-              <div class="form-group form-grid-full">
-                <label class="form-label" for="appCollegeAddr">College Address</label>
-                <input type="text" id="appCollegeAddr" name="collegeAddress" class="form-input" placeholder="e.g. Parvathapur, Ghatkesar, Hyderabad">
-              </div>
             </div>
           </div>
 
@@ -335,8 +320,8 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label" for="appEmergRel">Relationship to Student <span class="req-star">*</span></label>
-                <input type="text" id="appEmergRel" name="emergencyRelationship" class="form-input" placeholder="e.g. Uncle / Brother" required>
+                <label class="form-label" for="appEmergRel">Relationship to Student</label>
+                <input type="text" id="appEmergRel" name="emergencyRelationship" class="form-input" placeholder="e.g. Uncle / Brother">
               </div>
 
               <div class="form-group form-grid-full">
@@ -353,13 +338,13 @@
             </div>
             <div class="form-grid">
               <div class="form-group">
-                <label class="form-label" for="appJoiningDate">Expected Joining Date <span class="req-star">*</span></label>
-                <input type="date" id="appJoiningDate" name="joiningDate" class="form-input" required>
+                <label class="form-label" for="appJoiningDate">Expected Joining Date</label>
+                <input type="date" id="appJoiningDate" name="joiningDate" class="form-input">
               </div>
 
               <div class="form-group">
-                <label class="form-label" for="appDuration">Expected Stay Duration (Months) <span class="req-star">*</span></label>
-                <select id="appDuration" name="stayDuration" class="form-input" required>
+                <label class="form-label" for="appDuration">Expected Stay Duration (Months)</label>
+                <select id="appDuration" name="stayDuration" class="form-input">
                   <option value="6">6 Months</option>
                   <option value="12" selected>12 Months</option>
                   <option value="24">24 Months</option>
@@ -367,8 +352,8 @@
               </div>
 
               <div class="form-group">
-                <label class="form-label" for="appSharing">Preferred Room Type / Sharing <span class="req-star">*</span></label>
-                <select id="appSharing" name="preferredSharingType" class="form-input" required>
+                <label class="form-label" for="appSharing">Preferred Room Type / Sharing</label>
+                <select id="appSharing" name="preferredSharingType" class="form-input">
                   <option value="2 Sharing">2 Sharing</option>
                   <option value="3 Sharing" selected>3 Sharing (₹8,500/mo)</option>
                   <option value="4 Sharing">4 Sharing (₹9,000/mo)</option>
@@ -400,7 +385,7 @@
           <!-- SECTION 6: REQUIRED DOCUMENT UPLOADS -->
           <div class="form-section">
             <div class="section-title">
-              <i data-lucide="file-text"></i> Section 6: Document Uploads (Max 5MB per file)
+              <i data-lucide="file-text"></i> Section 6: Passport-Size Photograph (Max 5MB)
             </div>
             <div class="form-grid">
 
@@ -410,38 +395,6 @@
                 <p class="doc-hint">JPEG or PNG image format. Maximum file size: 5MB</p>
                 <input type="file" id="docPhoto" name="photo" accept="image/jpeg,image/png" required style="width: 100%;">
                 <img id="photoPreviewImg" class="photo-preview" alt="Photo Preview">
-              </div>
-
-              <!-- Student College ID -->
-              <div class="doc-box">
-                <label for="docCollegeId">Student / College ID Card <span class="req-star">*</span></label>
-                <p class="doc-hint">JPEG, PNG, or PDF format (Max 5MB)</p>
-                <input type="file" id="docCollegeId" name="document_collegeId" accept="image/*,application/pdf" required style="width: 100%;">
-              </div>
-
-              <!-- Aadhaar Card -->
-              <div class="doc-box">
-                <label for="docAadhaar">Aadhaar Card <span class="req-star">*</span></label>
-                <p class="doc-hint">JPEG, PNG, or PDF format (Max 5MB)</p>
-                <input type="file" id="docAadhaar" name="document_aadhaar" accept="image/*,application/pdf" required style="width: 100%;">
-              </div>
-
-              <!-- Parent ID Proof -->
-              <div class="doc-box form-grid-full">
-                <label for="docParentId">Parent / Guardian ID Proof <span class="req-star">*</span></label>
-                <p class="doc-hint">Aadhaar, Voter ID, or PAN Card of parent (Max 5MB)</p>
-                <input type="file" id="docParentId" name="document_parentId" accept="image/*,application/pdf" required style="width: 100%;">
-              </div>
-
-              <!-- Optional Documents -->
-              <div class="doc-box">
-                <label for="docBonafide">Bonafide Certificate (Optional)</label>
-                <input type="file" id="docBonafide" name="document_bonafide" accept="image/*,application/pdf" style="width: 100%;">
-              </div>
-
-              <div class="doc-box">
-                <label for="docJoining">Joining Letter (Optional)</label>
-                <input type="file" id="docJoining" name="document_joiningLetter" accept="image/*,application/pdf" style="width: 100%;">
               </div>
 
             </div>

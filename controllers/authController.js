@@ -184,7 +184,7 @@ async function registerStudentApplication(req, res) {
     } = body;
 
     // Validate Required Fields
-    if (!name || !dateOfBirth || !gender || !phone || !aadhaarNumber || !collegeName || !course || !year || !rollNumber || !parentName || !guardianRelationship || !parentPhone || !emergencyName || !emergencyRelationship || !emergencyMobile || !joiningDate || !password || !confirmPassword) {
+    if (!name || !dateOfBirth || !gender || !phone || !aadhaarNumber || !collegeName || !course || !year || !parentName || !guardianRelationship || !parentPhone || !emergencyName || !emergencyMobile || !password || !confirmPassword) {
       return res.status(400).json({ success: false, message: 'Please fill in all required fields marked with *.' });
     }
 
@@ -209,14 +209,11 @@ async function registerStudentApplication(req, res) {
     // Validate Required Files
     const files = req.files || {};
     const photoFile = files.photo ? files.photo[0] : null;
-    const collegeIdFile = files.document_collegeId ? files.document_collegeId[0] : null;
-    const aadhaarFile = files.document_aadhaar ? files.document_aadhaar[0] : null;
-    const parentIdFile = files.document_parentId ? files.document_parentId[0] : null;
 
-    if (!collegeIdFile || !aadhaarFile || !photoFile || !parentIdFile) {
+    if (!photoFile) {
       return res.status(400).json({
         success: false,
-        message: 'Please upload all 4 required document files: Student/College ID, Aadhaar Card, Photograph, and Parent ID Proof.'
+        message: 'Please upload your Passport Size Photograph.'
       });
     }
 
@@ -280,7 +277,7 @@ async function registerStudentApplication(req, res) {
         guardianEmail || '',
         emergencyMobile.trim(),
         emergencyName.trim(),
-        emergencyRelationship.trim(),
+        emergencyRelationship ? emergencyRelationship.trim() : '',
         emergencyMobile.trim(),
         cleanAadhaar,
         dateOfBirth,
@@ -289,7 +286,7 @@ async function registerStudentApplication(req, res) {
         collegeName.trim(),
         course.trim(),
         branch || course.trim(),
-        rollNumber.trim(),
+        rollNumber ? rollNumber.trim() : '',
         year.trim(),
         academicYear || '',
         collegeAddress || '',
@@ -305,7 +302,7 @@ async function registerStudentApplication(req, res) {
         stayDuration ? parseInt(stayDuration) : 12,
         photoPath,
         '',
-        joiningDate,
+        joiningDate || new Date().toISOString().split('T')[0],
         'APPLICANT',
         8500,
         8500,
