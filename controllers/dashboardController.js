@@ -1,6 +1,8 @@
 const { getDb } = require('../config/db');
 const bcrypt = require('bcryptjs');
 const path = require('path');
+const { addAdminClient, broadcastAdminEvent } = require('../services/realtimeService');
+const { sendWelcomeWhatsApp } = require('../services/whatsappService');
 
 async function getStats(req, res) {
   try {
@@ -625,6 +627,17 @@ async function downloadDbBackup(req, res) {
   }
 }
 
+function subscribeAdminEvents(req, res) {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no',
+    'Access-Control-Allow-Origin': '*'
+  });
+  addAdminClient(res, req);
+}
+
 async function getApplications(req, res) {
   try {
     const { status } = req.query;
@@ -669,7 +682,10 @@ async function getApplications(req, res) {
       rollNumber: app.rollnumber || app.rollNumber,
       roomNumber: app.roomnumber || app.roomNumber,
       bedNumber: app.bednumber || app.bedNumber,
-      bedLabel: app.bedlabel || app.bedLabel
+      bedLabel: app.bedlabel || app.bedLabel,
+      whatsappStatus: app.whatsappstatus || app.whatsappStatus || 'NONE',
+      whatsappSentAt: app.whatsappsentat || app.whatsappSentAt,
+      whatsappError: app.whatsapperror || app.whatsappError
     }));
     res.status(200).json({ success: true, applications: normalizedApps });
   } catch (err) {
@@ -696,11 +712,16 @@ async function reviewApplication(req, res) {
     }
 
     let targetAppStatus = 'PENDING';
+    let targetStudentStatus = student.status || 'APPLICANT';
+    let targetUserStatus = 'pending';
     let rejectionReason = null;
     let correctionReason = null;
+    let whatsappResult = null;
 
     if (action === 'APPROVE') {
       targetAppStatus = 'APPROVED';
+      targetStudentStatus = 'active';
+      targetUserStatus = 'active';
       const feeAmount = admissionFee ? parseFloat(admissionFee) : (parseFloat(student.monthlyRent) || 8500);
 
       // Check if admission invoice already generated in payments table
@@ -720,8 +741,20 @@ async function reviewApplication(req, res) {
         `INSERT INTO notifications (type, message) VALUES ($1, $2)`,
         ['application_approved', `Application ${student.applicationId || student.id} approved for ${student.studentName}. Initial fee invoice generated.`]
       );
+
+      // Send WhatsApp welcome message (safe async, non-blocking)
+      try {
+        whatsappResult = await sendWelcomeWhatsApp({
+          ...student,
+          applicationStatus: 'APPROVED'
+        });
+      } catch (waErr) {
+        console.error('WhatsApp Welcome Dispatch Error (non-fatal):', waErr);
+      }
     } else if (action === 'REJECT') {
       targetAppStatus = 'REJECTED';
+      targetStudentStatus = 'inactive';
+      targetUserStatus = 'rejected';
       rejectionReason = reason || 'Application rejected by hostel administration.';
       await db.query(
         `INSERT INTO notifications (type, message) VALUES ($1, $2)`,
@@ -736,17 +769,43 @@ async function reviewApplication(req, res) {
       );
     }
 
+    // Update students table
     await db.query(
       `UPDATE students 
-       SET applicationStatus = $1, rejectionReason = $2, correctionReason = $3, updatedAt = CURRENT_TIMESTAMP 
-       WHERE id = $4`,
-      [targetAppStatus, rejectionReason, correctionReason, id]
+       SET applicationStatus = $1, status = $2, rejectionReason = $3, correctionReason = $4, updatedAt = CURRENT_TIMESTAMP 
+       WHERE id = $5`,
+      [targetAppStatus, targetStudentStatus, rejectionReason, correctionReason, id]
     );
+
+    // Update users table to permit/block Student Portal login access
+    const targetUserId = student.userid || student.userId;
+    if (targetUserId && (action === 'APPROVE' || action === 'REJECT')) {
+      await db.query(
+        `UPDATE users SET status = $1, updatedAt = CURRENT_TIMESTAMP WHERE id = $2`,
+        [targetUserStatus, targetUserId]
+      );
+    }
+
+    // Broadcast real-time SSE update to all connected admin dashboards
+    try {
+      broadcastAdminEvent('application_updated', {
+        id: parseInt(id),
+        applicationId: student.applicationId || student.studentCustomId || `AKS-APP-${id}`,
+        studentName: student.studentName,
+        phone: student.phone,
+        applicationStatus: targetAppStatus,
+        whatsappStatus: whatsappResult ? whatsappResult.status : student.whatsappStatus || 'NONE',
+        updatedAt: new Date().toISOString()
+      });
+    } catch (sseErr) {
+      console.warn('Realtime update broadcast error (non-fatal):', sseErr);
+    }
 
     res.status(200).json({
       success: true,
       message: `Application status updated to ${targetAppStatus}.`,
-      applicationStatus: targetAppStatus
+      applicationStatus: targetAppStatus,
+      whatsapp: whatsappResult
     });
   } catch (err) {
     console.error('Review Application Error:', err);
@@ -904,6 +963,7 @@ module.exports = {
   verifyDocument,
   allocateRoomToStudent,
   getPasswordResetRequests,
-  adminResetPassword
+  adminResetPassword,
+  subscribeAdminEvents
 };
 

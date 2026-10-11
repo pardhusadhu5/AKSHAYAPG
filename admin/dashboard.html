@@ -3721,8 +3721,88 @@
       });
     });
 
+    // Toast Notification System
+    function showAdminToast(message, type = 'info') {
+      let container = document.getElementById('adminToastContainer');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'adminToastContainer';
+        container.style.cssText = 'position:fixed; top:20px; right:20px; z-index:99999; display:flex; flex-direction:column; gap:10px; max-width:380px;';
+        document.body.appendChild(container);
+      }
+      const toast = document.createElement('div');
+      const bg = type === 'success' ? '#10b981' : (type === 'error' ? '#ef4444' : (type === 'warning' ? '#f59e0b' : '#004D47'));
+      toast.style.cssText = `background:${bg}; color:#fff; padding:12px 18px; border-radius:8px; box-shadow:0 6px 16px rgba(0,0,0,0.2); font-size:0.9rem; font-weight:600; display:flex; align-items:center; gap:8px; animation:fadeIn 0.3s ease;`;
+      toast.innerHTML = `<span>📢</span> <span>${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.4s ease';
+        setTimeout(() => toast.remove(), 400);
+      }, 4500);
+    }
+    window.showToast = showAdminToast;
+
+    // Real-Time SSE Listener & Fallback Polling
+    let adminEventSource = null;
+    let applicationsPollTimer = null;
+
+    function initAdminRealtime() {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+
+      if (window.EventSource) {
+        if (adminEventSource) {
+          try { adminEventSource.close(); } catch (_) {}
+        }
+        adminEventSource = new EventSource(`/api/admin/events?token=${encodeURIComponent(token)}`);
+
+        adminEventSource.addEventListener('new_application', (e) => {
+          try {
+            const data = JSON.parse(e.data);
+            showAdminToast(`New Application: ${data.studentName} (${data.applicationId})`, 'info');
+            fetchApplications(true);
+            if (typeof fetchStatsAndRecent === 'function') fetchStatsAndRecent();
+          } catch (err) {
+            console.error('Error handling new_application event:', err);
+          }
+        });
+
+        adminEventSource.addEventListener('application_updated', (e) => {
+          try {
+            fetchApplications(true);
+            if (typeof fetchStatsAndRecent === 'function') fetchStatsAndRecent();
+          } catch (err) {}
+        });
+
+        adminEventSource.onerror = () => {
+          // EventSource auto-reconnects natively; fallback polling ensures no missed data
+        };
+      }
+
+      // Automatic fallback polling every 15 seconds when viewing Applications panel
+      if (applicationsPollTimer) clearInterval(applicationsPollTimer);
+      applicationsPollTimer = setInterval(() => {
+        const activePanel = document.querySelector('.panel-view.active');
+        if (activePanel && activePanel.id === 'applicationsPanel') {
+          fetchApplications(true);
+        }
+      }, 15000);
+
+      // Re-fetch when admin returns to tab
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          const activePanel = document.querySelector('.panel-view.active');
+          if (activePanel && activePanel.id === 'applicationsPanel') {
+            fetchApplications(true);
+          }
+        }
+      });
+    }
+
     // Initial Trigger on start
     fetchStatsAndRecent();
+    initAdminRealtime();
 
     // ==========================================
     // APPLICATION REVIEW & DOCUMENT VERIFICATION LOGIC
@@ -3736,13 +3816,15 @@
       return `XXXX XXXX ${clean.slice(-4)}`;
     }
 
-    async function fetchApplications() {
+    async function fetchApplications(silent = false) {
       const token = localStorage.getItem('token');
       const tableBody = document.getElementById('applicationsTableBody');
       const statusFilter = document.getElementById('appStatusFilter') ? document.getElementById('appStatusFilter').value : 'all';
       if (!tableBody) return;
 
-      tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">Fetching applications...</td></tr>';
+      if (!silent) {
+        tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">Fetching applications...</td></tr>';
+      }
 
       try {
         const res = await fetch(`/api/admin/applications?status=${statusFilter}`, {
@@ -3783,6 +3865,12 @@
             else if (status === 'PENDING') statusBadgeClass = 'partially';
             else if (status === 'CORRECTION_REQUIRED') statusBadgeClass = 'partially';
 
+            let waStatusBadge = '';
+            if (app.whatsappStatus && app.whatsappStatus !== 'NONE') {
+              const waColor = app.whatsappStatus === 'SENT' ? '#10b981' : (app.whatsappStatus === 'FAILED' ? '#ef4444' : '#f59e0b');
+              waStatusBadge = `<div style="font-size:0.7rem; color:${waColor}; font-weight:700; margin-top:3px;">WA: ${app.whatsappStatus}</div>`;
+            }
+
             const tr = document.createElement('tr');
             tr.style.borderBottom = '1px solid #E5E7EB';
             tr.innerHTML = `
@@ -3791,7 +3879,10 @@
               <td style="padding:12px;">${phone}</td>
               <td style="padding:12px;">${college} ${course ? `(${course})` : ''}</td>
               <td style="padding:12px;">${prefRoom}</td>
-              <td style="padding:12px; text-align:center;"><span class="status-badge ${statusBadgeClass}">${status}</span></td>
+              <td style="padding:12px; text-align:center;">
+                <span class="status-badge ${statusBadgeClass}">${status}</span>
+                ${waStatusBadge}
+              </td>
               <td style="padding:12px; text-align:right;">
                 <button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem; border-color:var(--primary-brand); color:var(--primary-deep);" onclick="openAppReviewModal(${app.id})">Review Docs</button>
                 <button class="btn btn-primary" style="padding:4px 8px; font-size:0.75rem; margin-left:4px;" onclick="openAllocateModalForApp(${app.id}, '${name.replace(/'/g, "\\'")}')">Allocate</button>
@@ -3803,7 +3894,9 @@
         }
       } catch (err) {
         console.error('Fetch applications error:', err);
-        tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#ef4444;">Failed to load applications.</td></tr>';
+        if (!silent) {
+          tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#ef4444;">Failed to load applications.</td></tr>';
+        }
       }
     }
 
@@ -3876,6 +3969,9 @@
             <div><strong>Preferred Sharing:</strong> ${student.preferredSharingType || student.preferredRoomType || '3 Sharing'}</div>
             <div><strong>Preferred Floor:</strong> ${student.preferredFloor || 'Any'}</div>
             <div><strong>Joining Date:</strong> ${student.joinDate ? student.joinDate.split('T')[0] : 'N/A'}</div>
+            <div><strong>Application Status:</strong> <span style="font-weight:700; color:var(--primary-brand);">${student.applicationStatus || 'PENDING'}</span></div>
+            <div><strong>WhatsApp Welcome Status:</strong> <span class="status-badge ${student.whatsappStatus === 'SENT' ? 'active' : (student.whatsappStatus === 'FAILED' ? 'inactive' : 'partially')}">${student.whatsappStatus || 'NONE'}</span></div>
+            ${student.whatsappError ? `<div style="grid-column:span 2; font-size:0.8rem; color:#f59e0b;"><strong>WhatsApp Status:</strong> ${student.whatsappError}</div>` : ''}
             ${docsHtml}
           `;
         }
@@ -3931,9 +4027,17 @@
 
         const data = await res.json();
         if (data.success) {
-          alert(`Application updated successfully: ${data.message}`);
+          let extraInfo = '';
+          if (action === 'APPROVE') {
+            if (data.whatsapp && data.whatsapp.status === 'SENT') {
+              extraInfo = '\n\n📱 WhatsApp welcome message sent to student!';
+            } else if (data.whatsapp && data.whatsapp.status === 'PENDING_PROVIDER_SETUP') {
+              extraInfo = '\n\nℹ️ Approval saved and portal access granted. (WhatsApp credentials not configured on server).';
+            }
+          }
+          alert(`Application updated successfully: ${data.message}${extraInfo}`);
           closeModal('appReviewModal');
-          fetchApplications();
+          fetchApplications(true);
         } else {
           alert(data.message || 'Action failed.');
         }

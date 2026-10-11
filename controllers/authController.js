@@ -6,6 +6,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { getDb } = require('../config/db');
 const { JWT_SECRET } = require('../middleware/authMiddleware');
+const { broadcastAdminEvent } = require('../services/realtimeService');
 
 function normalizePhone(rawPhone) {
   if (!rawPhone) return '';
@@ -58,29 +59,40 @@ async function login(req, res) {
       const student = studentRows[0];
 
       if (student) {
-        const appStatus = student.applicationStatus || student.applicationstatus;
-        const studentStatus = student.status || student.status;
+        const appStatus = (student.applicationStatus || student.applicationstatus || '').toUpperCase();
+        const studentStatus = (student.status || '').toUpperCase();
+        const userStatus = (user.status || '').toUpperCase();
 
-        if (appStatus === 'PENDING' || appStatus === 'PENDING_REVIEW' || appStatus === 'DOCUMENT_VERIFICATION') {
+        if ((appStatus === 'PENDING' || appStatus === 'PENDING_REVIEW' || appStatus === 'DOCUMENT_VERIFICATION') || (userStatus === 'PENDING' && appStatus !== 'APPROVED')) {
           return res.status(403).json({
             success: false,
             message: 'Your registration is currently under review. Please contact the hostel administration.',
-            applicationStatus: appStatus,
+            applicationStatus: appStatus || 'PENDING',
             applicationId: student.applicationId || student.applicationid
           });
         }
 
-        if (appStatus === 'REJECTED') {
+        if (appStatus === 'REJECTED' || userStatus === 'REJECTED') {
           return res.status(403).json({
             success: false,
             message: 'Your registration was not approved. Please contact the hostel administration.',
             rejectionReason: student.rejectionReason || student.rejectionreason || 'Application rejected by administration.',
+            applicationStatus: appStatus || 'REJECTED',
+            applicationId: student.applicationId || student.applicationid
+          });
+        }
+
+        if (appStatus === 'CORRECTION_REQUIRED') {
+          return res.status(403).json({
+            success: false,
+            message: 'Your registration requires corrections before approval. Please contact the hostel administration.',
+            correctionReason: student.correctionReason || student.correctionreason || 'Please update your application details.',
             applicationStatus: appStatus,
             applicationId: student.applicationId || student.applicationid
           });
         }
 
-        if (studentStatus === 'INACTIVE' || user.status === 'inactive') {
+        if (studentStatus === 'INACTIVE' || userStatus === 'INACTIVE') {
           return res.status(403).json({
             success: false,
             message: 'Your account is currently inactive. Please contact the hostel administration.'
@@ -344,6 +356,24 @@ async function registerStudentApplication(req, res) {
     );
 
     await db.query('COMMIT');
+
+    // Broadcast real-time event to all connected admin dashboards
+    try {
+      broadcastAdminEvent('new_application', {
+        id: studentId,
+        applicationId: appId,
+        studentName: name.trim(),
+        phone: normalizedPhone,
+        collegeName: collegeName.trim(),
+        course: course.trim(),
+        preferredRoomType: preferredSharingType || '3 Sharing',
+        preferredSharingType: preferredSharingType || '3 Sharing',
+        applicationStatus: 'PENDING',
+        createdAt: new Date().toISOString()
+      });
+    } catch (sseErr) {
+      console.warn('Realtime event broadcast error (non-fatal):', sseErr);
+    }
 
     return res.status(200).json({
       success: true,

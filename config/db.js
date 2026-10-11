@@ -179,6 +179,10 @@ async function initializeDatabase(db) {
       ADD COLUMN IF NOT EXISTS expectedDuration INTEGER,
       ADD COLUMN IF NOT EXISTS stayDuration INTEGER,
       ADD COLUMN IF NOT EXISTS applicationRemarks TEXT,
+      ADD COLUMN IF NOT EXISTS whatsappStatus VARCHAR(50) DEFAULT 'NONE',
+      ADD COLUMN IF NOT EXISTS whatsappSentAt TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS whatsappMessageId VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS whatsappError TEXT,
       DROP CONSTRAINT IF EXISTS students_status_check;
   `).catch((err) => { console.error('Migration notice:', err.message); });
 
