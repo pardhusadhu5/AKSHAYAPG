@@ -245,6 +245,19 @@ async function updatePaymentStatus(req, res) {
       return res.status(404).json({ success: false, message: 'Student record not found.' });
     }
 
+    // Keep payments table in sync with student payment status toggle
+    if (paymentStatus === 'paid') {
+      await db.query(
+        "UPDATE payments SET status = 'paid', amountPaid = amountDue, paidAt = CURRENT_TIMESTAMP, updatedAt = CURRENT_TIMESTAMP WHERE studentId = $1 AND status != 'paid'",
+        [id]
+      );
+    } else {
+      await db.query(
+        "UPDATE payments SET status = 'pending', amountPaid = 0, paidAt = NULL, updatedAt = CURRENT_TIMESTAMP WHERE studentId = $1 AND status = 'paid'",
+        [id]
+      );
+    }
+
     res.status(200).json({ success: true, message: 'Payment status updated successfully.' });
   } catch (err) {
     console.error('Update Payment Error:', err);

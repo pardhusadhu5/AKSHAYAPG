@@ -376,6 +376,128 @@
       display: block !important;
     }
 
+    /* Payments & Revenue Ledger Rules */
+    #paymentsPanel {
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    #paymentsPanel .table-responsive {
+      max-height: 600px;
+      overflow-y: auto;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      border-radius: 12px !important;
+      border: 1px solid #E5E7EB !important;
+      box-sizing: border-box !important;
+      width: 100% !important;
+      background: white;
+    }
+
+    #paymentsLedgerTable {
+      width: 100% !important;
+      min-width: 880px !important;
+      border-collapse: separate !important;
+      border-spacing: 0 !important;
+      margin: 0 !important;
+    }
+
+    #paymentsLedgerTable thead th {
+      position: sticky !important;
+      top: 0 !important;
+      z-index: 10 !important;
+      background: #f8fafc !important;
+      color: var(--primary-deep) !important;
+      font-weight: 700 !important;
+      font-size: 0.75rem !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.5px !important;
+      border-bottom: 2px solid #E5E7EB !important;
+      padding: 12px 14px !important;
+      white-space: nowrap !important;
+      text-align: left;
+    }
+
+    #paymentsLedgerTable thead th.text-center,
+    #paymentsLedgerTable tbody td.text-center {
+      text-align: center !important;
+    }
+
+    #paymentsLedgerTable thead th.text-right,
+    #paymentsLedgerTable tbody td.text-right {
+      text-align: right !important;
+    }
+
+    #paymentsLedgerTable tbody td {
+      padding: 12px 14px !important;
+      vertical-align: middle !important;
+      font-size: 0.85rem !important;
+      color: var(--dark-slate-light) !important;
+      border-bottom: 1px solid #F1F5F9 !important;
+      white-space: nowrap !important;
+    }
+
+    #paymentsLedgerTable tbody tr:hover {
+      background-color: #f8fafc;
+    }
+
+    #paymentsLedgerTable .student-primary-name {
+      font-weight: 700;
+      color: var(--primary-deep);
+      font-size: 0.88rem;
+      margin-bottom: 2px;
+    }
+
+    #paymentsLedgerTable .student-sub-info {
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    #paymentsLedgerTable .room-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #dbeafe;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+
+    #paymentsLedgerTable .room-pill.unassigned {
+      background: #f1f5f9;
+      color: #64748b;
+      border-color: #e2e8f0;
+    }
+
+    #paymentsLedgerTable .month-pill {
+      display: inline-block;
+      padding: 3px 8px;
+      background: #f3f4f6;
+      color: #374151;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+
+    #paymentsLedgerTable .month-pill.admission {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+    }
+
+    #paymentsLedgerTable .amount-display {
+      font-weight: 800;
+      font-size: 0.92rem;
+      color: var(--dark-slate);
+    }
+
     /* Modal Overlay & Card Styling */
     .modal-overlay {
       position: fixed;
@@ -934,18 +1056,18 @@
           <table class="data-table" id="paymentsLedgerTable">
             <thead>
               <tr>
-                <th>Student (ID)</th>
-                <th>Room</th>
-                <th>Fee Month</th>
-                <th>Amount</th>
-                <th>Status</th>
-                <th>Payment Date</th>
-                <th>Reference</th>
-                <th>Actions</th>
+                <th style="min-width: 200px;">Student (ID)</th>
+                <th style="min-width: 120px;" class="text-center">Room</th>
+                <th style="min-width: 130px;" class="text-center">Fee Month</th>
+                <th style="min-width: 120px;" class="text-right">Amount</th>
+                <th style="min-width: 110px;" class="text-center">Status</th>
+                <th style="min-width: 120px;" class="text-center">Payment Date</th>
+                <th style="min-width: 130px;" class="text-center">Reference</th>
+                <th style="min-width: 120px;" class="text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td colspan="8" style="text-align:center;">Loading ledger...</td></tr>
+              <tr><td colspan="8" style="text-align:center; padding:24px; color:var(--text-muted);">Loading ledger...</td></tr>
             </tbody>
           </table>
         </div>
@@ -2237,6 +2359,10 @@
 
     // Toggle Payment status
     async function togglePaymentStatus(studentId, currentStatus) {
+      if (!studentId) {
+        alert('Invalid student identifier for payment update.');
+        return;
+      }
       const token = localStorage.getItem('token');
       const nextStatus = currentStatus === 'paid' ? 'unpaid' : 'paid';
       try {
@@ -2252,6 +2378,9 @@
         if (data.success) {
           fetchStudentsDatabase();
           fetchStatsAndRecent();
+          if (typeof fetchPaymentsLedger === 'function') {
+            fetchPaymentsLedger();
+          }
         } else {
           alert('Failed to update status: ' + data.message);
         }
@@ -3276,53 +3405,169 @@
       const token = localStorage.getItem('token');
       const tableBody = document.querySelector('#paymentsLedgerTable tbody');
       if (!tableBody) return;
-      tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Loading ledger...</td></tr>';
-      
+      tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--text-muted);"><i data-lucide="loader-2" class="spin" style="margin-right:8px; display:inline-block; vertical-align:middle;"></i>Loading ledger...</td></tr>';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+
       try {
         const res = await fetch('/api/payments/admin/all', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
-        
-        if (data.success) {
+
+        if (data.success && Array.isArray(data.payments)) {
           tableBody.innerHTML = '';
           if (data.payments.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No payment invoices generated yet. Click Billing Invoice Run.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:32px; color:var(--text-muted);">No payment invoices generated yet. Click <strong>Billing Invoice Run</strong> above.</td></tr>';
+            updatePaymentHeaderCards([], 0, 0);
             return;
           }
-          
+
+          let totalCollected = 0;
+          let totalOutstanding = 0;
+
           data.payments.forEach(pay => {
             const row = document.createElement('tr');
-            const isPaid = pay.status === 'paid';
-            const statusBadge = `<span class="status-badge ${isPaid ? 'active' : 'inactive'}">${pay.status.toUpperCase()}</span>`;
-            const sId = pay.studentCustomId || `AKS${String(pay.studentId).padStart(6, '0')}`;
+
+            // 1. Student details & ID mapping (never undefined)
+            const studentId = pay.studentId || pay.studentid;
+            const studentName = (pay.studentName || pay.studentname || 'Student').trim();
+            const rawCustomId = pay.studentCustomId || pay.studentcustomid || pay.applicationId || pay.applicationid;
+            const displayId = rawCustomId || (studentId ? `AKS${String(studentId).padStart(6, '0')}` : 'ID Pending');
+            const phone = pay.phone || 'No phone';
+
+            // 2. Room number mapping (never Room Unassigned / undefined)
+            const rawRoom = pay.roomNumber || pay.roomnumber;
+            const roomHtml = rawRoom
+              ? `<span class="room-pill"><i data-lucide="door-closed" style="width:13px; height:13px;"></i>Room ${rawRoom}</span>`
+              : `<span class="room-pill unassigned"><i data-lucide="help-circle" style="width:13px; height:13px;"></i>Unassigned</span>`;
+
+            // 3. Fee month mapping (never undefined)
+            const rawMonth = pay.billingMonth || pay.billingmonth || '';
+            let monthLabel = rawMonth;
+            let isAdmission = false;
+            if (!rawMonth || rawMonth === 'ADMISSION' || rawMonth.toLowerCase() === 'admission') {
+              monthLabel = 'Admission Fee';
+              isAdmission = true;
+            } else if (/^\d{4}-\d{2}$/.test(rawMonth)) {
+              try {
+                const [y, m] = rawMonth.split('-');
+                const monthDate = new Date(parseInt(y), parseInt(m) - 1, 1);
+                monthLabel = monthDate.toLocaleDateString('en-IN', { month: 'short', year: 'numeric' });
+              } catch (_) {
+                monthLabel = rawMonth;
+              }
+            } else {
+              monthLabel = rawMonth || 'General Fee';
+            }
+            const monthHtml = `<span class="month-pill ${isAdmission ? 'admission' : ''}">${monthLabel}</span>`;
+
+            // 4. Amount formatting (guaranteed never ₹NaN)
+            const dueVal = Number(pay.amountDue ?? pay.amountdue ?? 0);
+            const paidVal = Number(pay.amountPaid ?? pay.amountpaid ?? 0);
+            const validDue = isNaN(dueVal) ? 0 : dueVal;
+            const validPaid = isNaN(paidVal) ? 0 : paidVal;
+            const formattedAmount = '₹' + validDue.toLocaleString('en-IN');
+
+            // 5. Payment status mapping
+            const statusStr = (pay.status || 'pending').toLowerCase();
+            const isPaid = statusStr === 'paid';
+            const isPartial = statusStr === 'partial';
+            let badgeClass = 'inactive';
+            let badgeText = 'PENDING';
+            if (isPaid) {
+              badgeClass = 'active';
+              badgeText = 'PAID';
+              totalCollected += validPaid > 0 ? validPaid : validDue;
+            } else if (isPartial) {
+              badgeClass = 'partially';
+              badgeText = 'PARTIAL';
+              totalCollected += validPaid;
+              totalOutstanding += (validDue - validPaid);
+            } else {
+              badgeClass = 'inactive';
+              badgeText = 'UNPAID';
+              totalOutstanding += validDue;
+            }
+            const statusBadge = `<span class="status-badge ${badgeClass}" style="font-weight:700; padding:3px 8px; font-size:0.72rem; text-transform:uppercase;">${badgeText}</span>`;
+
+            // 6. Payment date formatting (never undefined)
+            let dateDisplay = '--';
+            const rawPaidAt = pay.paidAt || pay.paidat || (isPaid ? (pay.updatedAt || pay.updatedat) : null);
+            if (rawPaidAt) {
+              try {
+                const d = new Date(rawPaidAt);
+                if (!isNaN(d.getTime())) {
+                  dateDisplay = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+                } else {
+                  dateDisplay = String(rawPaidAt).split('T')[0].split(' ')[0];
+                }
+              } catch (_) {
+                dateDisplay = String(rawPaidAt).split('T')[0].split(' ')[0];
+              }
+            } else if (isPaid) {
+              dateDisplay = 'Settled';
+            }
+
+            // 7. Reference number formatting (never undefined)
+            const refVal = pay.receiptNumber || pay.receiptnumber || pay.gatewayPaymentId || pay.gatewaypaymentid || pay.referenceNumber || pay.referencenumber;
+            const refDisplay = refVal 
+              ? `<span style="font-family:monospace; font-size:0.75rem; background:#f1f5f9; padding:2px 6px; border-radius:4px; color:#334155;">${refVal}</span>` 
+              : `<span style="font-size:0.75rem; color:var(--text-muted);">${isPaid ? 'Cash / Desk' : '--'}</span>`;
+
+            // 8. Action button with valid student ID
+            const actionBtn = studentId ? `
+              <button class="btn btn-outline" style="padding:5px 10px; font-size:0.72rem; font-weight:700; border-radius:6px; color:${isPaid ? '#10b981' : '#007a71'}; border-color:${isPaid ? '#a7f3d0' : '#007a71'}; cursor:pointer;" onclick="togglePaymentStatus(${studentId}, '${isPaid ? 'paid' : 'unpaid'}')">
+                ${isPaid ? 'Mark Unpaid' : 'Mark Paid'}
+              </button>
+            ` : `
+              <span style="font-size:0.72rem; color:var(--text-muted);">--</span>
+            `;
 
             row.innerHTML = `
               <td>
-                <div style="font-weight:700; color:var(--primary-deep);">${pay.studentName}</div>
-                <div style="font-size:0.7rem; color:var(--text-muted);">${sId} | ${pay.phone}</div>
+                <div class="student-primary-name">${studentName}</div>
+                <div class="student-sub-info">
+                  <span style="font-family:monospace; font-weight:600; color:var(--primary-brand);">${displayId}</span>
+                  <span>•</span>
+                  <span>${phone}</span>
+                </div>
               </td>
-              <td>Room ${pay.roomNumber || 'Unassigned'}</td>
-              <td><strong>${pay.billingMonth}</strong></td>
-              <td>₹${Number(pay.amountDue).toLocaleString('en-IN')}</td>
-              <td>${statusBadge}</td>
-              <td>${pay.paidAt ? pay.paidAt.split(' ')[0] : (isPaid ? 'Settled' : '--')}</td>
-              <td><span style="font-size:0.75rem; color:var(--text-muted);">${pay.referenceNumber || 'Cash/UPI'}</span></td>
-              <td>
-                <button class="btn btn-outline" style="padding:4px 8px; font-size:0.7rem; color:${isPaid ? '#10b981' : '#007a71'};" onclick="togglePaymentStatus(${pay.studentId}, '${isPaid ? 'paid' : 'unpaid'}')">
-                  ${isPaid ? 'Mark Unpaid' : 'Mark Paid'}
-                </button>
-              </td>
+              <td class="text-center">${roomHtml}</td>
+              <td class="text-center">${monthHtml}</td>
+              <td class="text-right"><span class="amount-display">${formattedAmount}</span></td>
+              <td class="text-center">${statusBadge}</td>
+              <td class="text-center" style="font-size:0.8rem; color:#475569;">${dateDisplay}</td>
+              <td class="text-center">${refDisplay}</td>
+              <td class="text-center">${actionBtn}</td>
             `;
             tableBody.appendChild(row);
           });
+
+          // Update summary metric cards
+          updatePaymentHeaderCards(data.payments, totalCollected, totalOutstanding);
+
           if (typeof lucide !== 'undefined') lucide.createIcons();
+        } else {
+          tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--error);">${data.message || 'Failed to load ledger records.'}</td></tr>`;
         }
       } catch (err) {
         console.error('Ledger error:', err);
-        const tbody = document.querySelector('#paymentsTable tbody');
-        if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; color:#ef4444;">Failed to load payments. Server error.</td></tr>';
+        const tbody = document.querySelector('#paymentsLedgerTable tbody');
+        if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:24px; color:#ef4444;">Failed to load payments. Server error.</td></tr>';
       }
+    }
+
+    function updatePaymentHeaderCards(payments, totalCollected, totalOutstanding) {
+      const colEl = document.getElementById('paymentCollectedHeader');
+      const outEl = document.getElementById('paymentOutstandingHeader');
+      const rateEl = document.getElementById('paymentCollectionRateHeader');
+
+      if (colEl) colEl.innerText = '₹' + Math.round(totalCollected).toLocaleString('en-IN');
+      if (outEl) outEl.innerText = '₹' + Math.round(totalOutstanding).toLocaleString('en-IN');
+
+      const totalBilled = totalCollected + totalOutstanding;
+      const rate = totalBilled > 0 ? Math.round((totalCollected / totalBilled) * 100) : 0;
+      if (rateEl) rateEl.innerText = `${rate}%`;
     }
 
     async function triggerMonthlyBillingRun() {
