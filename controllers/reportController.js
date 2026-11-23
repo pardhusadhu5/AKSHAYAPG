@@ -284,45 +284,107 @@ async function exportGoogleSheet(req, res) {
     }
 
     const accessToken = tokenData.access_token;
-    let spreadsheetId = process.env.GOOGLE_SHEET_ID || process.env.SPREADSHEET_ID;
+    const spreadsheetId = (process.env.GOOGLE_SHEET_ID || process.env.SPREADSHEET_ID || '').trim();
 
-    // Create a new Google Sheet if no existing Sheet ID is configured
     if (!spreadsheetId) {
-      try {
-        const createSheetRes = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+      return res.status(400).json({
+        success: false,
+        message: `GOOGLE_SHEET_ID is not configured in Render environment variables. Please set GOOGLE_SHEET_ID to your existing Google Spreadsheet ID and ensure the sheet is shared with "${clientEmail}" as Editor.`
+      });
+    }
+
+    // Worksheet tab mapping for each report type
+    const tabNameMap = {
+      student: 'Student Details',
+      room: 'Rooms',
+      occupancy: 'Beds Occupancy',
+      income: 'Income & Payments',
+      pending: 'Pending Fee Dues'
+    };
+    const tabTitle = tabNameMap[type] || 'Report Data';
+
+    // Verify access to existing spreadsheet and check/create the target worksheet tab
+    let targetSheetId = null;
+    try {
+      const getSheetRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties(sheetId,title)`, {
+        headers: { 'Authorization': `Bearer ${accessToken}` }
+      });
+
+      const sheetData = await getSheetRes.json().catch(() => ({}));
+
+      if (!getSheetRes.ok) {
+        if (getSheetRes.status === 403) {
+          console.error('Google Sheets Access Forbidden:', sheetData.error?.message);
+          return res.status(403).json({
+            success: false,
+            message: `Google Sheets Permission Error: Service account (${clientEmail}) does not have edit access to spreadsheet "${spreadsheetId}". Please open your Google Sheet, click Share, and invite ${clientEmail} as Editor.`
+          });
+        }
+        if (getSheetRes.status === 404) {
+          return res.status(404).json({
+            success: false,
+            message: `Google Sheets Not Found: Spreadsheet ID "${spreadsheetId}" was not found. Please verify the GOOGLE_SHEET_ID configured in Render.`
+          });
+        }
+        const errMsg = sheetData.error?.message || `HTTP ${getSheetRes.status}`;
+        console.error('Google Sheets Access Error:', errMsg);
+        return res.status(getSheetRes.status >= 400 && getSheetRes.status < 500 ? getSheetRes.status : 502).json({
+          success: false,
+          message: `Failed to access Google Spreadsheet: ${errMsg}`
+        });
+      }
+
+      // Check if the specific worksheet tab exists
+      const existingSheets = sheetData.sheets || [];
+      const matchingSheet = existingSheets.find(s => s.properties?.title === tabTitle);
+
+      if (matchingSheet) {
+        targetSheetId = matchingSheet.properties?.sheetId;
+      } else {
+        // Tab does not exist yet; create it via batchUpdate
+        const addSheetRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            properties: { title: sheetTitle },
-            sheets: [{ properties: { title: 'Report Data' } }]
+            requests: [
+              {
+                addSheet: {
+                  properties: {
+                    title: tabTitle
+                  }
+                }
+              }
+            ]
           })
         });
 
-        const sheetObj = await createSheetRes.json().catch(() => ({}));
-        if (!createSheetRes.ok || !sheetObj.spreadsheetId) {
-          const createErrMsg = sheetObj.error?.message || `HTTP ${createSheetRes.status}`;
-          console.error('Google Sheets Creation Error:', createErrMsg);
-          return res.status(createSheetRes.status >= 400 && createSheetRes.status < 500 ? createSheetRes.status : 502).json({
+        const addSheetData = await addSheetRes.json().catch(() => ({}));
+        if (!addSheetRes.ok) {
+          const addErrMsg = addSheetData.error?.message || `HTTP ${addSheetRes.status}`;
+          console.error(`Failed to create worksheet tab "${tabTitle}":`, addErrMsg);
+          return res.status(502).json({
             success: false,
-            message: `Google Sheets creation failed: ${createErrMsg}`
+            message: `Failed to create worksheet tab "${tabTitle}": ${addErrMsg}`
           });
         }
-        spreadsheetId = sheetObj.spreadsheetId;
-      } catch (createNetErr) {
-        console.error('Google Sheets Create Connection Error:', createNetErr.message);
-        return res.status(502).json({
-          success: false,
-          message: `Failed to connect to Google Sheets API: ${createNetErr.message}`
-        });
+
+        targetSheetId = addSheetData.replies?.[0]?.addSheet?.properties?.sheetId;
       }
+    } catch (accessNetErr) {
+      console.error('Google Sheets Access Error:', accessNetErr.message);
+      return res.status(502).json({
+        success: false,
+        message: `Network error connecting to Google Sheets API: ${accessNetErr.message}`
+      });
     }
 
-    // Append Rows Data to Spreadsheet
+    // Append Rows Data to the specific worksheet tab
     try {
-      const appendRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:append?valueInputOption=USER_ENTERED`, {
+      const range = `${encodeURIComponent(tabTitle)}!A1`;
+      const appendRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${range}:append?valueInputOption=USER_ENTERED`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
@@ -336,39 +398,26 @@ async function exportGoogleSheet(req, res) {
       const appendObj = await appendRes.json().catch(() => ({}));
       if (!appendRes.ok) {
         const appendErrMsg = appendObj.error?.message || `HTTP ${appendRes.status}`;
-        console.error('Google Sheets Append Error:', appendErrMsg);
+        console.error(`Google Sheets Append Error for tab "${tabTitle}":`, appendErrMsg);
         return res.status(appendRes.status >= 400 && appendRes.status < 500 ? appendRes.status : 502).json({
           success: false,
-          message: `Google Sheets data append failed: ${appendErrMsg}`
+          message: `Failed to append data to tab "${tabTitle}": ${appendErrMsg}`
         });
       }
     } catch (appendNetErr) {
       console.error('Google Sheets Append Connection Error:', appendNetErr.message);
       return res.status(502).json({
         success: false,
-        message: `Failed to append data to Google Sheet: ${appendNetErr.message}`
+        message: `Network error appending to Google Sheet: ${appendNetErr.message}`
       });
     }
 
-    // Set public read permissions on newly created sheet (if permitted by domain)
-    try {
-      await fetch(`https://www.googleapis.com/drive/v3/files/${spreadsheetId}/permissions`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ role: 'reader', type: 'anyone' })
-      });
-    } catch (permErr) {
-      console.warn('Google Drive permission warning:', permErr.message);
-    }
-
-    const sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
+    const tabParam = targetSheetId !== null && targetSheetId !== undefined ? `#gid=${targetSheetId}` : '';
+    const sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit${tabParam}`;
     return res.status(200).json({
       success: true,
       googleSheetUrl: sheetUrl,
-      message: 'Google Sheet created successfully.'
+      message: `Report exported successfully to tab "${tabTitle}" in your Google Sheet.`
     });
 
   } catch (err) {
