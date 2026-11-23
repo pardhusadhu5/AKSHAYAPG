@@ -172,16 +172,13 @@
       <div class="auth-card glass-card">
         <div class="auth-header">
           <h2>Student Portal Login</h2>
-          <p>Sign in using your 10-digit mobile number and password</p>
+          <p>Sign in using your registered email and password</p>
         </div>
         
         <form id="studentLoginForm">
           <div class="form-group" style="margin-bottom: 20px;">
-            <label class="form-label" for="phoneInput">Mobile Number <span style="color:red;">*</span></label>
-            <div style="display: flex; gap: 8px; align-items: center;">
-              <span style="padding: 12px 14px; background: rgba(0, 0, 0, 0.04); border: 1px solid var(--glass-border); border-radius: var(--radius-sm); font-weight: 700; color: var(--dark-slate);">+91</span>
-              <input type="tel" id="phoneInput" class="form-input" placeholder="Enter 10-digit mobile number" required pattern="[0-9]{10}" maxlength="10" style="flex-grow: 1;">
-            </div>
+            <label class="form-label" for="emailInput">Registered Email ID <span style="color:red;">*</span></label>
+            <input type="email" id="emailInput" class="form-input" placeholder="Enter your registered email ID" required style="width: 100%;">
           </div>
 
           <div class="form-group" style="margin-bottom: 12px;">
@@ -214,18 +211,19 @@
   <div class="modal-overlay" id="forgotPasswordModal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3>Request Password Reset</h3>
+        <h3>Reset Your Password</h3>
         <button class="close-btn" id="closeForgotModal">&times;</button>
       </div>
       <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 20px;">
-        Submit your registered 10-digit mobile number. Hostel administration will review your request and issue a temporary login password.
+        Enter your registered email ID. If an approved account exists, a secure password reset link will be sent to your email.
       </p>
       <form id="forgotPasswordForm">
         <div class="form-group" style="margin-bottom: 20px;">
-          <label class="form-label" for="resetPhoneInput">Registered Mobile Number</label>
-          <input type="tel" id="resetPhoneInput" class="form-input" placeholder="Enter 10-digit mobile number" required pattern="[0-9]{10}" maxlength="10">
+          <label class="form-label" for="resetEmailInput">Registered Email ID <span style="color:red;">*</span></label>
+          <input type="email" id="resetEmailInput" class="form-input" placeholder="e.g. yourname@domain.com" required style="width: 100%;">
         </div>
-        <button type="submit" class="btn btn-primary" id="submitResetBtn" style="width: 100%;">Submit Reset Request</button>
+        <div id="resetStatusBox" style="display: none; padding: 12px; margin-bottom: 16px; border-radius: 6px; font-size: 0.85rem;"></div>
+        <button type="submit" class="btn btn-primary" id="submitResetBtn" style="width: 100%;">Send Reset Link</button>
       </form>
     </div>
   </div>
@@ -272,16 +270,16 @@
       });
     }
 
-    // Student Login Submission
+    // Student Login Submission (Email + Password)
     const studentLoginForm = document.getElementById('studentLoginForm');
     if (studentLoginForm) {
       studentLoginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const phone = document.getElementById('phoneInput').value.trim();
+        const email = document.getElementById('emailInput').value.trim();
         const password = passwordInput.value;
 
-        if (!/^\d{10}$/.test(phone)) {
-          alert('Please enter a valid 10-digit mobile number.');
+        if (!email || !email.includes('@')) {
+          alert('Please enter a valid email address.');
           return;
         }
 
@@ -295,7 +293,7 @@
           const res = await fetch('/api/auth/login', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone, password })
+            body: JSON.stringify({ email, password })
           });
 
           const data = await res.json();
@@ -317,15 +315,17 @@
       });
     }
 
-    // Forgot Password Modal Handlers
+    // Forgot Password Modal Handlers (Email-based)
     const forgotModal = document.getElementById('forgotPasswordModal');
     const openForgotModalBtn = document.getElementById('openForgotPasswordModal');
     const closeForgotModalBtn = document.getElementById('closeForgotModal');
     const forgotForm = document.getElementById('forgotPasswordForm');
+    const resetStatusBox = document.getElementById('resetStatusBox');
 
     if (openForgotModalBtn) {
       openForgotModalBtn.addEventListener('click', (e) => {
         e.preventDefault();
+        if (resetStatusBox) resetStatusBox.style.display = 'none';
         forgotModal.style.display = 'flex';
       });
     }
@@ -345,9 +345,9 @@
     if (forgotForm) {
       forgotForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const resetPhone = document.getElementById('resetPhoneInput').value.trim();
-        if (!/^\d{10}$/.test(resetPhone)) {
-          alert('Please enter a valid 10-digit mobile number.');
+        const resetEmail = document.getElementById('resetEmailInput').value.trim();
+        if (!resetEmail || !resetEmail.includes('@')) {
+          alert('Please enter a valid email address.');
           return;
         }
 
@@ -356,22 +356,32 @@
 
         try {
           submitBtn.disabled = true;
-          submitBtn.innerText = 'Submitting Request...';
+          submitBtn.innerText = 'Sending Link...';
 
-          const res = await fetch('/api/auth/forgot-password-request', {
+          const res = await fetch('/api/auth/forgot-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ phone: resetPhone })
+            body: JSON.stringify({ email: resetEmail })
           });
 
           const data = await res.json();
-          if (res.ok && data.success) {
-            alert(data.message || 'Password reset request submitted successfully. Please contact admin.');
-            forgotModal.style.display = 'none';
-            document.getElementById('resetPhoneInput').value = '';
+
+          if (resetStatusBox) {
+            resetStatusBox.style.display = 'block';
+            resetStatusBox.style.backgroundColor = '#ecfdf5';
+            resetStatusBox.style.color = '#065f46';
+            resetStatusBox.style.border = '1px solid #a7f3d0';
+
+            let msg = data.message || 'If an account exists for this email address, password reset instructions will be sent.';
+            if (data.resetUrl) {
+              msg += `<br><br><strong>Development Link:</strong><br><a href="${data.resetUrl}" style="color: #007a71; word-break: break-all; font-weight: bold;">Click here to reset your password</a>`;
+            }
+            resetStatusBox.innerHTML = msg;
           } else {
-            alert(data.message || 'Failed to submit reset request.');
+            alert(data.message || 'Password reset instructions have been sent.');
           }
+
+          document.getElementById('resetEmailInput').value = '';
         } catch (err) {
           alert('Failed to connect to server. Please try again.');
         } finally {

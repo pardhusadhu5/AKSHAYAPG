@@ -1,4 +1,36 @@
 const { getDb } = require('../config/db');
+const crypto = require('crypto');
+
+/**
+ * Safely normalizes Google service account private keys from environment variables.
+ * Handles wrapping quotes, Windows \r\n line endings, literal \n escapes, and trims whitespace.
+ */
+function normalizePrivateKey(rawKey) {
+  if (!rawKey || typeof rawKey !== 'string') return null;
+
+  let key = rawKey.trim();
+
+  // Strip accidental outer single or double quotes
+  if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    key = key.slice(1, -1).trim();
+  }
+
+  // Normalize line endings
+  key = key.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  // Convert literal escaped \n strings to real newlines
+  key = key.replace(/\\n/g, '\n');
+
+  // Validate PEM header and footer
+  const hasBegin = key.includes('-----BEGIN PRIVATE KEY-----') || key.includes('-----BEGIN RSA PRIVATE KEY-----');
+  const hasEnd = key.includes('-----END PRIVATE KEY-----') || key.includes('-----END RSA PRIVATE KEY-----');
+
+  if (!hasBegin || !hasEnd) {
+    return null;
+  }
+
+  return key;
+}
 
 // Export SQL queries data to CSV spreadsheet downloads directly
 async function downloadReport(req, res) {
@@ -182,86 +214,161 @@ async function exportGoogleSheet(req, res) {
 
     // Check Google Service Account configuration
     const clientEmail = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || process.env.GOOGLE_CLIENT_EMAIL;
-    const privateKey = process.env.GOOGLE_PRIVATE_KEY;
+    const rawPrivateKey = process.env.GOOGLE_PRIVATE_KEY;
 
-    if (clientEmail && privateKey) {
-      try {
-        const tokenUrl = 'https://oauth2.googleapis.com/token';
-        const jwtHeader = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
-        const now = Math.floor(Date.now() / 1000);
-        const jwtClaim = Buffer.from(JSON.stringify({
-          iss: clientEmail,
-          scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive',
-          aud: tokenUrl,
-          exp: now + 3600,
-          iat: now
-        })).toString('base64url');
+    if (!clientEmail || !rawPrivateKey) {
+      return res.status(400).json({
+        success: false,
+        configured: false,
+        message: 'Google Sheets credentials are not configured in environment variables. Please set GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY (or GOOGLE_SHEETS_WEBHOOK_URL) in .env.'
+      });
+    }
 
-        const crypto = require('crypto');
-        const sign = crypto.createSign('RSA-SHA256');
-        sign.update(`${jwtHeader}.${jwtClaim}`);
-        const signature = sign.sign(privateKey.replace(/\\n/g, '\n'), 'base64url');
-        const jwt = `${jwtHeader}.${jwtClaim}.${signature}`;
+    const privateKey = normalizePrivateKey(rawPrivateKey);
+    if (!privateKey) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid GOOGLE_PRIVATE_KEY format. The key must be a valid PEM formatted string starting with -----BEGIN PRIVATE KEY----- and ending with -----END PRIVATE KEY-----.'
+      });
+    }
 
-        const tokenRes = await fetch(tokenUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+    // Generate OAuth2 JWT & Token
+    const tokenUrl = 'https://oauth2.googleapis.com/token';
+    const jwtHeader = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
+    const now = Math.floor(Date.now() / 1000);
+    const jwtClaim = Buffer.from(JSON.stringify({
+      iss: clientEmail,
+      scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive',
+      aud: tokenUrl,
+      exp: now + 3600,
+      iat: now
+    })).toString('base64url');
+
+    let jwt;
+    try {
+      const sign = crypto.createSign('RSA-SHA256');
+      sign.update(`${jwtHeader}.${jwtClaim}`);
+      const signature = sign.sign(privateKey, 'base64url');
+      jwt = `${jwtHeader}.${jwtClaim}.${signature}`;
+    } catch (signErr) {
+      console.error('Google Service Account Signing Error:', signErr.message);
+      return res.status(400).json({
+        success: false,
+        message: `Google Service Account signing failed: ${signErr.message}. Ensure the private key is valid and uncorrupted.`
+      });
+    }
+
+    let tokenData;
+    try {
+      const tokenRes = await fetch(tokenUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`
+      });
+      tokenData = await tokenRes.json().catch(() => ({}));
+
+      if (!tokenRes.ok || !tokenData.access_token) {
+        const oauthErr = tokenData.error_description || tokenData.error || `HTTP ${tokenRes.status}`;
+        console.error('Google OAuth Authentication Error:', oauthErr);
+        return res.status(401).json({
+          success: false,
+          message: `Google OAuth authentication failed: ${oauthErr}. Please verify your GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY in Render.`
         });
-        const tokenData = await tokenRes.json();
+      }
+    } catch (tokenNetErr) {
+      console.error('Google OAuth Connection Error:', tokenNetErr.message);
+      return res.status(502).json({
+        success: false,
+        message: `Failed to connect to Google OAuth server: ${tokenNetErr.message}`
+      });
+    }
 
-        if (tokenData.access_token) {
-          const createSheetRes = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${tokenData.access_token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-              properties: { title: sheetTitle },
-              sheets: [{ properties: { title: 'Report Data' } }]
-            })
+    const accessToken = tokenData.access_token;
+    let spreadsheetId = process.env.GOOGLE_SHEET_ID || process.env.SPREADSHEET_ID;
+
+    // Create a new Google Sheet if no existing Sheet ID is configured
+    if (!spreadsheetId) {
+      try {
+        const createSheetRes = await fetch('https://sheets.googleapis.com/v4/spreadsheets', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            properties: { title: sheetTitle },
+            sheets: [{ properties: { title: 'Report Data' } }]
+          })
+        });
+
+        const sheetObj = await createSheetRes.json().catch(() => ({}));
+        if (!createSheetRes.ok || !sheetObj.spreadsheetId) {
+          const createErrMsg = sheetObj.error?.message || `HTTP ${createSheetRes.status}`;
+          console.error('Google Sheets Creation Error:', createErrMsg);
+          return res.status(createSheetRes.status >= 400 && createSheetRes.status < 500 ? createSheetRes.status : 502).json({
+            success: false,
+            message: `Google Sheets creation failed: ${createErrMsg}`
           });
-          const sheetObj = await createSheetRes.json();
-          if (sheetObj.spreadsheetId) {
-            const spreadsheetId = sheetObj.spreadsheetId;
-            await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:append?valueInputOption=USER_ENTERED`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${tokenData.access_token}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                values: [headers, ...rowsData]
-              })
-            });
-
-            await fetch(`https://www.googleapis.com/drive/v3/files/${spreadsheetId}/permissions`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${tokenData.access_token}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({ role: 'reader', type: 'anyone' })
-            }).catch(() => {});
-
-            const sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
-            return res.status(200).json({
-              success: true,
-              googleSheetUrl: sheetUrl,
-              message: 'Google Sheet created successfully.'
-            });
-          }
         }
-      } catch (gErr) {
-        console.error('Google API Error:', gErr);
+        spreadsheetId = sheetObj.spreadsheetId;
+      } catch (createNetErr) {
+        console.error('Google Sheets Create Connection Error:', createNetErr.message);
+        return res.status(502).json({
+          success: false,
+          message: `Failed to connect to Google Sheets API: ${createNetErr.message}`
+        });
       }
     }
 
-    return res.status(400).json({
-      success: false,
-      configured: false,
-      message: 'Google Sheets credentials are not configured in environment variables. Please set GOOGLE_SERVICE_ACCOUNT_EMAIL and GOOGLE_PRIVATE_KEY (or GOOGLE_SHEETS_WEBHOOK_URL) in .env.'
+    // Append Rows Data to Spreadsheet
+    try {
+      const appendRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A1:append?valueInputOption=USER_ENTERED`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          values: [headers, ...rowsData]
+        })
+      });
+
+      const appendObj = await appendRes.json().catch(() => ({}));
+      if (!appendRes.ok) {
+        const appendErrMsg = appendObj.error?.message || `HTTP ${appendRes.status}`;
+        console.error('Google Sheets Append Error:', appendErrMsg);
+        return res.status(appendRes.status >= 400 && appendRes.status < 500 ? appendRes.status : 502).json({
+          success: false,
+          message: `Google Sheets data append failed: ${appendErrMsg}`
+        });
+      }
+    } catch (appendNetErr) {
+      console.error('Google Sheets Append Connection Error:', appendNetErr.message);
+      return res.status(502).json({
+        success: false,
+        message: `Failed to append data to Google Sheet: ${appendNetErr.message}`
+      });
+    }
+
+    // Set public read permissions on newly created sheet (if permitted by domain)
+    try {
+      await fetch(`https://www.googleapis.com/drive/v3/files/${spreadsheetId}/permissions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ role: 'reader', type: 'anyone' })
+      });
+    } catch (permErr) {
+      console.warn('Google Drive permission warning:', permErr.message);
+    }
+
+    const sheetUrl = `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit`;
+    return res.status(200).json({
+      success: true,
+      googleSheetUrl: sheetUrl,
+      message: 'Google Sheet created successfully.'
     });
 
   } catch (err) {

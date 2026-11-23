@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const { upload, uploadApplicationFields, syncReqFilesToCloudinary } = require('../services/uploadService');
 const authController = require('../controllers/authController');
-const { verifyToken } = require('../middleware/authMiddleware');
+const { verifyToken, rateLimiter } = require('../middleware/authMiddleware');
 
 const handleUploadApplication = (req, res, next) => {
   uploadApplicationFields(req, res, async (err) => {
@@ -29,7 +29,9 @@ const handleUploadApplication = (req, res, next) => {
 };
 
 // Routes
-router.post('/login', authController.login);
+router.post('/login', rateLimiter({ windowMs: 15 * 60 * 1000, max: 15, message: 'Too many login attempts. Please try again after 15 minutes.' }), authController.login);
+router.post('/forgot-password', rateLimiter({ windowMs: 15 * 60 * 1000, max: 5, message: 'Too many password reset requests. Please try again later.' }), authController.forgotPassword);
+router.post('/reset-password', rateLimiter({ windowMs: 15 * 60 * 1000, max: 10, message: 'Too many reset attempts. Please try again later.' }), authController.resetPassword);
 router.post('/register-student-application', handleUploadApplication, authController.registerStudentApplication);
 router.get('/application-status', authController.getApplicationStatus);
 router.post('/forgot-password-request', authController.forgotPasswordRequest);

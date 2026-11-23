@@ -1244,22 +1244,23 @@
           </div>
         </div>
 
-        <div class="table-responsive" style="max-height:600px; overflow-y:auto; border:1px solid #E5E7EB; border-radius:8px;">
-          <table class="data-table" style="width:100%; border-collapse:collapse;">
+        <div class="table-responsive" style="max-height:600px; overflow-x:auto; overflow-y:auto; border:1px solid #E5E7EB; border-radius:8px;">
+          <table class="data-table" style="width:100%; min-width:980px; border-collapse:collapse;">
             <thead>
-              <tr style="background:#f8fafc; text-align:left; font-size:0.75rem; text-transform:uppercase; color:var(--primary-deep);">
-                <th style="padding:12px; width:110px; vertical-align:middle;">APP ID</th>
-                <th style="padding:12px; width:180px; vertical-align:middle;">APPLICANT NAME</th>
-                <th style="padding:12px; width:130px; vertical-align:middle;">MOBILE</th>
-                <th style="padding:12px; min-width:220px; vertical-align:middle;">COLLEGE & BRANCH</th>
-                <th style="padding:12px; width:140px; vertical-align:middle;">PREFERRED ROOM</th>
-                <th style="padding:12px; width:150px; text-align:center; vertical-align:middle;">STATUS</th>
-                <th style="padding:12px; width:160px; text-align:right; vertical-align:middle;">ACTIONS</th>
+              <tr style="background:#f8fafc; text-align:left; font-size:0.75rem; text-transform:uppercase; color:var(--primary-deep); border-bottom:2px solid #E5E7EB;">
+                <th style="padding:12px 14px; width:120px; vertical-align:middle;">APP ID</th>
+                <th style="padding:12px 14px; width:160px; vertical-align:middle;">APPLICANT NAME</th>
+                <th style="padding:12px 14px; width:120px; vertical-align:middle;">MOBILE</th>
+                <th style="padding:12px 14px; min-width:180px; max-width:240px; vertical-align:middle;">COLLEGE & BRANCH</th>
+                <th style="padding:12px 14px; width:120px; vertical-align:middle;">PREFERRED ROOM</th>
+                <th style="padding:12px 14px; width:160px; vertical-align:middle;">SUBMITTED AT</th>
+                <th style="padding:12px 14px; width:130px; text-align:center; vertical-align:middle;">STATUS</th>
+                <th style="padding:12px 14px; width:220px; text-align:right; vertical-align:middle;">ACTIONS</th>
               </tr>
             </thead>
             <tbody id="applicationsTableBody">
               <tr>
-                <td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">Loading applications...</td>
+                <td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);">Loading applications...</td>
               </tr>
             </tbody>
           </table>
@@ -2164,18 +2165,22 @@
           data.students.forEach(stud => {
             const row = document.createElement('tr');
             
-            const escName = stud.studentName.replace(/'/g, "\\'");
+            const sName = stud.studentName || stud.studentname || 'Student';
+            const escName = sName.replace(/'/g, "\\'");
             const escEmail = (stud.email || '').replace(/'/g, "\\'");
-            const escParentName = (stud.parentName || '').replace(/'/g, "\\'");
-            const escCollege = (stud.collegeName || '').replace(/'/g, "\\'");
+            const escParentName = (stud.parentName || stud.parentname || '').replace(/'/g, "\\'");
+            const escCollege = (stud.collegeName || stud.collegename || '').replace(/'/g, "\\'");
             const escCourse = (stud.course || '').replace(/'/g, "\\'");
-            const sId = stud.studentCustomId || `AKS${String(stud.id).padStart(6, '0')}`;
-            const bedStr = stud.bedLabel || (stud.bedNumber ? `Bed ${stud.bedNumber}` : 'Unassigned');
+            const sId = stud.studentCustomId || stud.studentcustomid || `AKS${String(stud.id).padStart(6, '0')}`;
+            const bNum = stud.bedNumber || stud.bednumber;
+            const bedStr = stud.bedLabel || stud.bedlabel || (bNum ? `Bed ${bNum}` : 'Unassigned');
+            const rNum = stud.roomNumber || stud.roomnumber;
+            const rentVal = parseFloat(stud.monthlyRent || stud.monthlyrent || 0);
 
             const actionsCell = `
               <div class="actions-cell" style="display:flex; gap:4px; justify-content:center;">
                 <button class="btn-action" onclick="viewStudentDetails(${stud.id})" title="View Details"><i data-lucide="eye" style="width:13px; height:13px;"></i></button>
-                <button class="btn-action btn-edit" onclick="openEditStudentModal(${stud.id}, '${escName}', '${sId}', '${escEmail}', '${stud.phone}', '${escParentName}', '${stud.parentPhone || ''}', '${stud.aadhaarNumber || ''}', '${escCollege}', '${escCourse}', '${stud.year}', ${stud.monthlyRent}, '${stud.status}')" title="Edit Profile"><i data-lucide="edit-2" style="width:13px; height:13px;"></i></button>
+                <button class="btn-action btn-edit" onclick="openEditStudentModal(${stud.id}, '${escName}', '${sId}', '${escEmail}', '${stud.phone || ''}', '${escParentName}', '${stud.parentPhone || stud.parentphone || ''}', '${stud.aadhaarNumber || stud.aadhaarnumber || ''}', '${escCollege}', '${escCourse}', '${stud.year || ''}', ${rentVal}, '${stud.status || 'active'}')" title="Edit Profile"><i data-lucide="edit-2" style="width:13px; height:13px;"></i></button>
                 <button class="btn-action btn-delete" onclick="deleteStudent(${stud.id}, '${escName}')" title="Delete Profile"><i data-lucide="trash-2" style="width:13px; height:13px;"></i></button>
               </div>
             `;
@@ -2183,15 +2188,15 @@
             row.innerHTML = `
               <td style="padding:12px; font-weight:700; color:var(--primary-deep); vertical-align:top; white-space:nowrap;">${sId}</td>
               <td style="padding:12px; font-weight:700; vertical-align:top; word-break:break-word;">
-                <div>${stud.studentName}</div>
+                <div>${sName}</div>
                 <div style="font-size:0.75rem; color:var(--text-muted); word-break:break-all;">${stud.email || ''}</div>
               </td>
-              <td style="padding:12px; vertical-align:top; white-space:nowrap;">${stud.phone}</td>
-              <td style="padding:12px; vertical-align:top; word-break:break-word;">${stud.collegeName || 'N/A'}</td>
-              <td style="padding:12px; vertical-align:top; word-break:break-word;">${stud.course} (${stud.year})</td>
-              <td style="padding:12px; vertical-align:top; white-space:nowrap;">${stud.roomNumber ? `<strong>Room ${stud.roomNumber}</strong>` : '<span style="color:var(--text-muted); font-style:italic;">Unassigned</span>'}</td>
-              <td style="padding:12px; vertical-align:top; white-space:nowrap;">${stud.bedId ? `<span class="status-badge active" style="font-size:0.7rem;">${bedStr}</span>` : '<span style="color:var(--text-muted); font-style:italic;">None</span>'}</td>
-              <td style="padding:12px; vertical-align:top; white-space:nowrap;">${stud.joinDate}</td>
+              <td style="padding:12px; vertical-align:top; white-space:nowrap;">${stud.phone || 'N/A'}</td>
+              <td style="padding:12px; vertical-align:top; word-break:break-word;">${stud.collegeName || stud.collegename || 'N/A'}</td>
+              <td style="padding:12px; vertical-align:top; word-break:break-word;">${stud.course || ''} (${stud.year || ''})</td>
+              <td style="padding:12px; vertical-align:top; white-space:nowrap;">${rNum ? `<strong>Room ${rNum}</strong>` : '<span style="color:var(--text-muted); font-style:italic;">Unassigned</span>'}</td>
+              <td style="padding:12px; vertical-align:top; white-space:nowrap;">${(stud.bedId || stud.bedid) ? `<span class="status-badge active" style="font-size:0.7rem;">${bedStr}</span>` : '<span style="color:var(--text-muted); font-style:italic;">None</span>'}</td>
+              <td style="padding:12px; vertical-align:top; white-space:nowrap;">${stud.joinDate || '—'}</td>
               <td style="padding:12px; text-align:center; vertical-align:top;">
                 <span class="status-badge ${stud.paymentStatus === 'paid' ? 'active' : 'inactive'}" style="display:inline-block; text-align:center; font-weight:700; cursor:pointer; padding: 2px 6px; font-size: 0.7rem;" onclick="togglePaymentStatus(${stud.id}, '${stud.paymentStatus}')" title="Click to toggle payment status">
                   ${stud.paymentStatus === 'paid' ? 'Paid' : 'Unpaid'}
@@ -2246,8 +2251,8 @@
               <div><strong>Room Number:</strong> ${s.roomNumber ? `Room ${s.roomNumber}` : 'Unassigned'}</div>
               <div><strong>Assigned Bed:</strong> ${s.bedId ? bedStr : 'Unassigned'}</div>
               <div><strong>Joining Date:</strong> ${s.joinDate}</div>
-              <div><strong>Monthly Fee:</strong> ₹${s.monthlyRent.toLocaleString('en-IN')}</div>
-              <div><strong>Security Deposit:</strong> ₹${s.depositAmount ? s.depositAmount.toLocaleString('en-IN') : '8,500'}</div>
+              <div><strong>Monthly Fee:</strong> ₹${parseFloat(s.monthlyRent || s.monthlyrent || 0).toLocaleString('en-IN')}</div>
+              <div><strong>Security Deposit:</strong> ₹${parseFloat(s.depositAmount || s.depositamount || 8500).toLocaleString('en-IN')}</div>
             </div>
 
             <div class="detail-section-title">Parent / Guardian Information</div>
@@ -2694,7 +2699,8 @@
             const node = document.createElement('div');
             const isOcc = bed.status === 'occupied';
             const isMaint = bed.status === 'maintenance';
-            const bedName = bed.bedLabel || `Bed ${bed.bedNumber}`;
+            const bNum = bed.bedNumber || bed.bednumber || '';
+            const bedName = bed.bedLabel || bed.bedlabel || (bNum ? `Bed ${bNum}` : `Bed #${bed.id}`);
             
             node.className = `bed-select-node ${isOcc ? 'occupied' : ''}`;
             
@@ -2705,7 +2711,7 @@
             
             let bedActions = '';
             if (isOcc) {
-              const escStudName = (bed.studentName || '').replace(/'/g, "\\'");
+              const escStudName = (bed.studentName || bed.studentname || '').replace(/'/g, "\\'");
               bedActions = `
                 <div style="display:flex; gap:3px; margin-top:4px;">
                   ${bed.studentId ? `<button class="btn btn-outline" style="padding:2px 4px; font-size:0.58rem; flex:1;" onclick="viewStudentDetails(${bed.studentId}); event.stopPropagation();">View</button>` : ''}
@@ -2936,43 +2942,56 @@
     }
 
     // Allocation triggers
-    async function openAllocateModal(preSelectedRoomId = null) {
+    async function openAllocateModal(preSelectedRoomId = null, preSelectedStudentId = null, preSelectedStudentName = null) {
       const token = localStorage.getItem('token');
       document.getElementById('allocateForm').reset();
       document.getElementById('allocBedGroup').style.display = 'none';
       document.getElementById('selectedBedId').value = '';
 
       try {
-        const studRes = await fetch('/api/admin/students', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
+        const [studRes, roomRes] = await Promise.all([
+          fetch('/api/admin/students', { headers: { 'Authorization': `Bearer ${token}` } }),
+          fetch('/api/rooms', { headers: { 'Authorization': `Bearer ${token}` } })
+        ]);
         const studData = await studRes.json();
-        
-        const roomRes = await fetch('/api/rooms', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
         const roomData = await roomRes.json();
 
         if (studData.success && roomData.success) {
           const studentSelect = document.getElementById('allocStudent');
           studentSelect.innerHTML = '<option value="">Choose Student...</option>';
-          const unallocated = studData.students.filter(s => !s.roomId);
           
-          if (unallocated.length === 0) {
-            studentSelect.innerHTML = '<option value="">All registered students are allocated</option>';
-          } else {
-            unallocated.forEach(s => {
-              const sId = s.studentCustomId || `AKS${String(s.id).padStart(6, '0')}`;
-              studentSelect.innerHTML += `<option value="${s.id}">${s.studentName} (${sId})</option>`;
-            });
+          const studentsList = studData.students || [];
+          const unallocated = studentsList.filter(s => !(s.roomId || s.roomid));
+          
+          unallocated.forEach(s => {
+            const sId = s.studentCustomId || s.studentcustomid || `AKS${String(s.id).padStart(6, '0')}`;
+            const sName = s.studentName || s.studentname || `Student #${s.id}`;
+            studentSelect.innerHTML += `<option value="${s.id}">${sName} (${sId})</option>`;
+          });
+
+          // Ensure preSelectedStudentId is present in options
+          if (preSelectedStudentId) {
+            let match = Array.from(studentSelect.options).find(o => String(o.value) === String(preSelectedStudentId));
+            if (!match) {
+              const opt = document.createElement('option');
+              opt.value = preSelectedStudentId;
+              const displayLabel = (preSelectedStudentName && preSelectedStudentName !== 'undefined') ? preSelectedStudentName : `Student #${preSelectedStudentId}`;
+              opt.text = displayLabel;
+              studentSelect.appendChild(opt);
+            }
+            studentSelect.value = preSelectedStudentId;
           }
 
           const roomSelect = document.getElementById('allocRoom');
           roomSelect.innerHTML = '<option value="">Choose Room...</option>';
-          const availableRooms = roomData.rooms.filter(r => r.status === 'active' && r.vacantBeds > 0);
+          const availableRooms = (roomData.rooms || []).filter(r => r.status === 'active' && (r.vacantBeds || r.vacantbeds || 0) > 0);
           
           availableRooms.forEach(r => {
-            roomSelect.innerHTML += `<option value="${r.id}">Room ${r.roomNumber} (${r.floor}) - ₹${r.monthlyFee}/mo (${r.vacantBeds} beds available)</option>`;
+            const rNum = r.roomNumber || r.roomnumber;
+            const rFloor = r.floor || 'Floor 1';
+            const rFee = r.monthlyFee || r.monthlyfee || 0;
+            const rVacant = r.vacantBeds || r.vacantbeds || 0;
+            roomSelect.innerHTML += `<option value="${r.id}">Room ${rNum} (${rFloor}) - ₹${rFee}/mo (${rVacant} beds available)</option>`;
           });
 
           if (preSelectedRoomId) {
@@ -2989,9 +3008,8 @@
       }
     }
 
-    async function openAllocateModalWithStudent(studentId) {
-      await openAllocateModal();
-      document.getElementById('allocStudent').value = studentId;
+    async function openAllocateModalWithStudent(studentId, studentName = null) {
+      await openAllocateModal(null, studentId, studentName);
     }
 
     let currentReviewAppId = null;
@@ -3183,7 +3201,8 @@
           data.beds.forEach(bed => {
             const isOcc = bed.status === 'occupied';
             const isMaint = bed.status === 'maintenance';
-            const bedName = bed.bedLabel || `Bed ${bed.bedNumber}`;
+            const bNum = bed.bedNumber || bed.bednumber || '';
+            const bedName = bed.bedLabel || bed.bedlabel || (bNum ? `Bed ${bNum}` : `Bed #${bed.id}`);
 
             const node = document.createElement('div');
             node.className = `bed-select-node ${isOcc || isMaint ? 'occupied' : ''}`;
@@ -3919,8 +3938,14 @@
       alert('All notifications marked read.');
     }
 
-    // Attach search & filters listeners
-    document.getElementById('studentSearchInput').addEventListener('input', () => fetchStudentsDatabase());
+    // Attach search & filters listeners with 250ms debounce
+    let studentSearchDebounce = null;
+    document.getElementById('studentSearchInput').addEventListener('input', () => {
+      clearTimeout(studentSearchDebounce);
+      studentSearchDebounce = setTimeout(() => {
+        fetchStudentsDatabase();
+      }, 250);
+    });
     document.getElementById('filterPayment').addEventListener('change', () => fetchStudentsDatabase());
     document.getElementById('filterRoom').addEventListener('change', () => fetchStudentsDatabase());
     document.getElementById('filterCollege').addEventListener('change', () => fetchStudentsDatabase());
@@ -4061,6 +4086,25 @@
       return `XXXX XXXX ${clean.slice(-4)}`;
     }
 
+    function formatISTDateTime(dateInput) {
+      if (!dateInput) return '—';
+      try {
+        const d = new Date(dateInput);
+        if (isNaN(d.getTime())) return '—';
+        return d.toLocaleString('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+      } catch (e) {
+        return '—';
+      }
+    }
+
     async function fetchApplications(silent = false) {
       const token = localStorage.getItem('token');
       const tableBody = document.getElementById('applicationsTableBody');
@@ -4068,7 +4112,7 @@
       if (!tableBody) return;
 
       if (!silent) {
-        tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">Fetching applications...</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);">Fetching applications...</td></tr>';
       }
 
       try {
@@ -4091,7 +4135,7 @@
           }
 
           if (apps.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">No applications found.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);">No applications found.</td></tr>';
             return;
           }
 
@@ -4104,9 +4148,10 @@
             const course = app.course || '';
             const prefRoom = app.preferredSharingType || app.preferredroomtype || app.preferredRoomType || '3 Sharing';
             const status = (app.applicationStatus || app.applicationstatus || 'PENDING').toUpperCase();
+            const dateStr = formatISTDateTime(app.submittedAt || app.submittedat || app.createdAt || app.createdat);
 
             let statusBadgeClass = 'inactive';
-            if (status === 'APPROVED') statusBadgeClass = 'active';
+            if (status === 'APPROVED' || status === 'ADMISSION_CONFIRMED') statusBadgeClass = 'active';
             else if (status === 'PENDING') statusBadgeClass = 'partially';
             else if (status === 'CORRECTION_REQUIRED') statusBadgeClass = 'partially';
 
@@ -4119,19 +4164,25 @@
             const tr = document.createElement('tr');
             tr.style.borderBottom = '1px solid #E5E7EB';
             tr.innerHTML = `
-              <td style="padding:12px;"><strong>${appId}</strong></td>
-              <td style="padding:12px;"><strong>${name}</strong></td>
-              <td style="padding:12px;">${phone}</td>
-              <td style="padding:12px;">${college} ${course ? `(${course})` : ''}</td>
-              <td style="padding:12px;">${prefRoom}</td>
-              <td style="padding:12px; text-align:center;">
+              <td style="padding:12px 14px; font-weight:700; color:var(--primary-deep); vertical-align:top; white-space:nowrap;">${appId}</td>
+              <td style="padding:12px 14px; font-weight:700; vertical-align:top;">${name}</td>
+              <td style="padding:12px 14px; vertical-align:top; white-space:nowrap;">${phone}</td>
+              <td style="padding:12px 14px; vertical-align:top; word-break:break-word; max-width:240px;">
+                <div>${college}</div>
+                ${course ? `<div style="font-size:0.75rem; color:var(--text-muted);">${course}</div>` : ''}
+              </td>
+              <td style="padding:12px 14px; vertical-align:top; white-space:nowrap;">${prefRoom}</td>
+              <td style="padding:12px 14px; vertical-align:top; white-space:nowrap; font-size:0.8rem; color:#475569;">${dateStr}</td>
+              <td style="padding:12px 14px; text-align:center; vertical-align:top;">
                 <span class="status-badge ${statusBadgeClass}">${status}</span>
                 ${waStatusBadge}
               </td>
-              <td style="padding:12px; text-align:right;">
-                <button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem; border-color:var(--primary-brand); color:var(--primary-deep);" onclick="openAppReviewModal(${app.id})">Review Docs</button>
-                <button class="btn btn-primary" style="padding:4px 8px; font-size:0.75rem; margin-left:4px;" onclick="openAllocateModalForApp(${app.id}, '${name.replace(/'/g, "\\'")}')">Allocate</button>
-                <button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem; margin-left:4px; color:#3b82f6; border-color:#3b82f6;" onclick="openResetPasswordModal(${app.id}, '${name.replace(/'/g, "\\'")}')">Reset Pass</button>
+              <td style="padding:12px 14px; text-align:right; vertical-align:top;">
+                <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center; flex-wrap:wrap;">
+                  <button class="btn btn-outline" style="padding:5px 9px; font-size:0.75rem; border-color:var(--primary-brand); color:var(--primary-deep);" onclick="openAppReviewModal(${app.id})">Review Docs</button>
+                  <button class="btn btn-primary" style="padding:5px 9px; font-size:0.75rem; background:var(--primary-brand); border-color:var(--primary-brand);" onclick="openAllocateModalForApp(${app.id}, '${name.replace(/'/g, "\\'")}')">Allocate</button>
+                  <button class="btn btn-outline" style="padding:5px 9px; font-size:0.75rem; color:#2563eb; border-color:#93c5fd;" onclick="openResetPasswordModal(${app.id}, '${name.replace(/'/g, "\\'")}')">Reset Pass</button>
+                </div>
               </td>
             `;
             tableBody.appendChild(tr);
@@ -4140,7 +4191,7 @@
       } catch (err) {
         console.error('Fetch applications error:', err);
         if (!silent) {
-          tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#ef4444;">Failed to load applications.</td></tr>';
+          tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#ef4444;">Failed to load applications.</td></tr>';
         }
       }
     }
@@ -4291,19 +4342,8 @@
       }
     }
 
-    function openAllocateModalForApp(studentId, name) {
-      openAllocateModal();
-      const select = document.getElementById('allocStudentSelect');
-      if (select) {
-        let match = Array.from(select.options).find(o => o.value == studentId);
-        if (!match) {
-          const opt = document.createElement('option');
-          opt.value = studentId;
-          opt.innerText = name;
-          select.appendChild(opt);
-        }
-        select.value = studentId;
-      }
+    async function openAllocateModalForApp(studentId, name) {
+      await openAllocateModal(null, studentId, name);
     }
 
     async function openResetPasswordModal(studentId, name) {

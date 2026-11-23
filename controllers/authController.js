@@ -7,6 +7,7 @@ const crypto = require('crypto');
 const { getDb } = require('../config/db');
 const { JWT_SECRET } = require('../middleware/authMiddleware');
 const { broadcastAdminEvent } = require('../services/realtimeService');
+const { sendPasswordResetEmail } = require('../services/emailService');
 
 function normalizePhone(rawPhone) {
   if (!rawPhone) return '';
@@ -29,32 +30,40 @@ async function login(req, res) {
     const { email, phone, password } = req.body;
     const db = await getDb();
 
-    // Student login (uses Mobile Number + Password)
-    if (phone) {
-      const normalizedPhone = normalizePhone(phone);
-      if (!normalizedPhone || !password) {
-        return res.status(400).json({ success: false, message: 'Mobile number and password are required.' });
-      }
+    if (!password) {
+      return res.status(400).json({ success: false, message: 'Password is required.' });
+    }
 
-      const { rows: userRows } = await db.query(
-        'SELECT * FROM users WHERE phone = $1 AND role = $2',
-        [normalizedPhone, 'student']
-      );
-      const user = userRows[0];
+    let user = null;
 
-      if (!user) {
-        return res.status(401).json({ success: false, message: 'Invalid mobile number or password.' });
-      }
+    // Check by email (Primary for both student and admin)
+    if (email && email.trim()) {
+      const cleanEmail = email.trim().toLowerCase();
+      const { rows } = await db.query('SELECT * FROM users WHERE LOWER(email) = $1', [cleanEmail]);
+      user = rows[0];
+    } else if (phone && phone.trim()) {
+      // Backward compatibility for phone login
+      const cleanPhone = normalizePhone(phone);
+      const { rows } = await db.query('SELECT * FROM users WHERE phone = $1', [cleanPhone]);
+      user = rows[0];
+    } else {
+      return res.status(400).json({ success: false, message: 'Email address is required.' });
+    }
 
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        return res.status(401).json({ success: false, message: 'Invalid mobile number or password.' });
-      }
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+    }
 
-      // Check student account & application status
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+    }
+
+    // If student, strictly enforce admin approval status
+    if (user.role === 'student') {
       const { rows: studentRows } = await db.query(
         'SELECT * FROM students WHERE userId = $1 OR phone = $2',
-        [user.id, normalizedPhone]
+        [user.id, user.phone]
       );
       const student = studentRows[0];
 
@@ -99,57 +108,24 @@ async function login(req, res) {
           });
         }
       }
-
-      const token = jwt.sign(
-        { id: user.id, name: user.name, email: user.email, role: user.role },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-
-      return res.status(200).json({
-        success: true,
-        token,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role
-        }
-      });
     }
 
-    // Admin / Manager login (uses Email + Password)
-    if (email) {
-      const { rows: userRows } = await db.query('SELECT * FROM users WHERE email = $1', [email.trim()]);
-      const user = userRows[0];
-      if (!user) {
-        return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+    const token = jwt.sign(
+      { id: user.id, name: user.name, email: user.email, role: user.role },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    return res.status(200).json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
       }
-
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) {
-        return res.status(401).json({ success: false, message: 'Invalid email or password.' });
-      }
-
-      const token = jwt.sign(
-        { id: user.id, name: user.name, email: user.email, role: user.role },
-        JWT_SECRET,
-        { expiresIn: '24h' }
-      );
-
-      return res.status(200).json({
-        success: true,
-        token,
-        user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role
-        }
-      });
-    }
-
-    return res.status(400).json({ success: false, message: 'Email or mobile number is required.' });
+    });
   } catch (err) {
     console.error('Login Error:', err);
     res.status(500).json({ success: false, message: 'Internal server error' });
@@ -479,7 +455,32 @@ async function getMe(req, res) {
       WHERE s.userId = $1
     `, [user.id]);
 
-    const profile = studentRows[0] || null;
+    const rawProfile = studentRows[0] || null;
+    let profile = null;
+    if (rawProfile) {
+      profile = {
+        ...rawProfile,
+        roomNumber: rawProfile.roomnumber || rawProfile.roomNumber || null,
+        bedNumber: rawProfile.bednumber || rawProfile.bedNumber || null,
+        bedLabel: rawProfile.bedlabel || rawProfile.bedLabel || (rawProfile.bednumber ? `Bed ${rawProfile.bednumber}` : null),
+        monthlyRent: parseFloat(rawProfile.monthlyrent || rawProfile.monthlyRent || 0),
+        depositAmount: parseFloat(rawProfile.depositamount || rawProfile.depositAmount || 0),
+        studentName: rawProfile.studentname || rawProfile.studentName || user.name,
+        studentCustomId: rawProfile.studentcustomid || rawProfile.studentCustomId || null,
+        roomId: rawProfile.roomid || rawProfile.roomId || null,
+        bedId: rawProfile.bedid || rawProfile.bedId || null,
+        applicationStatus: rawProfile.applicationstatus || rawProfile.applicationStatus || 'PENDING',
+        paymentStatus: rawProfile.paymentstatus || rawProfile.paymentStatus || 'unpaid',
+        collegeName: rawProfile.collegename || rawProfile.collegeName || '',
+        course: rawProfile.course || '',
+        year: rawProfile.year || '',
+        branch: rawProfile.branch || '',
+        aadhaarNumber: rawProfile.aadhaarnumber || rawProfile.aadhaarNumber || '',
+        parentName: rawProfile.parentname || rawProfile.parentName || '',
+        parentPhone: rawProfile.parentphone || rawProfile.parentPhone || '',
+        joinDate: rawProfile.joindate ? (typeof rawProfile.joindate === 'string' ? rawProfile.joindate.split('T')[0] : new Date(rawProfile.joindate).toISOString().split('T')[0]) : 'N/A'
+      };
+    }
     const { rows: docs } = profile ? await db.query('SELECT * FROM documents WHERE studentId = $1', [profile.id]) : { rows: [] };
 
     res.status(200).json({
@@ -629,6 +630,151 @@ async function updateStudentApplication(req, res) {
   }
 }
 
+
+/**
+ * Request password reset link (Email-based, generic response to prevent user enumeration)
+ */
+async function forgotPassword(req, res) {
+  try {
+    const { email } = req.body;
+    if (!email || !email.trim()) {
+      return res.status(400).json({ success: false, message: 'Email address is required.' });
+    }
+
+    const cleanEmail = email.trim().toLowerCase();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(cleanEmail)) {
+      return res.status(400).json({ success: false, message: 'Please enter a valid email address.' });
+    }
+
+    const db = await getDb();
+    const { rows: userRows } = await db.query('SELECT * FROM users WHERE LOWER(email) = $1', [cleanEmail]);
+    const user = userRows[0];
+
+    // Generic response regardless of whether user exists
+    const genericResponse = {
+      success: true,
+      message: 'If an account exists for this email address, password reset instructions have been sent.'
+    };
+
+    if (!user) {
+      return res.status(200).json(genericResponse);
+    }
+
+    // Only allow students & registered users with valid status
+    if (user.role === 'student') {
+      const { rows: studentRows } = await db.query('SELECT * FROM students WHERE userId = $1', [user.id]);
+      const student = studentRows[0];
+      if (student) {
+        const appStatus = (student.applicationStatus || '').toUpperCase();
+        // Do not issue reset links if rejected or pending
+        if (appStatus === 'REJECTED' || appStatus === 'PENDING') {
+          return res.status(200).json(genericResponse);
+        }
+      }
+    }
+
+    // Generate random secure token & store its SHA-256 hash
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes expiry
+
+    // Invalidate existing unused tokens for this user
+    await db.query('UPDATE password_resets SET isUsed = true WHERE userId = $1 AND isUsed = false', [user.id]);
+
+    // Insert new hashed token
+    await db.query(
+      'INSERT INTO password_resets (userId, token, expiresAt, isUsed) VALUES ($1, $2, $3, false)',
+      [user.id, tokenHash, expiresAt]
+    );
+
+    // Build reset URL
+    const baseUrl = process.env.APP_BASE_URL || `${req.protocol}://${req.get('host')}`;
+    const resetUrl = `${baseUrl}/reset-password.html?token=${rawToken}`;
+
+    // Send email (non-blocking)
+    try {
+      await sendPasswordResetEmail({
+        to: user.email,
+        studentName: user.name,
+        resetUrl
+      });
+    } catch (mailErr) {
+      console.warn('Reset email dispatch error (non-fatal):', mailErr.message);
+    }
+
+    return res.status(200).json({
+      ...genericResponse,
+      // For local development only when SMTP not configured:
+      resetUrl: (!process.env.SMTP_HOST || !process.env.SMTP_USER) ? resetUrl : undefined
+    });
+  } catch (err) {
+    console.error('Forgot Password Error:', err);
+    res.status(500).json({ success: false, message: 'Failed to process password reset request.' });
+  }
+}
+
+/**
+ * Reset password using one-time secure token
+ */
+async function resetPassword(req, res) {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ success: false, message: 'Token and new password are required.' });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters long.' });
+    }
+
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const db = await getDb();
+
+    const { rows: resetRows } = await db.query(
+      'SELECT * FROM password_resets WHERE token = $1 AND isUsed = false AND expiresAt > CURRENT_TIMESTAMP',
+      [tokenHash]
+    );
+    const resetRecord = resetRows[0];
+
+    if (!resetRecord) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired password reset link. Please request a new one.' });
+    }
+
+    const { rows: userRows } = await db.query('SELECT * FROM users WHERE id = $1', [resetRecord.userid || resetRecord.userId]);
+    const user = userRows[0];
+
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User account not found.' });
+    }
+
+    // Verify approval status
+    if (user.role === 'student') {
+      const { rows: studentRows } = await db.query('SELECT * FROM students WHERE userId = $1', [user.id]);
+      const student = studentRows[0];
+      if (student) {
+        const appStatus = (student.applicationStatus || '').toUpperCase();
+        if (appStatus === 'REJECTED' || appStatus === 'PENDING') {
+          return res.status(403).json({ success: false, message: 'Password reset is not permitted for accounts awaiting approval or rejected.' });
+        }
+      }
+    }
+
+    // Hash new password & update
+    const hashedPassword = await bcrypt.hash(password, 10);
+    await db.query('UPDATE users SET password = $1, updatedAt = CURRENT_TIMESTAMP WHERE id = $2', [hashedPassword, user.id]);
+
+    // Mark token as used
+    await db.query('UPDATE password_resets SET isUsed = true WHERE id = $1', [resetRecord.id]);
+
+    return res.status(200).json({ success: true, message: 'Password updated successfully. You can now log in.' });
+  } catch (err) {
+    console.error('Reset Password Error:', err);
+    res.status(500).json({ success: false, message: 'Failed to reset password.' });
+  }
+}
+
 module.exports = {
   login,
   registerStudentApplication,
@@ -640,5 +786,7 @@ module.exports = {
   uploadDocument,
   getMyDocuments,
   deleteDocument,
-  updateStudentApplication
+  updateStudentApplication,
+  forgotPassword,
+  resetPassword
 };

@@ -231,6 +231,20 @@ async function initializeDatabase(db) {
     )
   `);
 
+  // 6b. Secure Token-Based Password Resets Table
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS password_resets (
+      id SERIAL PRIMARY KEY,
+      userId INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      token VARCHAR(255) NOT NULL,
+      expiresAt TIMESTAMP NOT NULL,
+      isUsed BOOLEAN DEFAULT false,
+      createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token);`).catch(() => {});
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_password_resets_userid ON password_resets(userId);`).catch(() => {});
+
   // Drop legacy OTP table if present (OTP System Completely Removed)
   await db.query(`DROP TABLE IF EXISTS otps;`).catch(() => {});
 

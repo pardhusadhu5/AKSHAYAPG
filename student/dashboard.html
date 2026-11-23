@@ -428,6 +428,9 @@
   <main class="main-content">
     <header class="dashboard-header">
       <div class="dh-title">
+        <div id="studentGreetingBanner" style="display:flex; align-items:center; gap:6px; margin-bottom:4px; font-size:1.05rem; font-weight:700; color:var(--primary-deep, #004d47); letter-spacing:-0.2px;">
+          <span id="studentGreetingText">Welcome to Akshaya Deluxe Hostel!</span>
+        </div>
         <h2 id="panelTitle">My Stay Profile</h2>
         <p id="panelSubtitle">Manage your admissions details and current room assignment.</p>
       </div>
@@ -916,6 +919,65 @@
       });
     }
 
+    // Personalized Time-based Greeting in IST (Asia/Kolkata)
+    let currentStudentName = null;
+
+    function computeISTGreeting(name) {
+      const now = new Date();
+      const istStr = now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' });
+      const istDate = new Date(istStr);
+      const hours = istDate.getHours();
+      const minutes = istDate.getMinutes();
+      const totalMinutes = hours * 60 + minutes;
+
+      let greetingWord = 'Good morning';
+      let emoji = '☀️';
+
+      // 5:00 AM (300 mins) to 11:59 AM (719 mins)
+      if (totalMinutes >= 300 && totalMinutes < 720) {
+        greetingWord = 'Good morning';
+        emoji = '☀️';
+      }
+      // 12:00 PM (720 mins) to 4:59 PM (1019 mins)
+      else if (totalMinutes >= 720 && totalMinutes < 1020) {
+        greetingWord = 'Good afternoon';
+        emoji = '🌤️';
+      }
+      // 5:00 PM (1020 mins) to 8:59 PM (1259 mins)
+      else if (totalMinutes >= 1020 && totalMinutes < 1260) {
+        greetingWord = 'Good evening';
+        emoji = '🌆';
+      }
+      // 9:00 PM (1260 mins) to 4:59 AM (299 mins)
+      else {
+        greetingWord = 'Good night';
+        emoji = '🌙';
+      }
+
+      const cleanName = (name && String(name).trim() && String(name).trim() !== 'undefined' && String(name).trim() !== 'null') ? String(name).trim() : 'Student';
+      return `${greetingWord}, ${cleanName}! ${emoji}`;
+    }
+
+    function updateStudentGreeting(name) {
+      if (name) currentStudentName = name;
+      const greetingEl = document.getElementById('studentGreetingText');
+      if (greetingEl) {
+        greetingEl.textContent = computeISTGreeting(currentStudentName);
+      }
+    }
+
+    // Initialize greeting from cached user immediately to prevent flicker
+    (function initImmediateGreeting() {
+      const cached = JSON.parse(localStorage.getItem('user') || 'null');
+      if (cached && cached.name) {
+        updateStudentGreeting(cached.name);
+      } else {
+        updateStudentGreeting('Student');
+      }
+      // Keep greeting continuously updated if student leaves page open
+      setInterval(() => updateStudentGreeting(), 30000);
+    })();
+
     // Switch panels
     function switchPanel(panelId) {
       panels.forEach(p => p.classList.remove('active'));
@@ -932,6 +994,13 @@
         panelTitle.innerText = meta.title;
         panelSubtitle.innerText = meta.sub;
       }
+
+      // Display greeting banner prominently on dashboardPanel
+      const greetingBanner = document.getElementById('studentGreetingBanner');
+      if (greetingBanner) {
+        greetingBanner.style.display = (panelId === 'dashboardPanel') ? 'flex' : 'none';
+      }
+
       sidebar.classList.remove('open');
 
       // Hook data load triggers
@@ -1047,14 +1116,24 @@
             }
           }
 
-          // Bind stay badge statistics
-          document.getElementById('roomBadge').innerText = (profile && profile.roomNumber) ? `Room ${profile.roomNumber}` : 'Room --';
-          document.getElementById('bedBadge').innerText = (profile && profile.bedNumber) ? `Bed ${profile.bedNumber}` : 'Bed --';
-          document.getElementById('rentBadge').innerText = profile ? `₹${profile.monthlyRent.toLocaleString('en-IN')}` : '₹0';
+          // Update greeting with official student profile name
+          const resolvedStudentName = (profile && (profile.studentName || profile.studentname)) ? (profile.studentName || profile.studentname) : (user ? user.name : 'Student');
+          updateStudentGreeting(resolvedStudentName);
+
+          // Bind stay badge statistics (normalized for camelCase and lower case)
+          const rNum = profile ? (profile.roomNumber || profile.roomnumber) : null;
+          const bNum = profile ? (profile.bedNumber || profile.bednumber) : null;
+          const bLabel = profile ? (profile.bedLabel || profile.bedlabel || (bNum ? `Bed ${bNum}` : null)) : null;
+          const mRent = profile ? parseFloat(profile.monthlyRent || profile.monthlyrent || 0) : 0;
+          const dAmount = profile ? parseFloat(profile.depositAmount || profile.depositamount || 0) : 0;
+
+          document.getElementById('roomBadge').innerText = rNum ? `Room ${rNum}` : 'Room --';
+          document.getElementById('bedBadge').innerText = bLabel ? bLabel : 'Bed --';
+          document.getElementById('rentBadge').innerText = mRent > 0 ? `₹${mRent.toLocaleString('en-IN')}` : '₹0';
           
           const duesBadge = document.getElementById('duesBadge');
           const duesBadge2 = document.getElementById('duesBadge2');
-          document.getElementById('rentDeposit').innerText = profile ? `₹${profile.depositAmount.toLocaleString('en-IN')}` : '₹0';
+          document.getElementById('rentDeposit').innerText = dAmount > 0 ? `₹${dAmount.toLocaleString('en-IN')}` : '₹0';
           
           const isPaid = profile && profile.paymentStatus === 'paid';
           if (isPaid) {

@@ -33,4 +33,34 @@ function requireRole(allowedRoles) {
   };
 }
 
-module.exports = { verifyToken, requireRole, JWT_SECRET };
+
+// Simple in-memory rate limiting to protect auth endpoints
+const rateLimitMap = new Map();
+
+function rateLimiter({ windowMs = 15 * 60 * 1000, max = 10, message = 'Too many requests. Please try again later.' } = {}) {
+  return (req, res, next) => {
+    const ip = req.ip || req.connection.remoteAddress || 'unknown';
+    const key = `${req.baseUrl || ''}${req.path}_${ip}`;
+    const now = Date.now();
+
+    const record = rateLimitMap.get(key) || { count: 0, resetTime: now + windowMs };
+
+    if (now > record.resetTime) {
+      record.count = 1;
+      record.resetTime = now + windowMs;
+    } else {
+      record.count += 1;
+    }
+
+    rateLimitMap.set(key, record);
+
+    if (record.count > max) {
+      return res.status(429).json({ success: false, message });
+    }
+
+    next();
+  };
+}
+
+module.exports = { verifyToken, requireRole, rateLimiter, JWT_SECRET };
+
