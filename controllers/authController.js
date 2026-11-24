@@ -262,11 +262,11 @@ async function registerStudentApplication(req, res) {
         aadhaarNumber, dateOfBirth, gender, bloodGroup, collegeName, course, branch, rollNumber, year, academicYear,
         collegeAddress, address, city, state, pincode, preferredRoomType, preferredFloor, preferredSharingType,
         foodPreference, expectedDuration, stayDuration, photo, idProof, joinDate, status, monthlyRent, depositAmount,
-        roomId, bedId, paymentStatus
+        roomId, bedId, paymentStatus, submittedAt
       ) VALUES (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24,
-        $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44
-      ) RETURNING id`,
+        $25, $26, $27, $28, $29, $30, $31, $32, $33, $34, $35, $36, $37, $38, $39, $40, $41, $42, $43, $44, CURRENT_TIMESTAMP
+      ) RETURNING id, applicationId, submittedAt, createdAt`,
       [
         userId,
         appId,
@@ -353,6 +353,7 @@ async function registerStudentApplication(req, res) {
       applicationId: appId,
       studentName: name.trim(),
       mobile: normalizedPhone,
+      submittedAt: studentResult[0]?.submittedAt || studentResult[0]?.createdAt || new Date().toISOString(),
       message: 'Registration submitted successfully. Your application is currently under review by Akshaya Deluxe Hostel administration.'
     });
   } catch (err) {

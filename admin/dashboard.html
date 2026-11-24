@@ -896,6 +896,104 @@
         </div>
       </div>
 
+      <!-- Room & Bed Metrics Bar -->
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:12px; margin-bottom:20px;" id="roomKpiBar">
+        <div class="stat-widget" style="background:white; padding:12px 16px; border-radius:10px; border:1px solid #E5E7EB;">
+          <div style="font-size:0.7rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Total Rooms</div>
+          <div style="font-size:1.35rem; font-weight:800; color:var(--dark-slate); margin-top:2px;" id="kpiTotalRooms">--</div>
+        </div>
+        <div class="stat-widget" style="background:white; padding:12px 16px; border-radius:10px; border:1px solid #E5E7EB;">
+          <div style="font-size:0.7rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Total Beds</div>
+          <div style="font-size:1.35rem; font-weight:800; color:var(--primary-deep); margin-top:2px;" id="kpiTotalBeds">--</div>
+        </div>
+        <div class="stat-widget" style="background:white; padding:12px 16px; border-radius:10px; border:1px solid #E5E7EB;">
+          <div style="font-size:0.7rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Occupied Beds</div>
+          <div style="font-size:1.35rem; font-weight:800; color:#ef4444; margin-top:2px;" id="kpiOccupiedBeds">--</div>
+        </div>
+        <div class="stat-widget" style="background:white; padding:12px 16px; border-radius:10px; border:1px solid #E5E7EB;">
+          <div style="font-size:0.7rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Available Beds</div>
+          <div style="font-size:1.35rem; font-weight:800; color:#10b981; margin-top:2px;" id="kpiVacantBeds">--</div>
+        </div>
+        <div class="stat-widget" style="background:white; padding:12px 16px; border-radius:10px; border:1px solid #E5E7EB;">
+          <div style="font-size:0.7rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Reserved Beds</div>
+          <div style="font-size:1.35rem; font-weight:800; color:#3b82f6; margin-top:2px;" id="kpiReservedBeds">--</div>
+        </div>
+        <div class="stat-widget" style="background:white; padding:12px 16px; border-radius:10px; border:1px solid #E5E7EB;">
+          <div style="font-size:0.7rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Maintenance</div>
+          <div style="font-size:1.35rem; font-weight:800; color:#f59e0b; margin-top:2px;" id="kpiMaintenanceBeds">--</div>
+        </div>
+        <div class="stat-widget" style="background:white; padding:12px 16px; border-radius:10px; border:1px solid #E5E7EB;">
+          <div style="font-size:0.7rem; color:var(--text-muted); font-weight:700; text-transform:uppercase;">Occupancy %</div>
+          <div style="font-size:1.35rem; font-weight:800; color:var(--primary-brand); margin-top:2px;" id="kpiOccupancyRate">--%</div>
+        </div>
+      </div>
+
+      <!-- Filters & Action Toolbar -->
+      <div style="background:white; padding:14px 18px; border-radius:10px; border:1px solid #E5E7EB; margin-bottom:18px; display:flex; flex-wrap:wrap; gap:12px; align-items:center; justify-content:space-between;">
+        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; flex:1;">
+          <input type="text" id="roomSearchInput" class="form-input" placeholder="Search room #..." onkeyup="filterRoomsDisplay()" style="max-width:150px; padding:6px 10px; font-size:0.82rem;">
+          <select id="roomFilterBlock" class="form-input" onchange="filterRoomsDisplay()" style="max-width:140px; padding:6px 10px; font-size:0.82rem;">
+            <option value="all">All Blocks</option>
+          </select>
+          <select id="roomFilterFloor" class="form-input" onchange="filterRoomsDisplay()" style="max-width:160px; padding:6px 10px; font-size:0.82rem;">
+            <option value="all">All Floors</option>
+          </select>
+          <select id="roomFilterSharing" class="form-input" onchange="filterRoomsDisplay()" style="max-width:150px; padding:6px 10px; font-size:0.82rem;">
+            <option value="all">All Sharing Types</option>
+            <option value="1">1 Sharing (Single)</option>
+            <option value="2">2 Sharing (Double)</option>
+            <option value="3">3 Sharing (Triple)</option>
+            <option value="4">4 Sharing (Four)</option>
+            <option value="5">5 Sharing (Five)</option>
+            <option value="6">6 Sharing (Six)</option>
+          </select>
+          <select id="roomFilterStatus" class="form-input" onchange="filterRoomsDisplay()" style="max-width:150px; padding:6px 10px; font-size:0.82rem;">
+            <option value="all">All Statuses</option>
+            <option value="Available">Available</option>
+            <option value="Partially Occupied">Partially Occupied</option>
+            <option value="Full">Full</option>
+            <option value="Maintenance">Maintenance</option>
+          </select>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-outline" onclick="openAllocationHistoryModal()" style="padding:6px 12px; font-size:0.8rem; display:inline-flex; align-items:center; gap:5px;">
+            <i data-lucide="history" style="width:14px; height:14px;"></i> History
+          </button>
+          <button class="btn btn-outline" id="btnToggleFloorSummary" onclick="toggleFloorSummaryCard()" style="padding:6px 12px; font-size:0.8rem; display:inline-flex; align-items:center; gap:5px;">
+            <i data-lucide="bar-chart-2" style="width:14px; height:14px;"></i> Floor Summary
+          </button>
+        </div>
+      </div>
+
+      <!-- Collapsible Floor Summary Breakdown Card -->
+      <div id="floorSummaryCard" style="display:none; background:white; padding:16px 20px; border-radius:10px; border:1px solid #E5E7EB; margin-bottom:18px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h4 style="margin:0; font-size:0.95rem; font-weight:800; color:var(--dark-slate); display:flex; align-items:center; gap:6px;">
+            <i data-lucide="layers" style="width:16px; height:16px; color:var(--primary-deep);"></i> Floor-wise Occupancy Breakdown
+          </h4>
+          <button class="btn btn-outline" style="padding:3px 8px; font-size:0.75rem;" onclick="toggleFloorSummaryCard()">&times; Close</button>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table" id="floorSummaryTable" style="width:100%;">
+            <thead>
+              <tr style="background:#f8fafc; font-size:0.75rem; text-transform:uppercase;">
+                <th>Floor</th>
+                <th>Rooms</th>
+                <th>Total Beds</th>
+                <th>Occupied</th>
+                <th>Available</th>
+                <th>Reserved</th>
+                <th>Maintenance</th>
+                <th>Occupancy %</th>
+              </tr>
+            </thead>
+            <tbody id="floorSummaryTableBody">
+              <tr><td colspan="8" style="text-align:center;">Loading floor breakdown...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div class="rooms-layout-grid" id="roomsContainer">
         <p style="text-align:center; grid-column: 1/-1;">Fetching room setup coordinates...</p>
       </div>
@@ -1131,6 +1229,7 @@
                 <th style="padding:12px; width:130px; vertical-align:middle;">MOBILE</th>
                 <th style="padding:12px; min-width:220px; vertical-align:middle;">COLLEGE & BRANCH</th>
                 <th style="padding:12px; width:140px; vertical-align:middle;">PREFERRED ROOM</th>
+                <th style="padding:12px; width:160px; vertical-align:middle;">SUBMISSION TIME</th>
                 <th style="padding:12px; width:150px; text-align:center; vertical-align:middle;">STATUS</th>
                 <th style="padding:12px; width:160px; text-align:right; vertical-align:middle;">ACTIONS</th>
               </tr>
@@ -1213,12 +1312,17 @@
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom: 16px;">
           <div class="form-group">
             <label class="form-label" for="newRoomType">Room Type / Sharing</label>
-            <select id="newRoomType" class="form-input">
-              <option value="5 Sharing">5 Sharing</option>
-              <option value="4 Sharing">4 Sharing</option>
-              <option value="6 Sharing">6 Sharing</option>
-              <option value="Triple Sharing">Triple Sharing</option>
-              <option value="Double Sharing">Double Sharing</option>
+            <select id="newRoomType" class="form-input" onchange="onNewRoomTypeChange()">
+              <option value="1 Sharing (Single)">1 Sharing (Single)</option>
+              <option value="2 Sharing (Double)">2 Sharing (Double)</option>
+              <option value="3 Sharing (Triple)">3 Sharing (Triple)</option>
+              <option value="4 Sharing (Four)">4 Sharing (Four)</option>
+              <option value="5 Sharing (Five)">5 Sharing (Five)</option>
+              <option value="6 Sharing (Six)">6 Sharing (Six)</option>
+
+
+
+
             </select>
           </div>
           <div class="form-group">
@@ -1281,12 +1385,17 @@
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom: 16px;">
           <div class="form-group">
             <label class="form-label" for="editRoomType">Room Type / Sharing</label>
-            <select id="editRoomType" class="form-input">
-              <option value="5 Sharing">5 Sharing</option>
-              <option value="4 Sharing">4 Sharing</option>
-              <option value="6 Sharing">6 Sharing</option>
-              <option value="Triple Sharing">Triple Sharing</option>
-              <option value="Double Sharing">Double Sharing</option>
+            <select id="editRoomType" class="form-input" onchange="onEditRoomTypeChange()">
+              <option value="1 Sharing (Single)">1 Sharing (Single)</option>
+              <option value="2 Sharing (Double)">2 Sharing (Double)</option>
+              <option value="3 Sharing (Triple)">3 Sharing (Triple)</option>
+              <option value="4 Sharing (Four)">4 Sharing (Four)</option>
+              <option value="5 Sharing (Five)">5 Sharing (Five)</option>
+              <option value="6 Sharing (Six)">6 Sharing (Six)</option>
+
+
+
+
             </select>
           </div>
           <div class="form-group">
@@ -1362,7 +1471,32 @@
         </table>
       </div>
 
+      <!-- Room Allocation & Transfer History -->
+      <div style="margin-top: 24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <h4 style="font-weight: 800; margin: 0; color: var(--dark-slate); font-size:0.95rem;">RECENT ROOM ALLOCATION & TRANSFER HISTORY</h4>
+          <span style="font-size:0.75rem; color:var(--text-muted);">Last 10 events</span>
+        </div>
+        <div class="table-responsive" style="max-height:180px; overflow-y:auto; border:1px solid #E5E7EB; border-radius:6px;">
+          <table class="data-table" id="roomHistoryTable" style="width:100%;">
+            <thead>
+              <tr style="background:#f8fafc; font-size:0.75rem; text-transform:uppercase;">
+                <th>Date</th>
+                <th>Student</th>
+                <th>Bed</th>
+                <th>Action</th>
+                <th>Reason</th>
+              </tr>
+            </thead>
+            <tbody id="roomHistoryTableBody">
+              <tr><td colspan="5" style="text-align:center; padding:12px;">No past allocation history recorded yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       <div style="margin-top:24px; display:flex; gap:12px; justify-content:flex-end;">
+        <button class="btn btn-outline" id="detailsBtnMaintenance" onclick="toggleCurrentRoomMaintenance()"><i data-lucide="wrench" style="width:14px; height:14px; display:inline-block; vertical-align:middle;"></i> Maintenance Mode</button>
         <button class="btn btn-primary" id="detailsBtnAllocate" onclick="openAllocateFromDetails()"><i data-lucide="user-plus" style="width:14px; height:14px; display:inline-block; vertical-align:middle;"></i> + Allocate Student</button>
         <button class="btn btn-outline" id="detailsBtnEdit" onclick="openEditFromDetails()">Edit Room</button>
         <button class="btn btn-outline" style="color:#ef4444; border-color:#ef4444;" onclick="closeModal('roomDetailsModal')">Close</button>
@@ -1401,6 +1535,10 @@
           <input type="hidden" id="selectedBedId" required>
         </div>
         
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label" for="allocReason">Allocation Reason / Notes (Optional)</label>
+          <input type="text" id="allocReason" class="form-input" placeholder="e.g. Admission Allocation">
+        </div>
         <button type="submit" class="btn btn-primary" style="width: 100%;">Confirm Allocation</button>
       </form>
     </div>
@@ -1436,7 +1574,101 @@
           <input type="hidden" id="selectedTransBedId" required>
         </div>
         
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label" for="transReason">Transfer Reason / Notes (Optional)</label>
+          <input type="text" id="transReason" class="form-input" placeholder="e.g. Student requested room change / AC shift">
+        </div>
         <button type="submit" class="btn btn-primary" style="width: 100%;">Complete Transfer</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal 9: Bed Allocation & Transfer Audit History Modal -->
+  <div class="modal-overlay" id="allocationHistoryModal">
+    <div class="modal-card" style="max-width: 900px;">
+      <div class="modal-header">
+        <h3 style="display:flex; align-items:center; gap:8px;">
+          <i data-lucide="history" style="width:20px; height:20px; color:var(--primary-deep);"></i> Bed Allocation & Transfer History
+        </h3>
+        <button class="modal-close-btn" onclick="closeModal('allocationHistoryModal')">&times;</button>
+      </div>
+
+      <!-- History Filter Controls -->
+      <div style="display:flex; flex-wrap:wrap; gap:10px; margin-bottom:16px; align-items:center; justify-content:space-between;">
+        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; flex:1;">
+          <input type="text" id="allocHistSearch" class="form-input" placeholder="Search student name, ID..." onkeyup="filterAllocationHistoryRows()" style="max-width:240px; padding:6px 12px; font-size:0.85rem;">
+          <select id="allocHistStatusFilter" class="form-input" onchange="filterAllocationHistoryRows()" style="max-width:180px; padding:6px 10px; font-size:0.85rem;">
+            <option value="all">All Movements</option>
+            <option value="active">Active Allocations</option>
+            <option value="transferred">Transfers</option>
+            <option value="vacated">Vacated / Deallocated</option>
+          </select>
+        </div>
+        <button class="btn btn-outline" onclick="loadAllocationHistoryData()" style="padding:6px 12px; font-size:0.8rem; display:inline-flex; align-items:center; gap:5px;">
+          <i data-lucide="refresh-cw" style="width:13px; height:13px;"></i> Refresh
+        </button>
+      </div>
+
+      <div class="table-responsive" style="max-height:420px; overflow-y:auto; border:1px solid #E5E7EB; border-radius:8px;">
+        <table class="data-table" id="allocationHistoryTable" style="width:100%;">
+          <thead>
+            <tr style="background:#f8fafc; font-size:0.75rem; text-transform:uppercase; color:var(--primary-deep);">
+              <th style="padding:10px 12px;">Date & Time</th>
+              <th style="padding:10px 12px;">Student Name & ID</th>
+              <th style="padding:10px 12px;">Action / Type</th>
+              <th style="padding:10px 12px;">From Spot</th>
+              <th style="padding:10px 12px;">Allocated Spot</th>
+              <th style="padding:10px 12px;">Reason / Notes</th>
+            </tr>
+          </thead>
+          <tbody id="allocationHistoryBody">
+            <tr><td colspan="6" style="text-align:center; padding:20px;">Loading allocation history...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div style="margin-top:20px; display:flex; justify-content:flex-end;">
+        <button class="btn btn-outline" onclick="closeModal('allocationHistoryModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 10: Bed Status & Temporary Reservation Modal -->
+  <div class="modal-overlay" id="bedReserveModal">
+    <div class="modal-card" style="max-width: 480px;">
+      <div class="modal-header">
+        <h3 id="bedReserveModalTitle">Update Bed Status</h3>
+        <button class="modal-close-btn" onclick="closeModal('bedReserveModal')">&times;</button>
+      </div>
+      <form id="bedReserveForm">
+        <input type="hidden" id="bedReserveBedId">
+        <input type="hidden" id="bedReserveRoomId">
+
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label class="form-label">Bed Spot</label>
+          <input type="text" id="bedReserveLabelShow" class="form-input" readonly style="background:#f1f5f9; font-weight:700;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 14px;">
+          <label class="form-label" for="bedReserveStatusSelect">Target Status</label>
+          <select id="bedReserveStatusSelect" class="form-input" onchange="onBedTargetStatusChange()">
+            <option value="vacant">Available (Vacant)</option>
+            <option value="reserved">Reserved (Temporary Hold)</option>
+            <option value="maintenance">Maintenance (Blocked)</option>
+          </select>
+        </div>
+
+        <div id="bedReservedForGroup" class="form-group" style="margin-bottom: 14px; display:none;">
+          <label class="form-label" for="bedReservedForInput">Reserved For / Applicant Name</label>
+          <input type="text" id="bedReservedForInput" class="form-input" placeholder="e.g. Ramesh Kumar (Token Adv Received)">
+        </div>
+
+        <div id="bedBlockedReasonGroup" class="form-group" style="margin-bottom: 18px; display:none;">
+          <label class="form-label" for="bedBlockedReasonInput">Reason / Maintenance Notes</label>
+          <input type="text" id="bedBlockedReasonInput" class="form-input" placeholder="e.g. Broken cot repair / Mattress replacement">
+        </div>
+
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Update Bed Status</button>
       </form>
     </div>
   </div>
@@ -2260,8 +2492,832 @@
       }
     }
 
-    // Rooms Directory database rendering
+    // ==========================================
+    // PHASE 1: ADVANCED ROOM & BED MANAGEMENT
+    // ==========================================
+    let cachedRoomsData = [];
+    let cachedAllocationHistory = [];
+
+    function onNewRoomTypeChange() {
+      const type = document.getElementById('newRoomType').value;
+      const capInput = document.getElementById('newRoomCap');
+      const match = type.match(/^(\d+)/);
+      if (match && capInput) capInput.value = parseInt(match[1]);
+    }
+
+    function onEditRoomTypeChange() {
+      const type = document.getElementById('editRoomType').value;
+      const capInput = document.getElementById('editRoomCap');
+      const match = type.match(/^(\d+)/);
+      if (match && capInput) capInput.value = parseInt(match[1]);
+    }
+
+    function populateRoomFilters(rooms) {
+      const blockSelect = document.getElementById('roomFilterBlock');
+      const floorSelect = document.getElementById('roomFilterFloor');
+      if (!blockSelect || !floorSelect) return;
+
+      const currentBlock = blockSelect.value;
+      const currentFloor = floorSelect.value;
+
+      const uniqueBlocks = [...new Set(rooms.map(r => r.block || 'Main Block'))].filter(Boolean);
+      const uniqueFloors = [...new Set(rooms.map(r => r.floor || 'Floor 1'))].filter(Boolean);
+
+      blockSelect.innerHTML = '<option value="all">All Blocks</option>';
+      uniqueBlocks.forEach(b => {
+        const opt = document.createElement('option');
+        opt.value = b;
+        opt.innerText = b;
+        if (b === currentBlock) opt.selected = true;
+        blockSelect.appendChild(opt);
+      });
+
+      floorSelect.innerHTML = '<option value="all">All Floors</option>';
+      uniqueFloors.forEach(f => {
+        const opt = document.createElement('option');
+        opt.value = f;
+        opt.innerText = f;
+        if (f === currentFloor) opt.selected = true;
+        floorSelect.appendChild(opt);
+      });
+    }
+
+    function filterRoomsDisplay() {
+      if (!cachedRoomsData) return;
+      const searchVal = (document.getElementById('roomSearchInput') ? document.getElementById('roomSearchInput').value : '').trim().toLowerCase();
+      const blockVal = document.getElementById('roomFilterBlock') ? document.getElementById('roomFilterBlock').value : 'all';
+      const floorVal = document.getElementById('roomFilterFloor') ? document.getElementById('roomFilterFloor').value : 'all';
+      const sharingVal = document.getElementById('roomFilterSharing') ? document.getElementById('roomFilterSharing').value : 'all';
+      const statusVal = document.getElementById('roomFilterStatus') ? document.getElementById('roomFilterStatus').value : 'all';
+
+      const filtered = cachedRoomsData.filter(r => {
+        if (searchVal && !String(r.roomNumber).toLowerCase().includes(searchVal)) return false;
+        if (blockVal !== 'all' && (r.block || 'Main Block') !== blockVal) return false;
+        if (floorVal !== 'all' && (r.floor || 'Floor 1') !== floorVal) return false;
+        if (sharingVal !== 'all' && parseInt(r.capacity) !== parseInt(sharingVal)) return false;
+        if (statusVal !== 'all' && r.displayStatus !== statusVal) return false;
+        return true;
+      });
+
+      renderRoomsCards(filtered);
+    }
+
+    function renderRoomsCards(roomsList) {
+      const container = document.getElementById('roomsContainer');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (!roomsList || roomsList.length === 0) {
+        container.innerHTML = '<p style="text-align:center; grid-column: 1/-1; padding:30px; color:var(--text-muted);">No rooms match your filter criteria.</p>';
+        return;
+      }
+
+      // Group by floor
+      const roomsByFloor = {};
+      roomsList.forEach(rm => {
+        const floor = rm.floor || 'Floor 1';
+        if (!roomsByFloor[floor]) roomsByFloor[floor] = [];
+        roomsByFloor[floor].push(rm);
+      });
+
+      const floorOrder = ['Floor 1', 'Floor 2', 'Floor 3 — Penthouse', 'Ground Floor', 'First Floor', 'Second Floor', 'Third Floor'];
+      Object.keys(roomsByFloor).forEach(f => {
+        if (!floorOrder.includes(f)) floorOrder.push(f);
+      });
+
+      floorOrder.forEach(floorName => {
+        const floorRooms = roomsByFloor[floorName];
+        if (!floorRooms || floorRooms.length === 0) return;
+
+        let floorTotalBeds = 0;
+        let floorOccupiedBeds = 0;
+        let floorVacantBeds = 0;
+        let floorReservedBeds = 0;
+        let floorMaintBeds = 0;
+
+        floorRooms.forEach(rm => {
+          floorTotalBeds += parseInt(rm.capacity || 0);
+          floorOccupiedBeds += parseInt(rm.occupiedBeds || 0);
+          floorVacantBeds += parseInt(rm.vacantBeds || 0);
+          floorReservedBeds += parseInt(rm.reservedBeds || 0);
+          floorMaintBeds += parseInt(rm.maintenanceBeds || 0);
+        });
+
+        const floorOccRate = floorTotalBeds > 0 ? Math.round((floorOccupiedBeds / floorTotalBeds) * 100) : 0;
+
+        const heading = document.createElement('div');
+        heading.style.gridColumn = '1 / -1';
+        heading.style.marginTop = '24px';
+        heading.style.marginBottom = '12px';
+        heading.style.borderBottom = '2px solid var(--primary-light)';
+        heading.style.paddingBottom = '8px';
+        heading.style.display = 'flex';
+        heading.style.justifyContent = 'space-between';
+        heading.style.alignItems = 'center';
+        heading.style.flexWrap = 'wrap';
+        heading.style.gap = '8px';
+        heading.innerHTML = `
+          <h4 style="font-weight: 800; color: var(--primary-deep); margin: 0; display:flex; align-items:center; gap:8px;">
+            <i data-lucide="layers" style="width:18px; height:18px;"></i>${floorName}
+          </h4>
+          <div style="display:flex; flex-wrap:wrap; gap:12px; font-size:0.8rem; font-weight:700;">
+            <span style="color:var(--dark-slate);">${floorRooms.length} Rooms</span>
+            <span style="color:var(--dark-slate);">${floorTotalBeds} Beds</span>
+            <span style="color:#ef4444;">${floorOccupiedBeds} Occupied</span>
+            <span style="color:#10b981;">${floorVacantBeds} Available</span>
+            ${floorReservedBeds > 0 ? `<span style="color:#3b82f6;">${floorReservedBeds} Reserved</span>` : ''}
+            ${floorMaintBeds > 0 ? `<span style="color:#f59e0b;">${floorMaintBeds} Maint</span>` : ''}
+            <span style="color:var(--primary-brand);">${floorOccRate}% Occupancy</span>
+          </div>
+        `;
+        container.appendChild(heading);
+
+        const floorGrid = document.createElement('div');
+        floorGrid.style.display = 'grid';
+        floorGrid.style.gridTemplateColumns = 'repeat(auto-fill, minmax(240px, 1fr))';
+        floorGrid.style.gap = '16px';
+        floorGrid.style.gridColumn = '1 / -1';
+
+        floorRooms.forEach(rm => {
+          const card = document.createElement('div');
+          card.className = 'room-card-console';
+          if (rm.status === 'maintenance') {
+            card.style.borderLeft = '4px solid #f59e0b';
+          }
+          card.setAttribute('onclick', `if(!event.target.closest('button')) viewRoomDetails(${rm.id})`);
+
+          let occupantsMarkup = '<div style="color:var(--text-muted); font-size:0.75rem; font-style:italic; padding-left: 2px;">• Empty</div>';
+          if (rm.currentStudents && rm.currentStudents.length > 0) {
+            const visibleStudents = rm.currentStudents.slice(0, 3);
+            const extraCount = rm.currentStudents.length - 3;
+
+            let listItems = visibleStudents.map(s => `
+              <div style="display:flex; align-items:center; justify-content:space-between; font-size:0.78rem; font-weight:600; color:var(--primary-brand); margin-bottom: 2px;">
+                <span class="text-truncate" style="max-width:140px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="${s.studentName}">${s.studentName}</span>
+                <span style="font-size:0.68rem; color:var(--text-muted);">${s.bedLabel || `Bed ${s.bedNumber}`}</span>
+              </div>
+            `).join('');
+
+            if (extraCount > 0) {
+              listItems += `
+                <div style="font-size:0.7rem; font-weight:700; color:var(--primary-deep); margin-top:2px; cursor:pointer;" onclick="viewRoomDetails(${rm.id}); event.stopPropagation();">
+                  +${extraCount} More (View All)
+                </div>
+              `;
+            }
+            occupantsMarkup = `<div style="display:flex; flex-direction:column; gap:2px; margin-top:2px; width:100%;">${listItems}</div>`;
+          }
+
+          const statusBadgeClass = rm.displayStatus === 'Available' ? 'Available' : (rm.displayStatus === 'Full' ? 'Full' : (rm.displayStatus === 'Maintenance' ? 'Maintenance' : 'Partially'));
+
+          card.innerHTML = `
+            <div class="room-card-console-header">
+              <div>
+                <span class="room-number-pill">Room ${rm.roomNumber}</span>
+                <span style="font-size:0.7rem; color:var(--text-muted); display:block;">${rm.roomType || 'Triple Sharing'} (${rm.block || 'Main Block'})</span>
+              </div>
+              <span class="room-status-badge ${statusBadgeClass}">${rm.displayStatus}</span>
+            </div>
+            <div class="room-stats-list">
+              <div class="room-stat-row">
+                <span class="room-stat-label">Capacity:</span>
+                <span class="room-stat-val">${rm.capacity} Beds</span>
+              </div>
+              <div class="room-stat-row">
+                <span class="room-stat-label">Occupied:</span>
+                <span class="room-stat-val" style="color:#ef4444;">${rm.occupiedBeds} Beds</span>
+              </div>
+              <div class="room-stat-row">
+                <span class="room-stat-label">Available:</span>
+                <span class="room-stat-val" style="color:#10b981;">${rm.vacantBeds} Beds</span>
+              </div>
+              ${rm.reservedBeds > 0 ? `
+              <div class="room-stat-row">
+                <span class="room-stat-label">Reserved:</span>
+                <span class="room-stat-val" style="color:#3b82f6;">${rm.reservedBeds} Beds</span>
+              </div>` : ''}
+              <div class="room-stat-row">
+                <span class="room-stat-label">Monthly Rent:</span>
+                <span class="room-stat-val">₹${Number(rm.monthlyFee).toLocaleString('en-IN')} / mo</span>
+              </div>
+              <div class="room-stat-row" style="margin-top: 6px; flex-direction:column; align-items:flex-start;">
+                <span class="room-stat-label" style="font-size:0.7rem; font-weight:700; margin-bottom: 2px;">Assigned Students:</span>
+                <div style="min-height: 50px; display: flex; flex-direction: column; justify-content: flex-start; width: 100%;">
+                  ${occupantsMarkup}
+                </div>
+              </div>
+            </div>
+            <div class="room-card-console-footer">
+              <button class="btn btn-outline" style="flex:1; padding:4px 6px; font-size:0.7rem; height:28px;" onclick="viewRoomDetails(${rm.id}); event.stopPropagation();">View</button>
+              ${rm.status === 'active' && rm.vacantBeds > 0 ? `<button class="btn btn-outline" style="flex:1; padding:4px 6px; font-size:0.7rem; height:28px; color:var(--primary-brand); border-color:var(--primary-brand);" onclick="openAllocateModal(${rm.id}); event.stopPropagation();">+ Allocate</button>` : ''}
+              <button class="btn btn-outline" style="padding:4px 6px; font-size:0.7rem; height:28px;" onclick="openEditRoomModal(${rm.id}, '${rm.roomNumber}', ${rm.capacity}, ${rm.monthlyFee}, '${rm.floor || 'Floor 1'}', '${rm.block || 'Main Block'}', '${rm.roomType || 'Triple Sharing'}', '${rm.status}'); event.stopPropagation();">Edit</button>
+              <button class="btn btn-outline" style="padding:4px 6px; font-size:0.7rem; height:28px; color:${rm.status === 'maintenance' ? '#10b981' : '#f59e0b'};" title="${rm.status === 'maintenance' ? 'Activate Room' : 'Set to Maintenance'}" onclick="toggleRoomMaintenanceFromCard(${rm.id}, '${rm.status}'); event.stopPropagation();">
+                <i data-lucide="wrench" style="width:12px; height:12px;"></i>
+              </button>
+              <button class="btn btn-outline" style="padding:4px 6px; font-size:0.7rem; height:28px; color:#ef4444; border-color:#ef4444;" onclick="deleteRoom(${rm.id}, '${rm.roomNumber}'); event.stopPropagation();">&times;</button>
+            </div>
+          `;
+          floorGrid.appendChild(card);
+        });
+        container.appendChild(floorGrid);
+      });
+
+      if (window.lucide) lucide.createIcons();
+    }
+
+    async function toggleFloorSummaryCard() {
+      const card = document.getElementById('floorSummaryCard');
+      if (!card) return;
+      if (card.style.display === 'block') {
+        card.style.display = 'none';
+        return;
+      }
+      card.style.display = 'block';
+
+      const tbody = document.getElementById('floorSummaryTableBody');
+      if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:16px;">Loading floor summary data...</td></tr>';
+
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch('/api/rooms/meta/buildings-floors', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success && tbody) {
+          tbody.innerHTML = '';
+          if (data.floorStats.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No floor data available.</td></tr>';
+            return;
+          }
+          data.floorStats.forEach(f => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td><strong style="color:var(--primary-deep);">${f.floor}</strong></td>
+              <td>${f.totalRooms}</td>
+              <td>${f.totalBeds}</td>
+              <td style="color:#ef4444; font-weight:700;">${f.occupiedBeds}</td>
+              <td style="color:#10b981; font-weight:700;">${f.vacantBeds}</td>
+              <td style="color:#3b82f6;">${f.reservedBeds}</td>
+              <td style="color:#f59e0b;">${f.maintenanceBeds}</td>
+              <td>
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <div style="flex:1; background:#e2e8f0; height:8px; border-radius:4px; overflow:hidden;">
+                    <div style="background:var(--primary-brand); height:100%; width:${f.occupancyRate}%;"></div>
+                  </div>
+                  <span style="font-weight:700; font-size:0.78rem;">${f.occupancyRate}%</span>
+                </div>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+        }
+      } catch (err) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:red;">Failed to load floor breakdown.</td></tr>';
+      }
+    }
+
+    async function openAllocationHistoryModal() {
+      openModal('allocationHistoryModal');
+      await loadAllocationHistoryData();
+    }
+
+    async function loadAllocationHistoryData() {
+      const tbody = document.getElementById('allocationHistoryBody');
+      if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px;">Fetching allocation audit logs...</td></tr>';
+
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch('/api/rooms/allocations/history?limit=100', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+          cachedAllocationHistory = data.history || [];
+          filterAllocationHistoryRows();
+        } else {
+          if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:red;">${data.message}</td></tr>`;
+        }
+      } catch (err) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:red;">Server connection error.</td></tr>';
+      }
+    }
+
+    function filterAllocationHistoryRows() {
+      const tbody = document.getElementById('allocationHistoryBody');
+      if (!tbody) return;
+
+      const searchVal = (document.getElementById('allocHistSearch') ? document.getElementById('allocHistSearch').value : '').trim().toLowerCase();
+      const statusFilter = document.getElementById('allocHistStatusFilter') ? document.getElementById('allocHistStatusFilter').value : 'all';
+
+      const filtered = cachedAllocationHistory.filter(item => {
+        if (statusFilter !== 'all' && item.status !== statusFilter) return false;
+        if (searchVal) {
+          const matchName = String(item.studentName || '').toLowerCase().includes(searchVal);
+          const matchId = String(item.studentCustomId || '').toLowerCase().includes(searchVal);
+          const matchRoom = String(item.roomNumber || '').toLowerCase().includes(searchVal);
+          if (!matchName && !matchId && !matchRoom) return false;
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-muted);">No allocation history records found.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = '';
+      filtered.forEach(row => {
+        const tr = document.createElement('tr');
+        const sId = row.studentCustomId || `AKS${String(row.studentId).padStart(6, '0')}`;
+        const bedLabel = row.bedLabel || (row.bedNumber ? `Bed ${row.bedNumber}` : '--');
+        const fromSpot = row.fromRoomNumber ? `Room ${row.fromRoomNumber} (${row.fromBedLabel || `Bed ${row.fromBedNumber}`})` : '--';
+        const toSpot = row.roomNumber ? `Room ${row.roomNumber} (${bedLabel})` : '--';
+
+        let statusBadge = '<span style="padding:3px 8px; border-radius:10px; font-size:0.7rem; font-weight:700; background:#d1fae5; color:#059669;">ALLOCATED</span>';
+        if (row.status === 'transferred') {
+          statusBadge = '<span style="padding:3px 8px; border-radius:10px; font-size:0.7rem; font-weight:700; background:#dbeafe; color:#2563eb;">TRANSFERRED</span>';
+        } else if (row.status === 'vacated') {
+          statusBadge = '<span style="padding:3px 8px; border-radius:10px; font-size:0.7rem; font-weight:700; background:#fee2e2; color:#dc2626;">VACATED</span>';
+        }
+
+        const dateStr = formatAppTimestamp(row.allocatedAt || row.createdAt);
+
+        tr.innerHTML = `
+          <td style="font-size:0.78rem; color:#475569; white-space:nowrap;">${dateStr}</td>
+          <td>
+            <div style="font-weight:700; color:var(--dark-slate);">${row.studentName}</div>
+            <div style="font-size:0.7rem; color:var(--text-muted);">${sId} • ${row.phone || ''}</div>
+          </td>
+          <td>${statusBadge}</td>
+          <td style="font-size:0.8rem; color:var(--text-muted);">${fromSpot}</td>
+          <td style="font-size:0.8rem; font-weight:700; color:var(--primary-deep);">${toSpot}</td>
+          <td style="font-size:0.8rem;">
+            <div>${row.reason || '--'}</div>
+            ${row.notes ? `<div style="font-size:0.7rem; color:var(--text-muted);">${row.notes}</div>` : ''}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function viewRoomDetails(roomId) {
+      activeDetailsRoomId = roomId;
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch(`/api/rooms/${roomId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          const rm = data.room;
+          activeDetailsRoomObj = rm;
+          document.getElementById('detailsRoomNumberHeader').innerText = `Room Setup - Room ${rm.roomNumber}`;
+          document.getElementById('detailsRoomBlockFloor').innerText = `${rm.block || 'Main Block'} / ${rm.floor || 'Floor 1'}`;
+          document.getElementById('detailsRoomTypeRent').innerText = `${rm.roomType || 'Triple Sharing'} (₹${Number(rm.monthlyFee).toLocaleString('en-IN')}/mo)`;
+          document.getElementById('detailsRoomOccupied').innerText = `${rm.occupiedBeds} Occupied / ${rm.vacantBeds} Available`;
+          document.getElementById('detailsRoomStatusBadge').innerText = rm.displayStatus;
+
+          const maintBtn = document.getElementById('detailsBtnMaintenance');
+          if (maintBtn) {
+            if (rm.status === 'maintenance') {
+              maintBtn.innerHTML = '<i data-lucide="check-circle" style="width:14px; height:14px; display:inline-block; vertical-align:middle;"></i> Set Active';
+              maintBtn.style.color = '#10b981';
+              maintBtn.style.borderColor = '#10b981';
+            } else {
+              maintBtn.innerHTML = '<i data-lucide="wrench" style="width:14px; height:14px; display:inline-block; vertical-align:middle;"></i> Maintenance Mode';
+              maintBtn.style.color = '#f59e0b';
+              maintBtn.style.borderColor = '#f59e0b';
+            }
+          }
+
+          // Populate Bed status board
+          const board = document.getElementById('detailsBedsBoard');
+          board.innerHTML = '';
+          data.beds.forEach(bed => {
+            const node = document.createElement('div');
+            const isOcc = bed.status === 'occupied';
+            const isMaint = bed.status === 'maintenance';
+            const isRes = bed.status === 'reserved';
+            const bedName = bed.bedLabel || `Bed ${bed.bedNumber}`;
+
+            node.className = `bed-select-node ${isOcc ? 'occupied' : ''}`;
+
+            if (isMaint) {
+              node.style.border = '2px dashed #f59e0b';
+              node.style.background = '#fffbeb';
+            } else if (isRes) {
+              node.style.border = '2px solid #3b82f6';
+              node.style.background = '#eff6ff';
+            } else if (!isOcc) {
+              node.style.border = '2px solid #10b981';
+              node.style.background = '#f0fdf4';
+            }
+
+            let bedActions = '';
+            if (isOcc) {
+              const escStudName = (bed.studentName || '').replace(/'/g, "\\'");
+              bedActions = `
+                <div style="display:flex; gap:3px; margin-top:4px;">
+                  ${bed.studentId ? `<button class="btn btn-outline" style="padding:2px 4px; font-size:0.58rem; flex:1;" onclick="viewStudentDetails(${bed.studentId}); event.stopPropagation();">View</button>` : ''}
+                  ${bed.studentId ? `<button class="btn btn-outline" style="padding:2px 4px; font-size:0.58rem; flex:1;" onclick="openTransferModal(${bed.studentId}, '${escStudName}'); event.stopPropagation();">Change</button>` : ''}
+                </div>
+              `;
+            } else if (isMaint) {
+              bedActions = `
+                <div style="margin-top:4px;">
+                  <button class="btn btn-outline" style="padding:2px 4px; font-size:0.58rem; width:100%; border-color:#10b981; color:#10b981;" onclick="toggleBedMaintenance(${bed.id}, 'vacant', ${roomId}); event.stopPropagation();">Make Available</button>
+                </div>
+              `;
+            } else if (isRes) {
+              bedActions = `
+                <div style="display:flex; gap:3px; margin-top:4px;">
+                  <button class="btn btn-outline" style="padding:2px 4px; font-size:0.58rem; flex:1; color:var(--primary-brand); border-color:var(--primary-brand);" onclick="openAllocateFromDetails(); event.stopPropagation();">+ Alloc</button>
+                  <button class="btn btn-outline" style="padding:2px 4px; font-size:0.58rem; flex:1; color:#10b981; border-color:#10b981;" onclick="toggleBedMaintenance(${bed.id}, 'vacant', ${roomId}); event.stopPropagation();">Release</button>
+                  <button class="btn btn-outline" style="padding:2px 4px; font-size:0.58rem; flex:1; color:#d97706; border-color:#f59e0b;" onclick="openBedReserveModal(${bed.id}, ${roomId}, '${bedName}', 'maintenance'); event.stopPropagation();">Maint</button>
+                </div>
+              `;
+            } else {
+              bedActions = `
+                <div style="display:flex; gap:3px; margin-top:4px;">
+                  <button class="btn btn-outline" style="padding:2px 4px; font-size:0.58rem; flex:1; color:var(--primary-brand); border-color:var(--primary-brand);" onclick="openAllocateFromDetails(); event.stopPropagation();">+ Alloc</button>
+                  <button class="btn btn-outline" style="padding:2px 4px; font-size:0.58rem; flex:1; color:#3b82f6; border-color:#3b82f6;" onclick="openBedReserveModal(${bed.id}, ${roomId}, '${bedName}', 'reserved'); event.stopPropagation();">Reserve</button>
+                  <button class="btn btn-outline" style="padding:2px 4px; font-size:0.58rem; flex:1; color:#d97706; border-color:#f59e0b;" onclick="openBedReserveModal(${bed.id}, ${roomId}, '${bedName}', 'maintenance'); event.stopPropagation();">Maint</button>
+                </div>
+              `;
+            }
+
+            let statusColor = isOcc ? '#ef4444' : (isMaint ? '#d97706' : (isRes ? '#2563eb' : '#10b981'));
+            let statusLabel = isOcc ? (bed.studentName || 'Occupied') : (isMaint ? 'Maintenance' : (isRes ? 'Reserved' : 'Available'));
+            let subInfo = bed.reservedFor ? `<div style="font-size:0.6rem; color:#1e40af; overflow:hidden; text-overflow:ellipsis;">${bed.reservedFor}</div>` : (bed.blockedReason ? `<div style="font-size:0.6rem; color:#92400e; overflow:hidden; text-overflow:ellipsis;">${bed.blockedReason}</div>` : '');
+
+            node.innerHTML = `
+              <div style="font-size:0.65rem; color:var(--text-muted); font-weight:700;">${bedName}</div>
+              <div style="font-size:0.7rem; font-weight:800; color:${statusColor}; text-transform:uppercase; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${statusLabel}">
+                ${statusLabel}
+              </div>
+              ${subInfo}
+              ${bedActions}
+            `;
+            board.appendChild(node);
+          });
+
+          // Populate occupants details table
+          const tableBody = document.querySelector('#roomOccupantsTable tbody');
+          tableBody.innerHTML = '';
+
+          if (data.students.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="6" style="text-align:center; color:var(--text-muted);">No students currently assigned to this room.</td></tr>';
+          } else {
+            data.students.forEach(stud => {
+              const row = document.createElement('tr');
+              const sId = stud.studentCustomId || `AKS${String(stud.id).padStart(6, '0')}`;
+              const bedName = stud.bedLabel || (stud.bedNumber ? `Bed ${stud.bedNumber}` : 'Bed');
+
+              row.innerHTML = `
+                <td><strong style="color:var(--primary-deep);">${bedName}</strong></td>
+                <td>
+                  <div style="font-weight:700;">${stud.studentName}</div>
+                  <div style="font-size:0.7rem; color:var(--text-muted);">${sId}</div>
+                </td>
+                <td>${stud.phone}</td>
+                <td style="font-size:0.8rem;">${stud.joinDate}</td>
+                <td><span class="status-badge ${stud.paymentStatus === 'paid' ? 'active' : 'inactive'}">${stud.paymentStatus}</span></td>
+                <td>
+                  <div style="display:flex; gap:4px;">
+                    <button class="btn btn-outline" style="padding:2px 6px; font-size:0.7rem;" onclick="openTransferModal(${stud.id}, '${stud.studentName}')">Transfer</button>
+                    <button class="btn btn-outline" style="padding:2px 6px; font-size:0.7rem; color:#ef4444; border-color:#ef4444;" onclick="deallocateStudent(${stud.id}, '${stud.studentName}')">Deallocate</button>
+                  </div>
+                </td>
+              `;
+              tableBody.appendChild(row);
+            });
+          }
+
+          // Populate recent room allocation history
+          const histBody = document.getElementById('roomHistoryTableBody');
+          if (histBody) {
+            histBody.innerHTML = '';
+            if (!data.history || data.history.length === 0) {
+              histBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:12px; color:var(--text-muted);">No past allocation history for this room yet.</td></tr>';
+            } else {
+              data.history.forEach(h => {
+                const tr = document.createElement('tr');
+                const bLabel = h.bedLabel || (h.bedNumber ? `Bed ${h.bedNumber}` : '--');
+                tr.innerHTML = `
+                  <td style="font-size:0.75rem;">${formatAppTimestamp(h.allocatedAt || h.createdAt)}</td>
+                  <td style="font-size:0.8rem; font-weight:700;">${h.studentName}</td>
+                  <td style="font-size:0.8rem; color:var(--primary-deep);">${bLabel}</td>
+                  <td><span style="font-size:0.7rem; font-weight:700; text-transform:uppercase;">${h.status}</span></td>
+                  <td style="font-size:0.75rem;">${h.reason || '--'}</td>
+                `;
+                histBody.appendChild(tr);
+              });
+            }
+          }
+
+          if (window.lucide) lucide.createIcons();
+          openModal('roomDetailsModal');
+        } else {
+          alert('Could not retrieve room details: ' + data.message);
+        }
+      } catch (err) {
+        alert('Details request failed: ' + err.message);
+      }
+    }
+
+    async function toggleCurrentRoomMaintenance() {
+      if (!activeDetailsRoomId) return;
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch(`/api/rooms/${activeDetailsRoomId}/maintenance`, {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(data.message);
+          viewRoomDetails(activeDetailsRoomId);
+          fetchRoomsDatabase();
+        } else {
+          alert('Failed to toggle maintenance: ' + data.message);
+        }
+      } catch (err) {
+        alert('Server error toggling maintenance.');
+      }
+    }
+
+    async function toggleRoomMaintenanceFromCard(roomId, currentStatus) {
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch(`/api/rooms/${roomId}/maintenance`, {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(data.message);
+          fetchRoomsDatabase();
+        } else {
+          alert('Action failed: ' + data.message);
+        }
+      } catch (err) {
+        alert('Server connection error.');
+      }
+    }
+
+    function openBedReserveModal(bedId, roomId, bedLabel, defaultTarget = 'reserved') {
+      document.getElementById('bedReserveBedId').value = bedId;
+      document.getElementById('bedReserveRoomId').value = roomId;
+      document.getElementById('bedReserveLabelShow').value = bedLabel;
+      document.getElementById('bedReserveStatusSelect').value = defaultTarget;
+      document.getElementById('bedReservedForInput').value = '';
+      document.getElementById('bedBlockedReasonInput').value = '';
+      onBedTargetStatusChange();
+      openModal('bedReserveModal');
+    }
+
+    function onBedTargetStatusChange() {
+      const status = document.getElementById('bedReserveStatusSelect').value;
+      const resGroup = document.getElementById('bedReservedForGroup');
+      const blkGroup = document.getElementById('bedBlockedReasonGroup');
+      if (resGroup) resGroup.style.display = status === 'reserved' ? 'block' : 'none';
+      if (blkGroup) blkGroup.style.display = (status === 'maintenance' || status === 'reserved') ? 'block' : 'none';
+    }
+
+    const bedReserveForm = document.getElementById('bedReserveForm');
+    if (bedReserveForm) {
+      bedReserveForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const bedId = document.getElementById('bedReserveBedId').value;
+        const roomId = document.getElementById('bedReserveRoomId').value;
+        const status = document.getElementById('bedReserveStatusSelect').value;
+        const reservedFor = document.getElementById('bedReservedForInput').value;
+        const blockedReason = document.getElementById('bedBlockedReasonInput').value;
+
+        await toggleBedMaintenance(bedId, status, roomId, blockedReason, reservedFor);
+        closeModal('bedReserveModal');
+      });
+    }
+
+    async function toggleBedMaintenance(bedId, newStatus, roomId, blockedReason = null, reservedFor = null) {
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch(`/api/rooms/beds/${bedId}/status`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: newStatus, blockedReason, reservedFor })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(data.message);
+          if (roomId) viewRoomDetails(roomId);
+          fetchRoomsDatabase();
+        } else {
+          alert('Failed to update bed: ' + data.message);
+        }
+      } catch (err) {
+        alert('Server error updating bed.');
+      }
+    }
+
+    function openCreateRoomModal() {
+      document.getElementById('createRoomForm').reset();
+      onNewRoomTypeChange();
+      openModal('createRoomModal');
+    }
+
+    function openEditRoomModal(id, num, cap, fee, floor, block, roomType, status) {
+      document.getElementById('editRoomId').value = id;
+      document.getElementById('editRoomNum').value = num;
+      document.getElementById('editRoomCap').value = cap;
+      document.getElementById('editRoomFee').value = fee;
+      document.getElementById('editRoomFloor').value = floor || 'Floor 1';
+      document.getElementById('editRoomBlock').value = block || 'Main Block';
+      document.getElementById('editRoomType').value = roomType || '5 Sharing (Five)';
+      document.getElementById('editRoomStatus').value = status;
+      openModal('editRoomModal');
+    }
+
+    async function deleteRoom(id, roomNumber) {
+      if (!confirm(`Are you sure you want to delete Room ${roomNumber}? Note: Rooms with occupied beds cannot be deleted.`)) {
+        return;
+      }
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch(`/api/rooms/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(data.message);
+          fetchRoomsDatabase();
+          fetchStatsAndRecent();
+          hasLoadedFilters = false;
+        } else {
+          alert('Cannot Delete: ' + data.message);
+        }
+      } catch (err) {
+        alert('Deletion failed: ' + err.message);
+      }
+    }
+
+    function openAllocateFromDetails() {
+      closeModal('roomDetailsModal');
+      openAllocateModal(activeDetailsRoomId);
+    }
+
+    function openEditFromDetails() {
+      closeModal('roomDetailsModal');
+      const token = localStorage.getItem('token');
+      fetch(`/api/rooms/${activeDetailsRoomId}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          const rm = d.room;
+          openEditRoomModal(rm.id, rm.roomNumber, rm.capacity, rm.monthlyFee, rm.floor, rm.block, rm.roomType, rm.status);
+        }
+      });
+    }
+
+    async function openAllocateModal(preSelectedRoomId = null) {
+      const token = localStorage.getItem('token');
+      document.getElementById('allocateForm').reset();
+      document.getElementById('allocBedGroup').style.display = 'none';
+      document.getElementById('selectedBedId').value = '';
+
+      try {
+        const studRes = await fetch('/api/admin/students', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const studData = await studRes.json();
+
+        const roomRes = await fetch('/api/rooms', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const roomData = await roomRes.json();
+
+        if (studData.success && roomData.success) {
+          const studentSelect = document.getElementById('allocStudent');
+          studentSelect.innerHTML = '<option value="">Choose Student...</option>';
+          const unallocated = studData.students.filter(s => !s.roomId);
+
+          if (unallocated.length === 0) {
+            studentSelect.innerHTML = '<option value="">All registered students are allocated</option>';
+          } else {
+            unallocated.forEach(s => {
+              const sId = s.studentCustomId || `AKS${String(s.id).padStart(6, '0')}`;
+              studentSelect.innerHTML += `<option value="${s.id}">${s.studentName} (${sId})</option>`;
+            });
+          }
+
+          const roomSelect = document.getElementById('allocRoom');
+          roomSelect.innerHTML = '<option value="">Choose Room...</option>';
+          const availableRooms = roomData.rooms.filter(r => r.status === 'active' && r.vacantBeds > 0);
+
+          availableRooms.forEach(r => {
+            roomSelect.innerHTML += `<option value="${r.id}">Room ${r.roomNumber} (${r.floor}) - ₹${r.monthlyFee}/mo (${r.vacantBeds} beds available)</option>`;
+          });
+
+          if (preSelectedRoomId) {
+            roomSelect.value = preSelectedRoomId;
+            onAllocationRoomChange();
+          }
+
+          openModal('allocateModal');
+        } else {
+          alert('Failed to load allocation options.');
+        }
+      } catch (err) {
+        alert('Server fetch failed: ' + err.message);
+      }
+    }
+
+    async function openAllocateModalWithStudent(studentId) {
+      await openAllocateModal();
+      document.getElementById('allocStudent').value = studentId;
+    }
+
+    async function openTransferModal(studentId, studentName) {
+      closeModal('roomDetailsModal');
+      document.getElementById('transStudentId').value = studentId;
+      document.getElementById('transStudentName').value = studentName;
+      document.getElementById('selectedTransBedId').value = '';
+      document.getElementById('transBedContainer').innerHTML = '';
+      if (document.getElementById('transReason')) document.getElementById('transReason').value = '';
+
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch('/api/rooms', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+          const select = document.getElementById('transRoom');
+          select.innerHTML = '<option value="">Choose target room...</option>';
+          data.rooms.forEach(r => {
+            if (r.status === 'active' && r.vacantBeds > 0) {
+              select.innerHTML += `<option value="${r.id}">Room ${r.roomNumber} (${r.floor}) - ${r.vacantBeds} beds available</option>`;
+            }
+          });
+          openModal('transferModal');
+        }
+      } catch (err) {
+        alert('Failed to load target rooms list.');
+      }
+    }
+
     async function fetchRoomsDatabase() {
+      const token = localStorage.getItem('token');
+      const container = document.getElementById('roomsContainer');
+      if (container) {
+        container.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Fetching room setup details...</p>';
+      }
+
+      try {
+        const res = await fetch('/api/rooms', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          cachedRoomsData = data.rooms || [];
+
+          // Update KPI metrics
+          if (data.summary) {
+            const sm = data.summary;
+            const setKpi = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
+            setKpi('kpiTotalRooms', sm.totalRooms || 0);
+            setKpi('kpiTotalBeds', sm.totalBeds || 0);
+            setKpi('kpiOccupiedBeds', sm.occupiedBeds || 0);
+            setKpi('kpiVacantBeds', sm.vacantBeds || 0);
+            setKpi('kpiReservedBeds', sm.reservedBeds || 0);
+            setKpi('kpiMaintenanceBeds', sm.maintenanceBeds || 0);
+            setKpi('kpiOccupancyRate', (sm.occupancyRate || 0) + '%');
+          }
+
+          // Populate filter dropdowns
+          populateRoomFilters(cachedRoomsData);
+
+          // Render cards
+          filterRoomsDisplay();
+        } else {
+          if (container) container.innerHTML = `<p style="text-align:center; color:var(--error); grid-column: 1/-1;">${data.message}</p>`;
+        }
+      } catch (err) {
+        console.error('Error fetching rooms:', err);
+        if (container) container.innerHTML = '<p style="text-align:center; color:var(--error); grid-column: 1/-1;">Connection error. Check backend server.</p>';
+      }
+    }
+
+    // Rooms Directory database rendering
+    async function _legacy_fetchRoomsDatabase() {
       const token = localStorage.getItem('token');
       const container = document.getElementById('roomsContainer');
       container.innerHTML = '<p style="text-align:center; grid-column: 1/-1;">Fetching room setup details...</p>';
@@ -2419,7 +3475,7 @@
     }
 
     // Create Room Handling
-    function openCreateRoomModal() {
+    function _legacy_openCreateRoomModal() {
       document.getElementById('createRoomForm').reset();
       openModal('createRoomModal');
     }
@@ -2463,7 +3519,7 @@
     });
 
     // Edit Room Handling
-    function openEditRoomModal(id, num, cap, fee, floor, block, roomType, status) {
+    function _legacy_openEditRoomModal(id, num, cap, fee, floor, block, roomType, status) {
       document.getElementById('editRoomId').value = id;
       document.getElementById('editRoomNum').value = num;
       document.getElementById('editRoomCap').value = cap;
@@ -2516,7 +3572,7 @@
     });
 
     // Delete Room
-    async function deleteRoom(id, roomNumber) {
+    async function _legacy_deleteRoom(id, roomNumber) {
       if (!confirm(`Are you sure you want to delete Room ${roomNumber}? Note: Rooms with occupied beds cannot be deleted.`)) {
         return;
       }
@@ -2541,7 +3597,7 @@
     }
 
     // View Room occupancy details & bed board
-    async function viewRoomDetails(roomId) {
+    async function _legacy_viewRoomDetails(roomId) {
       activeDetailsRoomId = roomId;
       const token = localStorage.getItem('token');
       try {
@@ -2565,6 +3621,7 @@
             const node = document.createElement('div');
             const isOcc = bed.status === 'occupied';
             const isMaint = bed.status === 'maintenance';
+            const isRes = bed.status === 'reserved';
             const bedName = bed.bedLabel || `Bed ${bed.bedNumber}`;
             
             node.className = `bed-select-node ${isOcc ? 'occupied' : ''}`;
@@ -2649,12 +3706,12 @@
       }
     }
 
-    function openAllocateFromDetails() {
+    function _legacy_openAllocateFromDetails() {
       closeModal('roomDetailsModal');
       openAllocateModal(activeDetailsRoomId);
     }
 
-    function openEditFromDetails() {
+    function _legacy_openEditFromDetails() {
       closeModal('roomDetailsModal');
       // Fetch details and trigger edit modal
       const token = localStorage.getItem('token');
@@ -2670,7 +3727,7 @@
       });
     }
 
-    async function toggleBedMaintenance(bedId, newStatus, roomId) {
+    async function _legacy_toggleBedMaintenance(bedId, newStatus, roomId) {
       const token = localStorage.getItem('token');
       try {
         const res = await fetch(`/api/rooms/beds/${bedId}/status`, {
@@ -2694,7 +3751,7 @@
       }
     }
 
-    async function openTransferModal(studentId, studentName) {
+    async function _legacy_openTransferModal(studentId, studentName) {
       closeModal('roomDetailsModal');
       document.getElementById('transStudentId').value = studentId;
       document.getElementById('transStudentName').value = studentName;
@@ -2788,7 +3845,7 @@
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({ studentId, targetRoomId, targetBedId })
+            body: JSON.stringify({ studentId, targetRoomId, targetBedId, reason: (document.getElementById('transReason') ? document.getElementById('transReason').value : '') || 'Room/Bed Transfer' })
           });
           const data = await res.json();
           if (data.success) {
@@ -2807,7 +3864,7 @@
     }
 
     // Allocation triggers
-    async function openAllocateModal(preSelectedRoomId = null) {
+    async function _legacy_openAllocateModal(preSelectedRoomId = null) {
       const token = localStorage.getItem('token');
       document.getElementById('allocateForm').reset();
       document.getElementById('allocBedGroup').style.display = 'none';
@@ -2860,10 +3917,31 @@
       }
     }
 
-    async function openAllocateModalWithStudent(studentId) {
+    async function _legacy_openAllocateModalWithStudent(studentId) {
       await openAllocateModal();
       document.getElementById('allocStudent').value = studentId;
     }
+
+    
+    function formatAppTimestamp(ts) {
+      if (!ts) return 'N/A';
+      try {
+        const d = new Date(ts);
+        if (isNaN(d.getTime())) return 'N/A';
+        return d.toLocaleString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        });
+      } catch (_) {
+        return String(ts);
+      }
+    }
+    window.formatAppTimestamp = formatAppTimestamp;
 
     let currentReviewAppId = null;
     let currentReviewAppObj = null;
@@ -2875,7 +3953,7 @@
       const tbody = document.getElementById('applicationsTableBody');
       if (!tbody) return;
 
-      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px;">Loading applications...</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px;">Loading applications...</td></tr>`;
 
       try {
         const res = await fetch(`/api/admin/applications?status=${statusFilter}`, {
@@ -2885,6 +3963,12 @@
 
         if (data.success) {
           const apps = data.applications || [];
+          apps.sort((a, b) => {
+            const timeA = new Date(a.submittedAt || a.createdAt || 0).getTime();
+            const timeB = new Date(b.submittedAt || b.createdAt || 0).getTime();
+            if (timeB !== timeA) return timeB - timeA;
+            return (b.id || 0) - (a.id || 0);
+          });
           
           // Update badge count for pending review
           const pendingCount = apps.filter(a => a.applicationStatus === 'PENDING').length;
@@ -2895,7 +3979,7 @@
           }
 
           if (apps.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">No applications found for filter "${statusFilter}".</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);">No applications found for filter "${statusFilter}".</td></tr>`;
             return;
           }
 
@@ -2931,6 +4015,7 @@
                 <div style="font-size:0.75rem; color:var(--text-muted);">${app.branch || app.course || ''} (${app.year || ''})</div>
               </td>
               <td style="padding:12px; font-weight:600; vertical-align:top; white-space:nowrap;">${app.preferredRoomType || '3 Sharing'}</td>
+              <td style="padding:12px; font-size:0.8rem; color:#475569; white-space:nowrap; vertical-align:middle;">${formatAppTimestamp(app.submittedAt || app.createdAt)}</td>
               <td style="padding:12px; text-align:center; vertical-align:top;">
                 <span style="display:inline-block; padding:4px 10px; border-radius:12px; font-size:0.72rem; font-weight:700; text-transform:uppercase; ${statusBadgeStyle}">
                   ${statusText.replace('_', ' ')}
@@ -2950,7 +4035,7 @@
         }
       } catch (err) {
         console.error('Fetch apps error:', err);
-        tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px; color:#ef4444;">Failed to load applications: ${err.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:20px; color:#ef4444;">Failed to load applications: ${err.message}</td></tr>`;
       }
     }
 
@@ -2976,6 +4061,7 @@
       body.innerHTML = `
         <div><strong>Applicant Name:</strong> ${app.studentName}</div>
         <div><strong>Mobile Number:</strong> ${app.phone}</div>
+        <div><strong>Submission Time:</strong> <span style="font-weight:700; color:var(--primary-deep);">${formatAppTimestamp(app.submittedAt || app.createdAt)}</span></div>
         <div><strong>Aadhaar Number:</strong> ${app.aadhaarNumber || 'N/A'}</div>
         <div><strong>College:</strong> ${app.collegeName}</div>
         <div><strong>Branch / Course:</strong> ${app.branch || app.course || 'N/A'}</div>
@@ -3054,18 +4140,19 @@
           data.beds.forEach(bed => {
             const isOcc = bed.status === 'occupied';
             const isMaint = bed.status === 'maintenance';
+            const isRes = bed.status === 'reserved';
             const bedName = bed.bedLabel || `Bed ${bed.bedNumber}`;
 
             const node = document.createElement('div');
-            node.className = `bed-select-node ${isOcc || isMaint ? 'occupied' : ''}`;
+            node.className = `bed-select-node ${isOcc || isMaint || isRes ? 'occupied' : ''}`;
             node.innerHTML = `
               <div>${bedName}</div>
-              <div style="font-size:0.55rem; font-weight:700; color:${isOcc ? '#ef4444' : (isMaint ? '#d97706' : '#10b981')}; text-transform:uppercase;">
-                ${isOcc ? 'Occupied' : (isMaint ? 'Maintenance' : 'Available')}
+              <div style="font-size:0.55rem; font-weight:700; color:${isOcc ? '#ef4444' : (isMaint ? '#d97706' : (isRes ? '#3b82f6' : '#10b981'))}; text-transform:uppercase;">
+                ${isOcc ? 'Occupied' : (isMaint ? 'Maintenance' : (isRes ? 'Reserved' : 'Available'))}
               </div>
             `;
             
-            if (!isOcc && !isMaint) {
+            if (!isOcc && !isMaint && !isRes) {
               node.setAttribute('onclick', `selectAllocationBed(this, ${bed.id})`);
             }
             container.appendChild(node);
@@ -3091,7 +4178,8 @@
       const payload = {
         studentId: document.getElementById('allocStudent').value,
         roomId: document.getElementById('allocRoom').value,
-        bedId: document.getElementById('selectedBedId').value
+        bedId: document.getElementById('selectedBedId').value,
+        reason: (document.getElementById('allocReason') ? document.getElementById('allocReason').value : '') || 'Admission Allocation'
       };
 
       if (!payload.studentId) {
@@ -3742,7 +4830,7 @@
       const statusFilter = document.getElementById('appStatusFilter') ? document.getElementById('appStatusFilter').value : 'all';
       if (!tableBody) return;
 
-      tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">Fetching applications...</td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);">Fetching applications...</td></tr>';
 
       try {
         const res = await fetch(`/api/admin/applications?status=${statusFilter}`, {
@@ -3752,6 +4840,12 @@
 
         if (data.success) {
           const apps = data.applications || [];
+          apps.sort((a, b) => {
+            const timeA = new Date(a.submittedAt || a.createdAt || 0).getTime();
+            const timeB = new Date(b.submittedAt || b.createdAt || 0).getTime();
+            if (timeB !== timeA) return timeB - timeA;
+            return (b.id || 0) - (a.id || 0);
+          });
           const pendingCount = apps.filter(a => (a.applicationStatus || a.applicationstatus) === 'PENDING').length;
           const pendingBadge = document.getElementById('pendingBadge');
           if (pendingBadge) {
@@ -3764,7 +4858,7 @@
           }
 
           if (apps.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:var(--text-muted);">No applications found.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);">No applications found.</td></tr>';
             return;
           }
 
@@ -3791,6 +4885,7 @@
               <td style="padding:12px;">${phone}</td>
               <td style="padding:12px;">${college} ${course ? `(${course})` : ''}</td>
               <td style="padding:12px;">${prefRoom}</td>
+              <td style="padding:12px; font-size:0.8rem; color:#475569; white-space:nowrap; vertical-align:middle;">${formatAppTimestamp(app.submittedAt || app.createdAt)}</td>
               <td style="padding:12px; text-align:center;"><span class="status-badge ${statusBadgeClass}">${status}</span></td>
               <td style="padding:12px; text-align:right;">
                 <button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem; border-color:var(--primary-brand); color:var(--primary-deep);" onclick="openAppReviewModal(${app.id})">Review Docs</button>
@@ -3803,7 +4898,7 @@
         }
       } catch (err) {
         console.error('Fetch applications error:', err);
-        tableBody.innerHTML = '<tr><td colspan="7" style="text-align:center; color:#ef4444;">Failed to load applications.</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; color:#ef4444;">Failed to load applications.</td></tr>';
       }
     }
 
@@ -3862,6 +4957,7 @@
           reviewBody.innerHTML = `
             <div><strong>Student Name:</strong> ${student.studentName}</div>
             <div><strong>Mobile Number:</strong> ${student.phone}</div>
+            <div><strong>Submission Time:</strong> <span style="font-weight:700; color:var(--primary-deep);">${formatAppTimestamp(student.submittedAt || student.createdAt)}</span></div>
             <div><strong>Date of Birth:</strong> ${student.dateOfBirth ? student.dateOfBirth.split('T')[0] : 'N/A'}</div>
             <div><strong>Gender:</strong> ${student.gender || 'Male'}</div>
             <div><strong>Aadhaar Number:</strong> ${maskAadhaar(student.aadhaarNumber)}</div>

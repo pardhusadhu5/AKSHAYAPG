@@ -180,7 +180,7 @@ async function getStudentsList(req, res) {
       query += ` AND s.year = $${params.length}`;
     }
 
-    query += ` ORDER BY s.id ASC`;
+    query += ` ORDER BY COALESCE(s.submittedAt, s.createdAt) DESC, s.id DESC`;
     
     const { rows: list } = await db.query(query, params);
     res.status(200).json({ success: true, students: list });
@@ -645,7 +645,7 @@ async function getApplications(req, res) {
       query += ` AND UPPER(s.applicationStatus) = $${params.length}`;
     }
 
-    query += ` ORDER BY s.id ASC`;
+    query += ` ORDER BY COALESCE(s.submittedAt, s.createdAt) DESC, s.id DESC`;
 
     const { rows: applications } = await db.query(query, params);
     const normalizedApps = applications.map(app => ({
@@ -669,7 +669,10 @@ async function getApplications(req, res) {
       rollNumber: app.rollnumber || app.rollNumber,
       roomNumber: app.roomnumber || app.roomNumber,
       bedNumber: app.bednumber || app.bedNumber,
-      bedLabel: app.bedlabel || app.bedLabel
+      bedLabel: app.bedlabel || app.bedLabel,
+      submittedAt: app.submittedat || app.submittedAt || app.createdat || app.createdAt,
+      createdAt: app.createdat || app.createdAt,
+      updatedAt: app.updatedat || app.updatedAt
     }));
     res.status(200).json({ success: true, applications: normalizedApps });
   } catch (err) {

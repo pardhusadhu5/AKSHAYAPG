@@ -86,6 +86,7 @@ async function initializeDatabase(db) {
     ALTER TABLE rooms ADD COLUMN IF NOT EXISTS floor VARCHAR(255) NOT NULL DEFAULT 'Ground Floor';
     ALTER TABLE rooms ADD COLUMN IF NOT EXISTS block VARCHAR(255) NOT NULL DEFAULT 'Block A';
     ALTER TABLE rooms ADD COLUMN IF NOT EXISTS roomType VARCHAR(255) NOT NULL DEFAULT 'Triple Sharing';
+    ALTER TABLE rooms ADD COLUMN IF NOT EXISTS status VARCHAR(255) NOT NULL DEFAULT 'active';
   `).catch(() => {});
 
   // 3. Beds Table
@@ -103,7 +104,11 @@ async function initializeDatabase(db) {
     )
   `);
 
-  await db.query(`ALTER TABLE beds ADD COLUMN IF NOT EXISTS bedLabel VARCHAR(255)`).catch(() => {});
+  await db.query(`
+    ALTER TABLE beds ADD COLUMN IF NOT EXISTS bedLabel VARCHAR(255);
+    ALTER TABLE beds ADD COLUMN IF NOT EXISTS blockedReason TEXT;
+    ALTER TABLE beds ADD COLUMN IF NOT EXISTS reservedFor VARCHAR(255);
+  `).catch(() => {});
 
   // 4. Students Table
   await db.query(`
@@ -144,13 +149,15 @@ async function initializeDatabase(db) {
       roomId INTEGER REFERENCES rooms(id) ON DELETE SET NULL,
       bedId INTEGER REFERENCES beds(id) ON DELETE SET NULL,
       paymentStatus VARCHAR(255) NOT NULL DEFAULT 'paid',
+      submittedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
 
   await db.query(`
-    ALTER TABLE students 
+    ALTER TABLE students
+      ADD COLUMN IF NOT EXISTS submittedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
       ADD COLUMN IF NOT EXISTS studentCustomId VARCHAR(255),
       ADD COLUMN IF NOT EXISTS applicationId VARCHAR(255),
       ADD COLUMN IF NOT EXISTS applicationStatus VARCHAR(255) NOT NULL DEFAULT 'PENDING',
@@ -180,6 +187,7 @@ async function initializeDatabase(db) {
       ADD COLUMN IF NOT EXISTS stayDuration INTEGER,
       ADD COLUMN IF NOT EXISTS applicationRemarks TEXT,
       DROP CONSTRAINT IF EXISTS students_status_check;
+    UPDATE students SET submittedAt = createdAt WHERE submittedAt IS NULL;
   `).catch((err) => { console.error('Migration notice:', err.message); });
 
   // 5. Documents Table
@@ -216,6 +224,8 @@ async function initializeDatabase(db) {
 
   await db.query(`ALTER TABLE documents ALTER COLUMN name DROP NOT NULL;`).catch(() => {});
 
+  await db.query(`CREATE TABLE IF NOT EXISTS password_resets (id SERIAL PRIMARY KEY, userId INTEGER REFERENCES users(id) ON DELETE CASCADE, token VARCHAR(255) NOT NULL, expiresAt TIMESTAMP NOT NULL, isUsed BOOLEAN DEFAULT false, createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`).catch(() => {});
+  
   // 6. Password Reset Requests Table (Non-OTP)
   await db.query(`
     CREATE TABLE IF NOT EXISTS password_reset_requests (
@@ -242,6 +252,18 @@ async function initializeDatabase(db) {
       status VARCHAR(255) NOT NULL DEFAULT 'active'
     )
   `);
+
+  await db.query(`
+    ALTER TABLE allocations
+      ADD COLUMN IF NOT EXISTS fromRoomId INTEGER REFERENCES rooms(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS fromBedId INTEGER REFERENCES beds(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS reason TEXT,
+      ADD COLUMN IF NOT EXISTS notes TEXT;
+    CREATE INDEX IF NOT EXISTS idx_allocations_student ON allocations(studentId);
+    CREATE INDEX IF NOT EXISTS idx_allocations_room ON allocations(roomId);
+    CREATE INDEX IF NOT EXISTS idx_allocations_bed ON allocations(bedId);
+    CREATE INDEX IF NOT EXISTS idx_allocations_status ON allocations(status);
+  `).catch(() => {});
 
   // 6. Payments Table
   await db.query(`
@@ -331,6 +353,8 @@ async function initializeDatabase(db) {
     CREATE INDEX IF NOT EXISTS idx_students_roomid ON students(roomId);
     CREATE INDEX IF NOT EXISTS idx_students_bedid ON students(bedId);
     CREATE INDEX IF NOT EXISTS idx_students_userid ON students(userId);
+    CREATE INDEX IF NOT EXISTS idx_students_submittedat ON students(submittedAt DESC);
+    CREATE INDEX IF NOT EXISTS idx_students_createdat ON students(createdAt DESC);
   `).catch((err) => { console.error('Index creation notice:', err.message); });
 
   // Seed default admin
@@ -412,14 +436,6 @@ async function initializeDatabase(db) {
       await db.query('ROLLBACK');
       console.error('Room Seeding Error:', err);
     }
-  }
-
-  // Seed sample students if empty (DISABLED to start with clean real admission workflow)
-  if (false) {
-    await db.query('BEGIN');
-    try {
-      const mockStudents = [];
-    } catch (_) {}
   }
 
   // Seed default hostel settings if empty

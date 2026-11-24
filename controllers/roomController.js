@@ -14,8 +14,7 @@ function getBedLetter(index) {
 
 // Helper function to calculate room display status
 function calculateRoomStatus(room, occupiedCount) {
-  if (room.status === 'maintenance') return 'Maintenance';
-  if (room.status === 'inactive') return 'Maintenance';
+  if (room.status === 'maintenance' || room.status === 'inactive') return 'Maintenance';
   const cap = parseInt(room.capacity || 0);
   const occ = parseInt(occupiedCount || 0);
   if (occ === 0) return 'Available';
@@ -28,11 +27,12 @@ async function getAllRooms(req, res) {
   try {
     const db = await getDb();
     
-    // 1. Fetch all rooms
+    // 1. Fetch all rooms with status counts
     const roomsPromise = db.query(`
       SELECT r.*,
         (SELECT COUNT(*) FROM beds b WHERE b.roomId = r.id AND b.status = 'occupied') as occupiedBeds,
         (SELECT COUNT(*) FROM beds b WHERE b.roomId = r.id AND b.status = 'vacant') as vacantBeds,
+        (SELECT COUNT(*) FROM beds b WHERE b.roomId = r.id AND b.status = 'reserved') as reservedBeds,
         (SELECT COUNT(*) FROM beds b WHERE b.roomId = r.id AND b.status = 'maintenance') as maintenanceBeds
       FROM rooms r
       ORDER BY r.roomNumber ASC
@@ -40,7 +40,7 @@ async function getAllRooms(req, res) {
 
     // 2. Fetch all beds for all rooms in 1 batch query
     const bedsPromise = db.query(`
-      SELECT b.id, b.roomId, b.bedNumber, b.bedLabel, b.status, b.userId,
+      SELECT b.id, b.roomId, b.bedNumber, b.bedLabel, b.status, b.blockedReason, b.reservedFor, b.userId,
              s.id as studentId, s.studentCustomId, s.studentName, s.joinDate
       FROM beds b
       LEFT JOIN users u ON b.userId = u.id
@@ -71,6 +71,8 @@ async function getAllRooms(req, res) {
       b.id = b.id;
       b.bedNumber = b.bedNumber || b.bednumber;
       b.bedLabel = b.bedLabel || b.bedlabel;
+      b.blockedReason = b.blockedReason || b.blockedreason;
+      b.reservedFor = b.reservedFor || b.reservedfor;
       b.studentId = b.studentId || b.studentid;
       b.studentCustomId = b.studentCustomId || b.studentcustomid;
       b.studentName = b.studentName || b.studentname;
@@ -91,6 +93,13 @@ async function getAllRooms(req, res) {
       occupantsByRoom[rId].push(occ);
     }
 
+    let totalRooms = rooms.length;
+    let totalBeds = 0;
+    let occupiedBeds = 0;
+    let vacantBeds = 0;
+    let reservedBeds = 0;
+    let maintenanceBeds = 0;
+
     for (let room of rooms) {
       const roomId = room.id;
       room.roomNumber = room.roomnumber || room.roomNumber;
@@ -99,22 +108,139 @@ async function getAllRooms(req, res) {
       room.capacity = parseInt(room.capacity || 0);
       room.floor = room.floor || 'Floor 1';
       room.block = room.block || 'Main Block';
+      room.status = room.status || 'active';
       room.occupiedBeds = parseInt(room.occupiedbeds || room.occupiedBeds || 0);
       room.vacantBeds = parseInt(room.vacantbeds || room.vacantBeds || 0);
+      room.reservedBeds = parseInt(room.reservedbeds || room.reservedBeds || 0);
       room.maintenanceBeds = parseInt(room.maintenancebeds || room.maintenanceBeds || 0);
       room.displayStatus = calculateRoomStatus(room, room.occupiedBeds);
       room.currentStudents = occupantsByRoom[roomId] || [];
       room.beds = bedsByRoom[roomId] || [];
+
+      totalBeds += room.capacity;
+      occupiedBeds += room.occupiedBeds;
+      vacantBeds += room.vacantBeds;
+      reservedBeds += room.reservedBeds;
+      maintenanceBeds += room.maintenanceBeds;
     }
 
-    res.status(200).json({ success: true, rooms });
+    const occupancyRate = totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0;
+
+    res.status(200).json({
+      success: true,
+      rooms,
+      summary: {
+        totalRooms,
+        totalBeds,
+        occupiedBeds,
+        vacantBeds,
+        reservedBeds,
+        maintenanceBeds,
+        occupancyRate
+      }
+    });
   } catch (err) {
     console.error('Fetch Rooms Error:', err);
     res.status(500).json({ success: false, message: `Failed to fetch rooms: ${err.message}` });
   }
 }
 
-// Fetch single room details including all beds and assigned students
+// Fetch buildings and floors metadata with floor-wise occupancy
+async function getBuildingsAndFloors(req, res) {
+  try {
+    const db = await getDb();
+    const { rows: blocks } = await db.query(`SELECT DISTINCT block FROM rooms WHERE block IS NOT NULL AND block != '' ORDER BY block ASC`);
+    const { rows: floors } = await db.query(`SELECT DISTINCT floor FROM rooms WHERE floor IS NOT NULL AND floor != '' ORDER BY floor ASC`);
+    
+    // Floor-wise stats
+    const { rows: floorStats } = await db.query(`
+      SELECT r.floor,
+        COUNT(DISTINCT r.id) as totalrooms,
+        COALESCE(SUM(r.capacity), 0) as totalbeds,
+        COUNT(CASE WHEN b.status = 'occupied' THEN 1 END) as occupiedbeds,
+        COUNT(CASE WHEN b.status = 'vacant' THEN 1 END) as vacantbeds,
+        COUNT(CASE WHEN b.status = 'reserved' THEN 1 END) as reservedbeds,
+        COUNT(CASE WHEN b.status = 'maintenance' THEN 1 END) as maintenancebeds
+      FROM rooms r
+      LEFT JOIN beds b ON b.roomId = r.id
+      GROUP BY r.floor
+      ORDER BY r.floor ASC
+    `);
+
+    const formattedFloorStats = floorStats.map(f => {
+      const totBeds = parseInt(f.totalbeds || 0);
+      const occBeds = parseInt(f.occupiedbeds || 0);
+      return {
+        floor: f.floor,
+        totalRooms: parseInt(f.totalrooms || 0),
+        totalBeds: totBeds,
+        occupiedBeds: occBeds,
+        vacantBeds: parseInt(f.vacantbeds || 0),
+        reservedBeds: parseInt(f.reservedbeds || 0),
+        maintenanceBeds: parseInt(f.maintenancebeds || 0),
+        occupancyRate: totBeds > 0 ? Math.round((occBeds / totBeds) * 100) : 0
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      blocks: blocks.map(b => b.block),
+      floors: floors.map(f => f.floor),
+      floorStats: formattedFloorStats
+    });
+  } catch (err) {
+    console.error('Buildings & Floors Meta Error:', err);
+    res.status(500).json({ success: false, message: `Failed to fetch building & floor metadata: ${err.message}` });
+  }
+}
+
+// Allocation & transfer history
+async function getAllocationHistory(req, res) {
+  try {
+    const { roomId, studentId, status, limit = 50 } = req.query;
+    const db = await getDb();
+
+    let sql = `
+      SELECT a.*,
+             s.studentName, s.studentCustomId, s.phone, s.collegeName, s.photo,
+             r.roomNumber, r.floor, r.block,
+             b.bedNumber, b.bedLabel,
+             fr.roomNumber as fromRoomNumber,
+             fb.bedNumber as fromBedNumber, fb.bedLabel as fromBedLabel
+      FROM allocations a
+      JOIN students s ON a.studentId = s.id
+      LEFT JOIN rooms r ON a.roomId = r.id
+      LEFT JOIN beds b ON a.bedId = b.id
+      LEFT JOIN rooms fr ON a.fromRoomId = fr.id
+      LEFT JOIN beds fb ON a.fromBedId = fb.id
+      WHERE 1=1
+    `;
+    const params = [];
+    if (roomId) {
+      params.push(roomId);
+      sql += ` AND (a.roomId = $${params.length} OR a.fromRoomId = $${params.length})`;
+    }
+    if (studentId) {
+      params.push(studentId);
+      sql += ` AND a.studentId = $${params.length}`;
+    }
+    if (status) {
+      params.push(status);
+      sql += ` AND a.status = $${params.length}`;
+    }
+
+    sql += ` ORDER BY a.allocatedAt DESC LIMIT $${params.length + 1}`;
+    params.push(parseInt(limit));
+
+    const { rows: history } = await db.query(sql, params);
+    res.status(200).json({ success: true, history });
+  } catch (err) {
+    console.error('Allocation History Error:', err);
+    res.status(500).json({ success: false, message: `Failed to fetch allocation history: ${err.message}` });
+  }
+}
+
+// Fetch single room details including all beds, assigned students, and recent history
 async function getRoomDetails(req, res) {
   try {
     const { id } = req.params;
@@ -124,6 +250,7 @@ async function getRoomDetails(req, res) {
       SELECT r.*,
         (SELECT COUNT(*) FROM beds b WHERE b.roomId = r.id AND b.status = 'occupied') as occupiedBeds,
         (SELECT COUNT(*) FROM beds b WHERE b.roomId = r.id AND b.status = 'vacant') as vacantBeds,
+        (SELECT COUNT(*) FROM beds b WHERE b.roomId = r.id AND b.status = 'reserved') as reservedBeds,
         (SELECT COUNT(*) FROM beds b WHERE b.roomId = r.id AND b.status = 'maintenance') as maintenanceBeds
       FROM rooms r
       WHERE r.id = $1
@@ -140,14 +267,16 @@ async function getRoomDetails(req, res) {
     room.capacity = parseInt(room.capacity || 0);
     room.floor = room.floor || 'Floor 1';
     room.block = room.block || 'Main Block';
+    room.status = room.status || 'active';
     room.occupiedBeds = parseInt(room.occupiedbeds || room.occupiedBeds || 0);
     room.vacantBeds = parseInt(room.vacantbeds || room.vacantBeds || 0);
+    room.reservedBeds = parseInt(room.reservedbeds || room.reservedBeds || 0);
     room.maintenanceBeds = parseInt(room.maintenancebeds || room.maintenanceBeds || 0);
     room.displayStatus = calculateRoomStatus(room, room.occupiedBeds);
 
     // Get all beds in room
     const { rows: beds } = await db.query(`
-      SELECT b.id, b.bedNumber, b.bedLabel, b.status, b.userId,
+      SELECT b.id, b.bedNumber, b.bedLabel, b.status, b.blockedReason, b.reservedFor, b.userId,
              s.id as studentId, s.studentCustomId, s.studentName, s.phone, s.joinDate
       FROM beds b
       LEFT JOIN users u ON b.userId = u.id
@@ -166,11 +295,23 @@ async function getRoomDetails(req, res) {
       ORDER BY b.bedNumber ASC
     `, [id]);
 
+    // Get recent room allocation history
+    const { rows: history } = await db.query(`
+      SELECT a.*, s.studentName, s.studentCustomId, s.phone, b.bedLabel, b.bedNumber
+      FROM allocations a
+      JOIN students s ON a.studentId = s.id
+      LEFT JOIN beds b ON a.bedId = b.id
+      WHERE a.roomId = $1 OR a.fromRoomId = $1
+      ORDER BY a.allocatedAt DESC
+      LIMIT 10
+    `, [id]);
+
     res.status(200).json({
       success: true,
       room,
       beds,
-      students
+      students,
+      history
     });
   } catch (err) {
     console.error('Fetch Room Details Error:', err);
@@ -200,7 +341,15 @@ async function createRoom(req, res) {
       return res.status(400).json({ success: false, message: `Room number "${roomNumber}" already exists.` });
     }
 
-    let calculatedType = roomType || `${totalBeds} Sharing`;
+    const standardTypes = {
+      1: '1 Sharing (Single)',
+      2: '2 Sharing (Double)',
+      3: '3 Sharing (Triple)',
+      4: '4 Sharing (Four)',
+      5: '5 Sharing (Five)',
+      6: '6 Sharing (Six)'
+    };
+    let calculatedType = roomType || standardTypes[totalBeds] || `${totalBeds} Sharing`;
 
     await db.query('BEGIN');
 
@@ -277,9 +426,9 @@ async function editRoom(req, res) {
     let bedsToDelete = [];
     if (totalBeds !== currentRoom.capacity) {
       if (totalBeds < currentRoom.capacity) {
-        // Count occupied beds
+        // Count non-vacant beds (occupied, reserved)
         const { rows: occCheck } = await db.query(
-          `SELECT COUNT(*) as count FROM beds WHERE roomId = $1 AND status = 'occupied'`,
+          `SELECT COUNT(*) as count FROM beds WHERE roomId = $1 AND status != 'vacant'`,
           [id]
         );
         const occupiedCount = parseInt(occCheck[0].count);
@@ -287,7 +436,7 @@ async function editRoom(req, res) {
         if (totalBeds < occupiedCount) {
           return res.status(400).json({
             success: false,
-            message: `Cannot reduce this room to ${totalBeds} sharing because ${occupiedCount} beds are currently occupied.`
+            message: `Cannot reduce this room to ${totalBeds} sharing because ${occupiedCount} beds are currently occupied or reserved.`
           });
         }
 
@@ -336,8 +485,17 @@ async function editRoom(req, res) {
       }
     }
 
+    const standardTypes = {
+      1: '1 Sharing (Single)',
+      2: '2 Sharing (Double)',
+      3: '3 Sharing (Triple)',
+      4: '4 Sharing (Four)',
+      5: '5 Sharing (Five)',
+      6: '6 Sharing (Six)'
+    };
+    let calculatedType = roomType || standardTypes[totalBeds] || `${totalBeds} Sharing`;
+
     // Update Room
-    let calculatedType = roomType || `${totalBeds} Sharing`;
     await db.query(
       `UPDATE rooms 
        SET roomNumber = $1, capacity = $2, monthlyFee = $3, floor = $4, block = $5, roomType = $6, status = $7, updatedAt = CURRENT_TIMESTAMP 
@@ -358,6 +516,34 @@ async function editRoom(req, res) {
     } catch (_) {}
     console.error('Edit Room Error:', err);
     res.status(500).json({ success: false, message: `Failed to update room: ${err.message}` });
+  }
+}
+
+// Toggle room maintenance mode
+async function toggleRoomMaintenance(req, res) {
+  try {
+    const { id } = req.params;
+    const db = await getDb();
+
+    const { rows: roomRows } = await db.query('SELECT * FROM rooms WHERE id = $1', [id]);
+    const room = roomRows[0];
+    if (!room) {
+      return res.status(404).json({ success: false, message: 'Room not found.' });
+    }
+
+    const currentStatus = room.status || 'active';
+    const nextStatus = currentStatus === 'maintenance' ? 'active' : 'maintenance';
+
+    await db.query('UPDATE rooms SET status = $1, updatedAt = CURRENT_TIMESTAMP WHERE id = $2', [nextStatus, id]);
+
+    res.status(200).json({
+      success: true,
+      message: `Room ${room.roomNumber} status set to ${nextStatus === 'maintenance' ? 'Maintenance' : 'Active'}.`,
+      status: nextStatus
+    });
+  } catch (err) {
+    console.error('Toggle Maintenance Error:', err);
+    res.status(500).json({ success: false, message: `Failed to update room status: ${err.message}` });
   }
 }
 
@@ -435,16 +621,16 @@ async function getVacantBeds(req, res) {
   }
 }
 
-// Update bed status (e.g. toggle maintenance / vacant)
+// Update bed status (e.g. toggle maintenance / vacant / reserved)
 async function updateBedStatus(req, res) {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, blockedReason, reservedFor } = req.body;
     let targetStatus = (status || '').toLowerCase();
     if (targetStatus === 'available') targetStatus = 'vacant';
 
-    if (!['vacant', 'maintenance'].includes(targetStatus)) {
-      return res.status(400).json({ success: false, message: 'Status must be vacant or maintenance.' });
+    if (!['vacant', 'reserved', 'maintenance'].includes(targetStatus)) {
+      return res.status(400).json({ success: false, message: 'Status must be vacant, reserved, or maintenance.' });
     }
 
     const db = await getDb();
@@ -458,9 +644,20 @@ async function updateBedStatus(req, res) {
       return res.status(400).json({ success: false, message: 'Cannot change status of an occupied bed. Deallocate student first.' });
     }
 
-    await db.query('UPDATE beds SET status = $1, updatedAt = CURRENT_TIMESTAMP WHERE id = $2', [targetStatus, id]);
+    await db.query(
+      `UPDATE beds 
+       SET status = $1, blockedReason = $2, reservedFor = $3, updatedAt = CURRENT_TIMESTAMP 
+       WHERE id = $4`,
+      [
+        targetStatus,
+        targetStatus === 'vacant' ? null : (blockedReason || null),
+        targetStatus === 'reserved' ? (reservedFor || null) : null,
+        id
+      ]
+    );
 
-    res.status(200).json({ success: true, message: `Bed status updated to ${targetStatus === 'vacant' ? 'Available' : 'Maintenance'}.` });
+    const statusLabel = targetStatus === 'vacant' ? 'Available' : (targetStatus === 'reserved' ? 'Reserved' : 'Maintenance');
+    res.status(200).json({ success: true, message: `Bed status updated to ${statusLabel}.`, status: targetStatus });
   } catch (err) {
     console.error('Update Bed Status Error:', err);
     res.status(500).json({ success: false, message: `Failed to update bed status: ${err.message}` });
@@ -470,7 +667,7 @@ async function updateBedStatus(req, res) {
 // Allocate a student to a room and bed (with race-condition double-booking safety)
 async function allocateStudent(req, res) {
   try {
-    const { studentId, roomId, bedId } = req.body;
+    const { studentId, roomId, bedId, reason, notes } = req.body;
 
     if (!studentId || !roomId || !bedId) {
       return res.status(400).json({ success: false, message: 'Student ID, Room ID, and Bed ID are required.' });
@@ -514,7 +711,7 @@ async function allocateStudent(req, res) {
     }
     if (bed.status !== 'vacant') {
       await db.query('ROLLBACK');
-      return res.status(400).json({ success: false, message: 'Selected bed is no longer available (occupied or maintenance).' });
+      return res.status(400).json({ success: false, message: 'Selected bed is not available (occupied, reserved, or maintenance).' });
     }
 
     const studentNameVal = student.studentName || student.studentname;
@@ -533,14 +730,14 @@ async function allocateStudent(req, res) {
 
     // Update Bed to occupied
     await db.query(
-      `UPDATE beds SET status = 'occupied', userId = $1, updatedAt = CURRENT_TIMESTAMP WHERE id = $2`,
+      `UPDATE beds SET status = 'occupied', userId = $1, blockedReason = NULL, reservedFor = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = $2`,
       [studentUserIdVal, bedId]
     );
 
     // Record Allocation
     await db.query(
-      `INSERT INTO allocations (studentId, roomId, bedId, status) VALUES ($1, $2, $3, $4)`,
-      [studentId, roomId, bedId, 'active']
+      `INSERT INTO allocations (studentId, roomId, bedId, reason, notes, status) VALUES ($1, $2, $3, $4, $5, $6)`,
+      [studentId, roomId, bedId, reason || 'Admission Allocation', notes || null, 'active']
     );
 
     // Add Notification
@@ -568,7 +765,7 @@ async function allocateStudent(req, res) {
 // Deallocate a student from their room and bed
 async function deallocateStudent(req, res) {
   try {
-    const { studentId } = req.body;
+    const { studentId, reason, notes } = req.body;
 
     if (!studentId) {
       return res.status(400).json({ success: false, message: 'Student ID is required.' });
@@ -594,7 +791,7 @@ async function deallocateStudent(req, res) {
     // Vacate bed
     if (studentBedId) {
       await db.query(
-        `UPDATE beds SET status = 'vacant', userId = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = $1`,
+        `UPDATE beds SET status = 'vacant', userId = NULL, blockedReason = NULL, reservedFor = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = $1`,
         [studentBedId]
       );
     }
@@ -607,8 +804,10 @@ async function deallocateStudent(req, res) {
 
     // Update allocation record
     await db.query(
-      `UPDATE allocations SET vacatedAt = CURRENT_TIMESTAMP, status = 'vacated' WHERE studentId = $1 AND status = 'active'`,
-      [studentId]
+      `UPDATE allocations 
+       SET vacatedAt = CURRENT_TIMESTAMP, reason = COALESCE($2, reason), notes = COALESCE($3, notes), status = 'vacated' 
+       WHERE studentId = $1 AND status = 'active'`,
+      [studentId, reason || 'Student Checked Out / Vacated', notes || null]
     );
 
     await db.query('COMMIT');
@@ -630,6 +829,8 @@ async function transferStudent(req, res) {
     const studentId = req.body.studentId;
     const targetRoomId = req.body.targetRoomId || req.body.newRoomId || req.body.roomId;
     const targetBedId = req.body.targetBedId || req.body.newBedId || req.body.bedId;
+    const reason = req.body.reason || 'Room/Bed Transfer';
+    const notes = req.body.notes || null;
 
     if (!studentId || !targetRoomId || !targetBedId) {
       return res.status(400).json({ success: false, message: 'Student ID, target Room ID, and target Bed ID are required.' });
@@ -644,6 +845,7 @@ async function transferStudent(req, res) {
       return res.status(404).json({ success: false, message: 'Student record not found.' });
     }
 
+    const oldRoomId = student.roomid || student.roomId;
     const oldBedId = student.bedid || student.bedId;
     const studentUserId = student.userid || student.userId;
 
@@ -664,26 +866,26 @@ async function transferStudent(req, res) {
       return res.status(404).json({ success: false, message: 'Target bed not found in selected room.' });
     }
     if (bed.status !== 'vacant') {
-      return res.status(400).json({ success: false, message: 'Target bed is not available (occupied or maintenance).' });
+      return res.status(400).json({ success: false, message: 'Target bed is not available (occupied, reserved, or maintenance).' });
     }
 
     await db.query('BEGIN');
 
     // Vacate old bed & update old allocation
     if (oldBedId) {
-      await db.query(`UPDATE beds SET status = 'vacant', userId = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = $1`, [oldBedId]);
-      await db.query(`UPDATE allocations SET vacatedAt = CURRENT_TIMESTAMP, status = 'transferred' WHERE studentId = $1 AND status = 'active'`, [studentId]);
+      await db.query(`UPDATE beds SET status = 'vacant', userId = NULL, blockedReason = NULL, reservedFor = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = $1`, [oldBedId]);
+      await db.query(`UPDATE allocations SET vacatedAt = CURRENT_TIMESTAMP, reason = COALESCE($2, reason), status = 'transferred' WHERE studentId = $1 AND status = 'active'`, [studentId, reason]);
     }
 
     // Occupy target bed
-    await db.query(`UPDATE beds SET status = 'occupied', userId = $1, updatedAt = CURRENT_TIMESTAMP WHERE id = $2`, [studentUserId, targetBedId]);
+    await db.query(`UPDATE beds SET status = 'occupied', userId = $1, blockedReason = NULL, reservedFor = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = $2`, [studentUserId, targetBedId]);
 
     // Update Student
     const newRent = room.monthlyfee || room.monthlyFee || student.monthlyrent || student.monthlyRent || 8500;
     await db.query(`UPDATE students SET roomId = $1, bedId = $2, monthlyRent = $3, updatedAt = CURRENT_TIMESTAMP WHERE id = $4`, [targetRoomId, targetBedId, newRent, studentId]);
 
     // Record new allocation
-    await db.query(`INSERT INTO allocations (studentId, roomId, bedId, status) VALUES ($1, $2, $3, $4)`, [studentId, targetRoomId, targetBedId, 'active']);
+    await db.query(`INSERT INTO allocations (studentId, roomId, bedId, fromRoomId, fromBedId, reason, notes, status) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`, [studentId, targetRoomId, targetBedId, oldRoomId, oldBedId, reason, notes, 'active']);
 
     await db.query('COMMIT');
 
@@ -704,10 +906,13 @@ async function transferStudent(req, res) {
 
 module.exports = {
   getAllRooms,
+  getBuildingsAndFloors,
+  getAllocationHistory,
   getRoomDetails,
   createRoom,
   editRoom,
   deleteRoom,
+  toggleRoomMaintenance,
   getBeds,
   getVacantBeds,
   updateBedStatus,
