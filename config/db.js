@@ -190,8 +190,19 @@ async function initializeDatabase(db) {
       ADD COLUMN IF NOT EXISTS whatsappSentAt TIMESTAMP,
       ADD COLUMN IF NOT EXISTS whatsappMessageId VARCHAR(255),
       ADD COLUMN IF NOT EXISTS whatsappError TEXT,
+      ADD COLUMN IF NOT EXISTS checkInDate TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS checkOutDate TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS stayStatus VARCHAR(50) DEFAULT 'NOT_CHECKED_IN',
+      ADD COLUMN IF NOT EXISTS expectedCheckOutDate DATE,
+      ADD COLUMN IF NOT EXISTS checkInRemarks TEXT,
+      ADD COLUMN IF NOT EXISTS checkOutReason TEXT,
+      ADD COLUMN IF NOT EXISTS checkOutRemarks TEXT,
       DROP CONSTRAINT IF EXISTS students_status_check;
     UPDATE students SET submittedAt = createdAt WHERE submittedAt IS NULL;
+    UPDATE students 
+    SET stayStatus = 'CHECKED_IN',
+        checkInDate = COALESCE(checkInDate, joinDate, createdAt)
+    WHERE roomId IS NOT NULL AND (stayStatus IS NULL OR stayStatus = 'NOT_CHECKED_IN') AND status = 'active';
   `).catch((err) => { console.error('Migration notice:', err.message); });
 
   // 5. Documents Table
@@ -362,6 +373,70 @@ async function initializeDatabase(db) {
       updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  // 12. Student Stay History Table (Phase 2)
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS stay_history (
+      id SERIAL PRIMARY KEY,
+      studentId INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+      roomId INTEGER REFERENCES rooms(id) ON DELETE SET NULL,
+      bedId INTEGER REFERENCES beds(id) ON DELETE SET NULL,
+      checkInDate TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      checkOutDate TIMESTAMP,
+      expectedCheckOutDate DATE,
+      stayDurationMonths INTEGER,
+      status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
+      checkInRemarks TEXT,
+      checkOutReason TEXT,
+      checkOutRemarks TEXT,
+      noticePeriodServed BOOLEAN DEFAULT TRUE,
+      createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_stay_history_student ON stay_history(studentId);
+    CREATE INDEX IF NOT EXISTS idx_stay_history_status ON stay_history(status);
+  `).catch(() => {});
+
+  // 13. Checkout Settlements Table (Phase 2)
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS settlements (
+      id SERIAL PRIMARY KEY,
+      settlementNumber VARCHAR(100) UNIQUE NOT NULL,
+      studentId INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+      stayId INTEGER REFERENCES stay_history(id) ON DELETE SET NULL,
+      checkOutDate TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      securityDepositHeld NUMERIC NOT NULL DEFAULT 0,
+      pendingRentAmount NUMERIC NOT NULL DEFAULT 0,
+      maintenanceCharges NUMERIC NOT NULL DEFAULT 0,
+      damageCharges NUMERIC NOT NULL DEFAULT 0,
+      otherCharges NUMERIC NOT NULL DEFAULT 0,
+      totalDeductions NUMERIC NOT NULL DEFAULT 0,
+      netPayableAmount NUMERIC NOT NULL DEFAULT 0,
+      refundAmount NUMERIC NOT NULL DEFAULT 0,
+      amountCollected NUMERIC NOT NULL DEFAULT 0,
+      refundMode VARCHAR(50),
+      paymentReference VARCHAR(255),
+      status VARCHAR(50) NOT NULL DEFAULT 'COMPLETED',
+      notes TEXT,
+      createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_settlements_student ON settlements(studentId);
+  `).catch(() => {});
+
+  // Backfill initial active stay record for current residents if not yet tracked
+  await db.query(`
+    INSERT INTO stay_history (studentId, roomId, bedId, checkInDate, status, checkInRemarks)
+    SELECT s.id, s.roomId, s.bedId, COALESCE(s.checkInDate, s.joinDate, s.createdAt), 'ACTIVE', 'Initial stay record'
+    FROM students s
+    WHERE s.roomId IS NOT NULL AND s.status = 'active'
+    AND NOT EXISTS (SELECT 1 FROM stay_history sh WHERE sh.studentId = s.id AND sh.status = 'ACTIVE')
+  `).catch(() => {});
 
   // 11. Create Performance Indexes
   await db.query(`

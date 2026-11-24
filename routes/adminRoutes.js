@@ -15,6 +15,12 @@ router.post('/applications/:id/review', dashboardController.reviewApplication);
 router.get('/students/:id/documents', dashboardController.getStudentDocuments);
 router.put('/documents/:id/verify', dashboardController.verifyDocument);
 router.post('/students/:id/allocate-room', dashboardController.allocateRoomToStudent);
+
+// Student Check-In & Check-Out (Phase 2)
+router.post('/students/:id/check-in', dashboardController.checkInStudent);
+router.get('/students/:id/checkout-preview', dashboardController.getCheckoutPreview);
+router.post('/students/:id/checkout', dashboardController.checkOutStudent);
+router.get('/students/:id/stay-history', dashboardController.getStudentStayHistory);
 router.get('/password-reset-requests', dashboardController.getPasswordResetRequests);
 router.post('/students/:id/reset-password', dashboardController.adminResetPassword);
 router.get('/filters', dashboardController.getFilterOptions);

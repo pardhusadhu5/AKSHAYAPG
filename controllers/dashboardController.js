@@ -218,6 +218,10 @@ async function getStudentsList(req, res) {
         paymentStatus: s.paymentstatus || s.paymentStatus || 'unpaid',
         status: s.status || 'active',
         applicationStatus: s.applicationstatus || s.applicationStatus || 'PENDING',
+        stayStatus: s.staystatus || s.stayStatus || (s.roomid || s.roomId ? 'CHECKED_IN' : 'NOT_CHECKED_IN'),
+        checkInDate: s.checkindate ? (typeof s.checkindate === 'string' ? s.checkindate.split('T')[0] : new Date(s.checkindate).toISOString().split('T')[0]) : null,
+        checkOutDate: s.checkoutdate ? (typeof s.checkoutdate === 'string' ? s.checkoutdate.split('T')[0] : new Date(s.checkoutdate).toISOString().split('T')[0]) : null,
+        expectedCheckOutDate: s.expectedcheckoutdate ? (typeof s.expectedcheckoutdate === 'string' ? s.expectedcheckoutdate.split('T')[0] : new Date(s.expectedcheckoutdate).toISOString().split('T')[0]) : null,
         joinDate: s.joindate ? (typeof s.joindate === 'string' ? s.joindate.split('T')[0] : new Date(s.joindate).toISOString().split('T')[0]) : '—'
       };
     });
@@ -276,6 +280,13 @@ async function getStudentDetails(req, res) {
       paymentStatus: rawStudent.paymentstatus || rawStudent.paymentStatus || 'unpaid',
       status: rawStudent.status || 'active',
       applicationStatus: rawStudent.applicationstatus || rawStudent.applicationStatus || 'PENDING',
+      stayStatus: rawStudent.staystatus || rawStudent.stayStatus || (rawStudent.roomid || rawStudent.roomId ? 'CHECKED_IN' : 'NOT_CHECKED_IN'),
+      checkInDate: rawStudent.checkindate ? (typeof rawStudent.checkindate === 'string' ? rawStudent.checkindate.split('T')[0] : new Date(rawStudent.checkindate).toISOString().split('T')[0]) : null,
+      checkOutDate: rawStudent.checkoutdate ? (typeof rawStudent.checkoutdate === 'string' ? rawStudent.checkoutdate.split('T')[0] : new Date(rawStudent.checkoutdate).toISOString().split('T')[0]) : null,
+      expectedCheckOutDate: rawStudent.expectedcheckoutdate ? (typeof rawStudent.expectedcheckoutdate === 'string' ? rawStudent.expectedcheckoutdate.split('T')[0] : new Date(rawStudent.expectedcheckoutdate).toISOString().split('T')[0]) : null,
+      checkInRemarks: rawStudent.checkinremarks || rawStudent.checkInRemarks || '',
+      checkOutReason: rawStudent.checkoutreason || rawStudent.checkOutReason || '',
+      checkOutRemarks: rawStudent.checkoutremarks || rawStudent.checkOutRemarks || '',
       joinDate: rawStudent.joindate ? (typeof rawStudent.joindate === 'string' ? rawStudent.joindate.split('T')[0] : new Date(rawStudent.joindate).toISOString().split('T')[0]) : '—'
     };
 
@@ -288,7 +299,25 @@ async function getStudentDetails(req, res) {
       ORDER BY p.id DESC
     `, [student.id]);
 
-    res.status(200).json({ success: true, student, payments });
+    // Get stay history
+    const { rows: stayHistory } = await db.query(`
+      SELECT sh.*, r.roomNumber, r.floor, r.block, b.bedLabel, b.bedNumber
+      FROM stay_history sh
+      LEFT JOIN rooms r ON sh.roomId = r.id
+      LEFT JOIN beds b ON sh.bedId = b.id
+      WHERE sh.studentId = $1
+      ORDER BY sh.id DESC
+    `, [student.id]);
+
+    // Get settlements
+    const { rows: settlements } = await db.query(`
+      SELECT st.*
+      FROM settlements st
+      WHERE st.studentId = $1
+      ORDER BY st.id DESC
+    `, [student.id]);
+
+    res.status(200).json({ success: true, student, payments, stayHistory, settlements });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -780,6 +809,9 @@ async function getApplications(req, res) {
         roomNumber: rNum,
         bedNumber: bNum,
         bedLabel: bLabel,
+        stayStatus: app.staystatus || app.stayStatus || (app.roomid || app.roomId ? 'CHECKED_IN' : 'NOT_CHECKED_IN'),
+        checkInDate: app.checkindate || app.checkInDate || null,
+        checkOutDate: app.checkoutdate || app.checkOutDate || null,
         submittedAt: app.submittedat || app.submittedAt || app.createdat || app.createdAt || null,
         createdAt: app.createdat || app.createdAt || null,
         whatsappStatus: app.whatsappstatus || app.whatsappStatus || 'NONE',
@@ -1072,8 +1104,401 @@ async function adminResetPassword(req, res) {
   }
 }
 
+// ==========================================
+// PHASE 2: STUDENT CHECK-IN & CHECK-OUT MANAGEMENT
+// ==========================================
+
+async function checkInStudent(req, res) {
+  try {
+    const { id } = req.params;
+    const { checkInDate, expectedCheckOutDate, stayDuration, remarks } = req.body;
+    const db = await getDb();
+
+    const { rows: studentRows } = await db.query(
+      `SELECT s.*, r.roomNumber, b.bedLabel, b.bedNumber 
+       FROM students s
+       LEFT JOIN rooms r ON s.roomId = r.id
+       LEFT JOIN beds b ON s.bedId = b.id
+       WHERE s.id = $1`,
+      [id]
+    );
+    const student = studentRows[0];
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student record not found.' });
+    }
+
+    const currentRoomId = student.roomId || student.roomid;
+    const currentBedId = student.bedId || student.bedid;
+
+    if (!currentRoomId || !currentBedId) {
+      return res.status(400).json({ success: false, message: 'Please allocate a room and bed before checking in.' });
+    }
+
+    const effectiveCheckIn = checkInDate ? new Date(checkInDate) : new Date();
+    const effectiveExpectedOut = expectedCheckOutDate ? new Date(expectedCheckOutDate) : null;
+    const duration = stayDuration ? parseInt(stayDuration) : (student.stayDuration || student.stayduration || 12);
+    const checkRemarks = remarks || 'Student checked in to hostel.';
+
+    await db.query('BEGIN');
+
+    // 1. Update Student record
+    await db.query(
+      `UPDATE students 
+       SET stayStatus = 'CHECKED_IN',
+           status = 'active',
+           applicationStatus = 'ADMITTED',
+           checkInDate = $1,
+           expectedCheckOutDate = $2,
+           stayDuration = $3,
+           checkInRemarks = $4,
+           updatedAt = CURRENT_TIMESTAMP
+       WHERE id = $5`,
+      [effectiveCheckIn, effectiveExpectedOut, duration, checkRemarks, id]
+    );
+
+    // 2. Activate user account if present
+    const studentUserId = student.userId || student.userid;
+    if (studentUserId) {
+      await db.query(`UPDATE users SET status = 'active', updatedAt = CURRENT_TIMESTAMP WHERE id = $1`, [studentUserId]);
+    }
+
+    // 3. Ensure assigned Bed is occupied
+    await db.query(
+      `UPDATE beds 
+       SET status = 'occupied', 
+           userId = $1, 
+           blockedReason = NULL, 
+           reservedFor = NULL, 
+           updatedAt = CURRENT_TIMESTAMP 
+       WHERE id = $2`,
+      [studentUserId, currentBedId]
+    );
+
+    // 4. Ensure active allocation record exists
+    const { rows: activeAlloc } = await db.query(
+      `SELECT id FROM allocations WHERE studentId = $1 AND status = 'active'`,
+      [id]
+    );
+    if (activeAlloc.length === 0) {
+      await db.query(
+        `INSERT INTO allocations (studentId, roomId, bedId, reason, notes, status) VALUES ($1, $2, $3, $4, $5, 'active')`,
+        [id, currentRoomId, currentBedId, 'Check-in Activation', checkRemarks]
+      );
+    }
+
+    // 5. Record in stay_history
+    const { rows: activeStay } = await db.query(
+      `SELECT id FROM stay_history WHERE studentId = $1 AND status = 'ACTIVE'`,
+      [id]
+    );
+    if (activeStay.length > 0) {
+      await db.query(
+        `UPDATE stay_history 
+         SET checkInDate = $1, expectedCheckOutDate = $2, stayDurationMonths = $3, checkInRemarks = $4, updatedAt = CURRENT_TIMESTAMP
+         WHERE id = $5`,
+        [effectiveCheckIn, effectiveExpectedOut, duration, checkRemarks, activeStay[0].id]
+      );
+    } else {
+      await db.query(
+        `INSERT INTO stay_history (studentId, roomId, bedId, checkInDate, expectedCheckOutDate, stayDurationMonths, status, checkInRemarks)
+         VALUES ($1, $2, $3, $4, $5, $6, 'ACTIVE', $7)`,
+        [id, currentRoomId, currentBedId, effectiveCheckIn, effectiveExpectedOut, duration, checkRemarks]
+      );
+    }
+
+    // 6. Notification
+    const sName = student.studentName || student.studentname;
+    const rNum = student.roomNumber || student.roomnumber;
+    const bLabel = student.bedLabel || student.bedlabel || `Bed ${student.bedNumber || student.bednumber}`;
+    await db.query(
+      `INSERT INTO notifications (type, message) VALUES ($1, $2)`,
+      ['student_checkin', `Student ${sName} has officially checked in to Room ${rNum} (${bLabel}).`]
+    );
+
+    await db.query('COMMIT');
+
+    res.status(200).json({
+      success: true,
+      message: `Student ${sName} successfully checked in to Room ${rNum} (${bLabel}).`,
+      checkInDate: effectiveCheckIn
+    });
+  } catch (err) {
+    console.error('Check-in error:', err);
+    try { const db = await getDb(); await db.query('ROLLBACK'); } catch (_) {}
+    res.status(500).json({ success: false, message: `Failed to complete check-in: ${err.message}` });
+  }
+}
+
+async function getCheckoutPreview(req, res) {
+  try {
+    const { id } = req.params;
+    const db = await getDb();
+
+    const { rows: studentRows } = await db.query(
+      `SELECT s.*, r.roomNumber, r.floor, r.block, b.bedLabel, b.bedNumber, u.email
+       FROM students s
+       LEFT JOIN users u ON s.userId = u.id
+       LEFT JOIN rooms r ON s.roomId = r.id
+       LEFT JOIN beds b ON s.bedId = b.id
+       WHERE s.id = $1`,
+      [id]
+    );
+    const student = studentRows[0];
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student not found.' });
+    }
+
+    // Query pending/unpaid fees
+    const { rows: unpaidFees } = await db.query(
+      `SELECT id, billingMonth, amountDue, amountPaid, (amountDue - amountPaid) as pendingAmount, status
+       FROM payments
+       WHERE studentId = $1 AND status != 'paid' AND (amountDue - amountPaid) > 0
+       ORDER BY id ASC`,
+      [id]
+    );
+
+    const pendingRent = unpaidFees.reduce((acc, f) => acc + parseFloat(f.pendingAmount || 0), 0);
+    const depositAmount = parseFloat(student.depositAmount || student.depositamount || 8500);
+
+    const checkIn = student.checkInDate || student.checkindate || student.joinDate || student.joindate || student.createdAt;
+    let daysStayed = 0;
+    if (checkIn) {
+      const start = new Date(checkIn);
+      const now = new Date();
+      daysStayed = Math.max(1, Math.ceil((now - start) / (1000 * 60 * 60 * 24)));
+    }
+
+    res.status(200).json({
+      success: true,
+      student: {
+        id: student.id,
+        studentName: student.studentName || student.studentname,
+        studentCustomId: student.studentCustomId || student.studentcustomid || `AKS${String(student.id).padStart(6, '0')}`,
+        phone: student.phone,
+        roomNumber: student.roomNumber || student.roomnumber || 'N/A',
+        bedLabel: student.bedLabel || student.bedlabel || `Bed ${student.bedNumber || student.bednumber || 'N/A'}`,
+        monthlyRent: parseFloat(student.monthlyRent || student.monthlyrent || 0),
+        depositAmount,
+        checkInDate: checkIn ? (typeof checkIn === 'string' ? checkIn.split('T')[0] : new Date(checkIn).toISOString().split('T')[0]) : 'N/A',
+        daysStayed
+      },
+      depositAmount,
+      pendingRent,
+      unpaidFees
+    });
+  } catch (err) {
+    console.error('Checkout preview error:', err);
+    res.status(500).json({ success: false, message: `Failed to load checkout preview: ${err.message}` });
+  }
+}
+
+async function checkOutStudent(req, res) {
+  try {
+    const { id } = req.params;
+    const {
+      checkOutDate,
+      checkOutReason,
+      checkOutRemarks,
+      noticePeriodServed,
+      maintenanceCharges,
+      damageCharges,
+      otherCharges,
+      refundMode,
+      paymentReference,
+      notes
+    } = req.body;
+
+    const db = await getDb();
+    const { rows: studentRows } = await db.query(
+      `SELECT s.*, r.roomNumber, b.bedLabel, b.bedNumber 
+       FROM students s
+       LEFT JOIN rooms r ON s.roomId = r.id
+       LEFT JOIN beds b ON s.bedId = b.id
+       WHERE s.id = $1`,
+      [id]
+    );
+    const student = studentRows[0];
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'Student record not found.' });
+    }
+
+    const currentBedId = student.bedId || student.bedid;
+    const currentRoomId = student.roomId || student.roomid;
+    const studentUserId = student.userId || student.userid;
+    const effectiveCheckOut = checkOutDate ? new Date(checkOutDate) : new Date();
+
+    // Calculate financials
+    const depositHeld = parseFloat(student.depositAmount || student.depositamount || 8500);
+
+    // Sum pending rent
+    const { rows: unpaidFees } = await db.query(
+      `SELECT id, (amountDue - amountPaid) as pendingAmount FROM payments WHERE studentId = $1 AND status != 'paid' AND (amountDue - amountPaid) > 0`,
+      [id]
+    );
+    const pendingRent = unpaidFees.reduce((acc, f) => acc + parseFloat(f.pendingAmount || 0), 0);
+
+    const maintFee = parseFloat(maintenanceCharges || 0);
+    const damageFee = parseFloat(damageCharges || 0);
+    const otherFee = parseFloat(otherCharges || 0);
+    const totalDeductions = pendingRent + maintFee + damageFee + otherFee;
+    const netPayable = depositHeld - totalDeductions;
+    const refundAmount = netPayable > 0 ? netPayable : 0;
+    const amountCollected = netPayable < 0 ? Math.abs(netPayable) : 0;
+
+    const settlementNumber = `SET-AKS-${Date.now().toString().slice(-6)}-${student.id}`;
+
+    await db.query('BEGIN');
+
+    // 1. Close active stay_history
+    const { rows: activeStay } = await db.query(
+      `UPDATE stay_history 
+       SET checkOutDate = $1, checkOutReason = $2, checkOutRemarks = $3, noticePeriodServed = $4, status = 'CHECKED_OUT', updatedAt = CURRENT_TIMESTAMP
+       WHERE studentId = $5 AND status = 'ACTIVE'
+       RETURNING id`,
+      [effectiveCheckOut, checkOutReason || 'Vacating Hostel', checkOutRemarks || notes || '', noticePeriodServed !== false, id]
+    );
+    const stayId = activeStay.length > 0 ? activeStay[0].id : null;
+
+    // 2. Insert into settlements
+    await db.query(
+      `INSERT INTO settlements (
+        settlementNumber, studentId, stayId, checkOutDate, securityDepositHeld, 
+        pendingRentAmount, maintenanceCharges, damageCharges, otherCharges, totalDeductions, 
+        netPayableAmount, refundAmount, amountCollected, refundMode, paymentReference, status, notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+      [
+        settlementNumber, id, stayId, effectiveCheckOut, depositHeld,
+        pendingRent, maintFee, damageFee, otherFee, totalDeductions,
+        netPayable, refundAmount, amountCollected, refundMode || 'Direct UPI/Cash', paymentReference || null,
+        'COMPLETED', notes || checkOutRemarks || ''
+      ]
+    );
+
+    // 3. Mark pending rent as paid/adjusted against security deposit if settled
+    if (pendingRent > 0) {
+      await db.query(
+        `UPDATE payments SET status = 'paid', amountPaid = amountDue, updatedAt = CURRENT_TIMESTAMP WHERE studentId = $1 AND status != 'paid'`,
+        [id]
+      );
+    }
+
+    // 4. Automatically Release the Bed
+    if (currentBedId) {
+      await db.query(
+        `UPDATE beds 
+         SET status = 'vacant', userId = NULL, blockedReason = NULL, reservedFor = NULL, updatedAt = CURRENT_TIMESTAMP 
+         WHERE id = $1`,
+        [currentBedId]
+      );
+    }
+    if (studentUserId) {
+      await db.query(
+        `UPDATE beds 
+         SET status = 'vacant', userId = NULL, blockedReason = NULL, reservedFor = NULL, updatedAt = CURRENT_TIMESTAMP 
+         WHERE userId = $1`,
+        [studentUserId]
+      );
+    }
+
+    // 5. Update Allocations Table
+    await db.query(
+      `UPDATE allocations 
+       SET vacatedAt = CURRENT_TIMESTAMP, reason = $1, status = 'vacated' 
+       WHERE studentId = $2 AND status = 'active'`,
+      [checkOutReason || 'Student Checkout', id]
+    );
+
+    // 6. Update Student record
+    await db.query(
+      `UPDATE students 
+       SET roomId = NULL, bedId = NULL, stayStatus = 'CHECKED_OUT', status = 'CHECKED_OUT', 
+           checkOutDate = $1, checkOutReason = $2, checkOutRemarks = $3, updatedAt = CURRENT_TIMESTAMP 
+       WHERE id = $4`,
+      [effectiveCheckOut, checkOutReason || 'Vacating Hostel', checkOutRemarks || notes || '', id]
+    );
+
+    // 7. Notification
+    const sName = student.studentName || student.studentname;
+    const rNum = student.roomNumber || student.roomnumber;
+    const bLabel = student.bedLabel || student.bedlabel || `Bed ${student.bedNumber || student.bednumber}`;
+    await db.query(
+      `INSERT INTO notifications (type, message) VALUES ($1, $2)`,
+      ['student_checkout', `Student ${sName} checked out. Bed ${bLabel} in Room ${rNum} is now vacant. Settlement ${settlementNumber} completed.`]
+    );
+
+    await db.query('COMMIT');
+
+    res.status(200).json({
+      success: true,
+      message: `Student ${sName} checked out successfully. Bed released.`,
+      settlement: {
+        settlementNumber,
+        depositHeld,
+        totalDeductions,
+        netPayable,
+        refundAmount,
+        amountCollected,
+        checkOutDate: effectiveCheckOut
+      }
+    });
+  } catch (err) {
+    console.error('Checkout error:', err);
+    try { const db = await getDb(); await db.query('ROLLBACK'); } catch (_) {}
+    res.status(500).json({ success: false, message: `Failed to complete checkout: ${err.message}` });
+  }
+}
+
+async function getStudentStayHistory(req, res) {
+  try {
+    const { id } = req.params;
+    const db = await getDb();
+
+    const { rows: stayHistory } = await db.query(
+      `SELECT sh.*, r.roomNumber, r.floor, r.block, b.bedLabel, b.bedNumber
+       FROM stay_history sh
+       LEFT JOIN rooms r ON sh.roomId = r.id
+       LEFT JOIN beds b ON sh.bedId = b.id
+       WHERE sh.studentId = $1
+       ORDER BY sh.id DESC`,
+      [id]
+    );
+
+    const { rows: allocationHistory } = await db.query(
+      `SELECT a.*, r.roomNumber, b.bedLabel, b.bedNumber, fr.roomNumber as fromRoomNumber, fb.bedLabel as fromBedLabel
+       FROM allocations a
+       LEFT JOIN rooms r ON a.roomId = r.id
+       LEFT JOIN beds b ON a.bedId = b.id
+       LEFT JOIN rooms fr ON a.fromRoomId = fr.id
+       LEFT JOIN beds fb ON a.fromBedId = fb.id
+       WHERE a.studentId = $1
+       ORDER BY a.allocatedAt DESC`,
+      [id]
+    );
+
+    const { rows: settlementsList } = await db.query(
+      `SELECT * FROM settlements WHERE studentId = $1 ORDER BY id DESC`,
+      [id]
+    );
+
+    res.status(200).json({
+      success: true,
+      stayHistory,
+      allocationHistory,
+      settlements: settlementsList
+    });
+  } catch (err) {
+    console.error('Get stay history error:', err);
+    res.status(500).json({ success: false, message: `Failed to load stay history: ${err.message}` });
+  }
+}
+
+
 module.exports = {
   getStats,
+  checkInStudent,
+  getCheckoutPreview,
+  checkOutStudent,
+  getStudentStayHistory,
   getStudentsList,
   getStudentDetails,
   updatePaymentStatus,

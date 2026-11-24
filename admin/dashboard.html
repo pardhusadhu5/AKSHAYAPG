@@ -1939,6 +1939,182 @@
     </div>
   </div>
 
+
+  <!-- Phase 2 Modal: Student Check-In -->
+  <div class="modal-overlay" id="checkInModal">
+    <div class="modal-card" style="max-width: 550px;">
+      <div class="modal-header">
+        <h3 id="checkInModalTitle">Student Check-In</h3>
+        <button class="modal-close-btn" onclick="closeModal('checkInModal')">&times;</button>
+      </div>
+      <form id="checkInForm" onsubmit="submitCheckIn(event)">
+        <input type="hidden" id="checkInStudentId">
+        
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:14px; font-size:0.85rem;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span><strong>Student:</strong> <span id="checkInStudentDisplay">—</span></span>
+            <span><strong>Student ID:</strong> <span id="checkInStudentCustomId" style="color:var(--primary-deep); font-weight:700;">—</span></span>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span><strong>Room & Bed:</strong> <span id="checkInRoomBedDisplay">—</span></span>
+            <span><strong>Monthly Rent:</strong> ₹<span id="checkInRentDisplay">0</span></span>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div class="form-group">
+            <label class="form-label" for="checkInDateInput">Check-In Date *</label>
+            <input type="date" id="checkInDateInput" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="checkInStayDuration">Stay Duration (Months)</label>
+            <input type="number" id="checkInStayDuration" class="form-input" min="1" max="60" value="12" onchange="updateExpectedCheckOut()">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:12px;">
+          <label class="form-label" for="checkInExpectedOut">Expected Check-Out Date</label>
+          <input type="date" id="checkInExpectedOut" class="form-input">
+        </div>
+
+        <div class="form-group" style="margin-bottom:16px;">
+          <label class="form-label" for="checkInRemarksInput">Check-In Remarks / Notes</label>
+          <textarea id="checkInRemarksInput" class="form-input" rows="2" placeholder="Keys handed over, room inspected, ID verified..."></textarea>
+        </div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('checkInModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="confirmCheckInBtn" style="background:#10b981; border-color:#10b981;">Confirm Check-In</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Phase 2 Modal: Student Check-Out & Final Settlement -->
+  <div class="modal-overlay" id="checkOutModal">
+    <div class="modal-card" style="max-width: 650px; max-height:90vh; overflow-y:auto;">
+      <div class="modal-header">
+        <h3 id="checkOutModalTitle">Student Check-Out & Settlement</h3>
+        <button class="modal-close-btn" onclick="closeModal('checkOutModal')">&times;</button>
+      </div>
+      <form id="checkOutForm" onsubmit="submitCheckOut(event)">
+        <input type="hidden" id="checkOutStudentId">
+        
+        <!-- Student & Stay Summary -->
+        <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:14px; font-size:0.85rem;">
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span><strong>Student:</strong> <span id="checkOutStudentDisplay">—</span></span>
+            <span><strong>Room & Bed:</strong> <span id="checkOutRoomBedDisplay">—</span></span>
+          </div>
+          <div style="display:flex; justify-content:space-between;">
+            <span><strong>Check-In Date:</strong> <span id="checkOutCheckInDisplay">—</span></span>
+            <span><strong>Stay Duration:</strong> <span id="checkOutStayDaysDisplay">0 days</span></span>
+          </div>
+        </div>
+
+        <!-- Checkout Details -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
+          <div class="form-group">
+            <label class="form-label" for="checkOutDateInput">Actual Check-Out Date *</label>
+            <input type="date" id="checkOutDateInput" class="form-input" required onchange="calculateSettlement()">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="checkOutReasonInput">Reason for Leaving *</label>
+            <select id="checkOutReasonInput" class="form-input" required>
+              <option value="Course Completed">Course Completed</option>
+              <option value="Job / Relocation">Job / Relocation</option>
+              <option value="Personal / Family Reason">Personal / Family Reason</option>
+              <option value="Vacating Hostel">Vacating Hostel</option>
+              <option value="Other">Other Reason</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; cursor:pointer;">
+            <input type="checkbox" id="checkOutNoticePeriod" checked>
+            <span>Notice period served as per hostel policy</span>
+          </label>
+        </div>
+
+        <!-- Financial Settlement Card with Live Calculation -->
+        <div style="background:#fff; border:1.5px solid #cbd5e1; border-radius:8px; padding:14px; margin-bottom:14px;">
+          <div style="font-weight:700; color:var(--primary-deep); margin-bottom:10px; font-size:0.9rem; border-bottom:1px solid #e2e8f0; padding-bottom:6px;">
+            Final Security Deposit & Dues Settlement
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size:0.85rem; margin-bottom:10px;">
+            <div>
+              <label class="form-label" style="font-size:0.75rem;">Security Deposit Held (₹)</label>
+              <input type="number" id="settleDepositHeld" class="form-input" style="background:#f1f5f9;" readonly value="0">
+            </div>
+            <div>
+              <label class="form-label" style="font-size:0.75rem;">Pending Rent Due (₹)</label>
+              <input type="number" id="settlePendingRent" class="form-input" style="background:#f1f5f9;" readonly value="0">
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px; font-size:0.85rem; margin-bottom:12px;">
+            <div>
+              <label class="form-label" style="font-size:0.75rem;">Maintenance Due (₹)</label>
+              <input type="number" id="settleMaintCharges" class="form-input" min="0" value="0" oninput="calculateSettlement()">
+            </div>
+            <div>
+              <label class="form-label" style="font-size:0.75rem;">Damage / Repair (₹)</label>
+              <input type="number" id="settleDamageCharges" class="form-input" min="0" value="0" oninput="calculateSettlement()">
+            </div>
+            <div>
+              <label class="form-label" style="font-size:0.75rem;">Other Charges (₹)</label>
+              <input type="number" id="settleOtherCharges" class="form-input" min="0" value="0" oninput="calculateSettlement()">
+            </div>
+          </div>
+
+          <!-- Total Deductions & Net Refundable / Payable Banner -->
+          <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:10px 14px; margin-bottom:10px;">
+            <div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">Total Deductions</div>
+              <div style="font-size:1rem; font-weight:700; color:#ef4444;">₹<span id="settleTotalDeductions">0</span></div>
+            </div>
+            <div style="text-align:right;">
+              <div style="font-size:0.75rem; color:var(--text-muted);" id="settleNetLabel">Net Refundable to Student</div>
+              <div style="font-size:1.15rem; font-weight:800; color:#10b981;" id="settleNetDisplay">₹0</div>
+            </div>
+          </div>
+
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; font-size:0.85rem;">
+            <div>
+              <label class="form-label" style="font-size:0.75rem;" for="settleRefundMode">Settlement Mode</label>
+              <select id="settleRefundMode" class="form-input">
+                <option value="UPI / Online Transfer">UPI / Online Transfer</option>
+                <option value="Cash">Cash</option>
+                <option value="Bank Account Transfer">Bank Account Transfer</option>
+                <option value="Adjusted">Adjusted Against Dues</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label" style="font-size:0.75rem;" for="settleReference">Payment / Txn Ref</label>
+              <input type="text" id="settleReference" class="form-input" placeholder="Txn ID / Ref Number">
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:16px;">
+          <label class="form-label" for="checkOutRemarksInput">Room Inspection & Checkout Notes</label>
+          <textarea id="checkOutRemarksInput" class="form-input" rows="2" placeholder="Room keys returned, cupboard cleared, room condition satisfactory..."></textarea>
+        </div>
+
+        <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:6px; padding:8px 12px; margin-bottom:16px; font-size:0.8rem; color:#b91c1c;">
+          <strong>Warning:</strong> Confirming checkout will permanently release the bed back to vacant inventory and complete final deposit settlement.
+        </div>
+
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('checkOutModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="confirmCheckOutBtn" style="background:#dc2626; border-color:#dc2626;">Confirm Check-Out & Release Bed</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- Modal 8: Edit Student Details Modal -->
   <div class="modal-overlay" id="editStudentModal">
     <div class="modal-card" style="max-width: 600px;">
@@ -2408,9 +2584,16 @@
             const rNum = stud.roomNumber || stud.roomnumber;
             const rentVal = parseFloat(stud.monthlyRent || stud.monthlyrent || 0);
 
+            const isCheckedIn = stud.stayStatus === 'CHECKED_IN';
+            const hasBed = !!(stud.bedId || stud.bedid);
+            const checkInOutBtn = isCheckedIn 
+              ? `<button class="btn-action" style="color:#d97706;" onclick="openCheckOutModal(${stud.id}, '${escName}')" title="Check Out & Settle"><i data-lucide="log-out" style="width:13px; height:13px;"></i></button>`
+              : (hasBed ? `<button class="btn-action" style="color:#10b981;" onclick="openCheckInModal(${stud.id}, '${escName}')" title="Check In Student"><i data-lucide="log-in" style="width:13px; height:13px;"></i></button>` : '');
+
             const actionsCell = `
-              <div class="actions-cell" style="display:flex; gap:4px; justify-content:center;">
+              <div class="actions-cell" style="display:flex; gap:4px; justify-content:center; align-items:center;">
                 <button class="btn-action" onclick="viewStudentDetails(${stud.id})" title="View Details"><i data-lucide="eye" style="width:13px; height:13px;"></i></button>
+                ${checkInOutBtn}
                 <button class="btn-action btn-edit" onclick="openEditStudentModal(${stud.id}, '${escName}', '${sId}', '${escEmail}', '${stud.phone || ''}', '${escParentName}', '${stud.parentPhone || stud.parentphone || ''}', '${stud.aadhaarNumber || stud.aadhaarnumber || ''}', '${escCollege}', '${escCourse}', '${stud.year || ''}', ${rentVal}, '${stud.status || 'active'}')" title="Edit Profile"><i data-lucide="edit-2" style="width:13px; height:13px;"></i></button>
                 <button class="btn-action btn-delete" onclick="deleteStudent(${stud.id}, '${escName}')" title="Delete Profile"><i data-lucide="trash-2" style="width:13px; height:13px;"></i></button>
               </div>
@@ -2498,7 +2681,87 @@
               <div><strong>Login Mobile:</strong> ${s.phone}</div>
               <div><strong>Account Status:</strong> <span class="status-badge ${s.status === 'active' ? 'active' : 'inactive'}">${s.status}</span></div>
             </div>
+
+            <div class="detail-section-title">Stay & Check-In Status</div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; font-size:0.85rem;">
+              <div><strong>Stay Status:</strong> <span class="status-badge ${s.stayStatus === 'CHECKED_IN' ? 'active' : (s.stayStatus === 'CHECKED_OUT' ? 'inactive' : 'partially')}">${s.stayStatus || 'NOT_CHECKED_IN'}</span></div>
+              <div><strong>Check-In Date:</strong> ${s.checkInDate || s.joinDate || 'N/A'}</div>
+              <div><strong>Expected Check-Out:</strong> ${s.expectedCheckOutDate || '12 Months from Check-In'}</div>
+              <div><strong>Actual Check-Out Date:</strong> ${s.checkOutDate || '—'}</div>
+              ${s.checkOutReason ? `<div><strong>Checkout Reason:</strong> ${s.checkOutReason}</div>` : ''}
+              ${s.checkInRemarks ? `<div style="grid-column: span 2;"><strong>Check-In Remarks:</strong> ${s.checkInRemarks}</div>` : ''}
+              ${s.checkOutRemarks ? `<div style="grid-column: span 2;"><strong>Checkout Remarks:</strong> ${s.checkOutRemarks}</div>` : ''}
+            </div>
+
+            <div class="detail-section-title" style="margin-top:16px;">Stay & Allocation History</div>
+            <div style="max-height:160px; overflow-y:auto; border:1px solid #E5E7EB; border-radius:6px; margin-top:8px;">
+              <table class="data-table" style="width:100%; font-size:0.75rem;">
+                <thead style="background:#f8fafc;">
+                  <tr>
+                    <th style="padding:6px 8px;">Date</th>
+                    <th style="padding:6px 8px;">Room / Bed</th>
+                    <th style="padding:6px 8px;">Status</th>
+                    <th style="padding:6px 8px;">Notes / Reason</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${(data.stayHistory && data.stayHistory.length > 0) ? data.stayHistory.map(sh => `
+                    <tr>
+                      <td style="padding:6px 8px; white-space:nowrap;">${sh.checkInDate ? new Date(sh.checkInDate).toLocaleDateString('en-IN') : '—'}</td>
+                      <td style="padding:6px 8px;">Room ${sh.roomNumber || 'N/A'} (${sh.bedLabel || (sh.bedNumber ? 'Bed ' + sh.bedNumber : 'Bed')})</td>
+                      <td style="padding:6px 8px;"><span class="status-badge ${sh.status === 'ACTIVE' ? 'active' : 'inactive'}" style="font-size:0.65rem;">${sh.status}</span></td>
+                      <td style="padding:6px 8px;">${sh.checkOutReason || sh.checkInRemarks || 'Hostel Stay'}</td>
+                    </tr>
+                  `).join('') : '<tr><td colspan="4" style="text-align:center; padding:10px; color:var(--text-muted);">No prior stay records.</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+
+            ${(data.settlements && data.settlements.length > 0) ? `
+            <div class="detail-section-title" style="margin-top:16px;">Final Settlement History</div>
+            <div style="max-height:140px; overflow-y:auto; border:1px solid #E5E7EB; border-radius:6px; margin-top:8px;">
+              <table class="data-table" style="width:100%; font-size:0.75rem;">
+                <thead style="background:#f8fafc;">
+                  <tr>
+                    <th style="padding:6px 8px;">Settlement #</th>
+                    <th style="padding:6px 8px;">Date</th>
+                    <th style="padding:6px 8px;">Deposit Held</th>
+                    <th style="padding:6px 8px;">Deductions</th>
+                    <th style="padding:6px 8px;">Net Settled</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${data.settlements.map(st => `
+                    <tr>
+                      <td style="padding:6px 8px; font-weight:700;">${st.settlementNumber || st.settlementnumber}</td>
+                      <td style="padding:6px 8px;">${new Date(st.checkOutDate || st.checkoutdate || st.createdAt).toLocaleDateString('en-IN')}</td>
+                      <td style="padding:6px 8px;">₹${parseFloat(st.securityDepositHeld || st.securitydepositheld || 0).toLocaleString('en-IN')}</td>
+                      <td style="padding:6px 8px; color:#ef4444;">₹${parseFloat(st.totalDeductions || st.totaldeductions || 0).toLocaleString('en-IN')}</td>
+                      <td style="padding:6px 8px; font-weight:700; color:${parseFloat(st.netPayableAmount || st.netpayableamount || 0) >= 0 ? '#10b981' : '#ef4444'};">
+                        ${parseFloat(st.netPayableAmount || st.netpayableamount || 0) >= 0 ? 'Refund: ₹' + parseFloat(st.refundAmount || st.refundamount || 0).toLocaleString('en-IN') : 'Due: ₹' + parseFloat(st.amountCollected || st.amountcollected || 0).toLocaleString('en-IN')}
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+            ` : ''}
+
+            <!-- Stay Action Buttons in Modal Body -->
+            <div style="margin-top:20px; padding-top:14px; border-top:1px solid #E5E7EB; display:flex; gap:10px; justify-content:flex-end;">
+              ${(s.roomId || s.roomid) && s.stayStatus !== 'CHECKED_IN' ? `
+                <button class="btn btn-primary" style="background:#10b981; border-color:#10b981;" onclick="closeModal('studentDetailsModal'); openCheckInModal(${s.id}, '${(s.studentName || '').replace(/'/g, "\\'")}')">
+                  Check In Student
+                </button>
+              ` : ''}
+              ${s.stayStatus === 'CHECKED_IN' ? `
+                <button class="btn btn-primary" style="background:#f59e0b; border-color:#f59e0b;" onclick="closeModal('studentDetailsModal'); openCheckOutModal(${s.id}, '${(s.studentName || '').replace(/'/g, "\\'")}')">
+                  Check Out & Settle
+                </button>
+              ` : ''}
+            </div>
           `;
+          if (typeof lucide !== 'undefined') lucide.createIcons();
           openModal('studentDetailsModal');
         }
       } catch (err) {
@@ -5274,6 +5537,7 @@
                 <div style="display:flex; gap:6px; justify-content:flex-end; align-items:center; flex-wrap:wrap;">
                   <button class="btn btn-outline" style="padding:5px 9px; font-size:0.75rem; border-color:var(--primary-brand); color:var(--primary-deep);" onclick="openAppReviewModal(${app.id})">Review Docs</button>
                   <button class="btn btn-primary" style="padding:5px 9px; font-size:0.75rem; background:var(--primary-brand); border-color:var(--primary-brand);" onclick="openAllocateModalForApp(${app.id}, '${name.replace(/'/g, "\\'")}')">Allocate</button>
+                  ${(app.roomId || app.roomid) && app.stayStatus !== 'CHECKED_IN' ? `<button class="btn btn-outline" style="padding:5px 9px; font-size:0.75rem; color:#10b981; border-color:#10b981;" onclick="openCheckInModal(${app.id}, '${name.replace(/'/g, "\\'")}')">Check In</button>` : ''}
                   <button class="btn btn-outline" style="padding:5px 9px; font-size:0.75rem; color:#2563eb; border-color:#93c5fd;" onclick="openResetPasswordModal(${app.id}, '${name.replace(/'/g, "\\'")}')">Reset Pass</button>
                 </div>
               </td>
@@ -5465,6 +5729,229 @@
         alert('Server error resetting password.');
       }
     }
-  </script>
+  
+
+    // ==========================================
+    // PHASE 2: CHECK-IN & CHECK-OUT MANAGEMENT
+    // ==========================================
+
+    async function openCheckInModal(studentId, studentName = '') {
+      const token = localStorage.getItem('token');
+      document.getElementById('checkInForm').reset();
+      document.getElementById('checkInStudentId').value = studentId;
+      document.getElementById('checkInStudentDisplay').innerText = studentName || `Student #${studentId}`;
+      document.getElementById('checkInStudentCustomId').innerText = `AKS${String(studentId).padStart(6, '0')}`;
+
+      // Set default check-in date to today
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('checkInDateInput').value = today;
+      document.getElementById('checkInStayDuration').value = 12;
+      updateExpectedCheckOut();
+
+      try {
+        const res = await fetch(`/api/admin/students/${studentId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success && data.student) {
+          const s = data.student;
+          document.getElementById('checkInStudentDisplay').innerText = s.studentName;
+          document.getElementById('checkInStudentCustomId').innerText = s.studentCustomId || `AKS${String(s.id).padStart(6, '0')}`;
+          const bLabel = s.bedLabel || (s.bedNumber ? `Bed ${s.bedNumber}` : 'Unassigned');
+          document.getElementById('checkInRoomBedDisplay').innerText = s.roomNumber ? `Room ${s.roomNumber} - ${bLabel}` : 'Not Allocated';
+          document.getElementById('checkInRentDisplay').innerText = (parseFloat(s.monthlyRent || s.monthlyrent || 0)).toLocaleString('en-IN');
+          
+          if (!s.roomId || !s.bedId) {
+            alert('This student does not have an assigned room or bed yet. Please allocate a bed first.');
+            return;
+          }
+        }
+        openModal('checkInModal');
+      } catch (err) {
+        console.error('Error opening check-in modal:', err);
+        openModal('checkInModal');
+      }
+    }
+
+    function updateExpectedCheckOut() {
+      const checkInVal = document.getElementById('checkInDateInput').value;
+      const durationMonths = parseInt(document.getElementById('checkInStayDuration').value) || 12;
+      if (checkInVal) {
+        const d = new Date(checkInVal);
+        d.setMonth(d.getMonth() + durationMonths);
+        document.getElementById('checkInExpectedOut').value = d.toISOString().split('T')[0];
+      }
+    }
+
+    async function submitCheckIn(e) {
+      e.preventDefault();
+      const studentId = document.getElementById('checkInStudentId').value;
+      const token = localStorage.getItem('token');
+      const submitBtn = document.getElementById('confirmCheckInBtn');
+
+      const payload = {
+        checkInDate: document.getElementById('checkInDateInput').value,
+        stayDuration: document.getElementById('checkInStayDuration').value,
+        expectedCheckOutDate: document.getElementById('checkInExpectedOut').value,
+        remarks: document.getElementById('checkInRemarksInput').value
+      };
+
+      try {
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Processing Check-In...';
+
+        const res = await fetch(`/api/admin/students/${studentId}/check-in`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(data.message || 'Student checked in successfully!');
+          closeModal('checkInModal');
+          if (typeof fetchStudentsDatabase === 'function') fetchStudentsDatabase();
+          if (typeof fetchApplications === 'function') fetchApplications(true);
+          if (typeof fetchStatsAndRecent === 'function') fetchStatsAndRecent();
+          if (document.getElementById('studentDetailsModal').classList.contains('active')) {
+            viewStudentDetails(studentId);
+          }
+        } else {
+          alert('Check-In failed: ' + data.message);
+        }
+      } catch (err) {
+        console.error('Check-in error:', err);
+        alert('Server error processing check-in.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'Confirm Check-In';
+      }
+    }
+
+    async function openCheckOutModal(studentId, studentName = '') {
+      const token = localStorage.getItem('token');
+      document.getElementById('checkOutForm').reset();
+      document.getElementById('checkOutStudentId').value = studentId;
+      document.getElementById('checkOutStudentDisplay').innerText = studentName || `Student #${studentId}`;
+      
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('checkOutDateInput').value = today;
+      document.getElementById('settleMaintCharges').value = 0;
+      document.getElementById('settleDamageCharges').value = 0;
+      document.getElementById('settleOtherCharges').value = 0;
+
+      try {
+        const res = await fetch(`/api/admin/students/${studentId}/checkout-preview`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+          const s = data.student;
+          document.getElementById('checkOutStudentDisplay').innerText = `${s.studentName} (${s.studentCustomId})`;
+          document.getElementById('checkOutRoomBedDisplay').innerText = `Room ${s.roomNumber} - ${s.bedLabel}`;
+          document.getElementById('checkOutCheckInDisplay').innerText = s.checkInDate || 'N/A';
+          document.getElementById('checkOutStayDaysDisplay').innerText = `${data.daysStayed || 0} days`;
+
+          document.getElementById('settleDepositHeld').value = data.depositAmount || 8500;
+          document.getElementById('settlePendingRent').value = data.pendingRent || 0;
+
+          calculateSettlement();
+          openModal('checkOutModal');
+        } else {
+          alert('Could not load checkout details: ' + data.message);
+        }
+      } catch (err) {
+        console.error('Error fetching checkout preview:', err);
+        alert('Failed to connect to server for checkout preview.');
+      }
+    }
+
+    function calculateSettlement() {
+      const deposit = parseFloat(document.getElementById('settleDepositHeld').value) || 0;
+      const rent = parseFloat(document.getElementById('settlePendingRent').value) || 0;
+      const maint = parseFloat(document.getElementById('settleMaintCharges').value) || 0;
+      const damage = parseFloat(document.getElementById('settleDamageCharges').value) || 0;
+      const other = parseFloat(document.getElementById('settleOtherCharges').value) || 0;
+
+      const totalDeductions = rent + maint + damage + other;
+      const net = deposit - totalDeductions;
+
+      document.getElementById('settleTotalDeductions').innerText = totalDeductions.toLocaleString('en-IN');
+      const netDisplay = document.getElementById('settleNetDisplay');
+      const netLabel = document.getElementById('settleNetLabel');
+
+      if (net >= 0) {
+        netLabel.innerText = 'Net Refundable to Student';
+        netDisplay.innerText = `₹${net.toLocaleString('en-IN')}`;
+        netDisplay.style.color = '#10b981';
+      } else {
+        netLabel.innerText = 'Balance Due from Student';
+        netDisplay.innerText = `₹${Math.abs(net).toLocaleString('en-IN')}`;
+        netDisplay.style.color = '#ef4444';
+      }
+    }
+
+    async function submitCheckOut(e) {
+      e.preventDefault();
+      const studentId = document.getElementById('checkOutStudentId').value;
+      const token = localStorage.getItem('token');
+      const submitBtn = document.getElementById('confirmCheckOutBtn');
+
+      if (!confirm('Are you sure you want to finalize checkout for this student? This will release their bed back to vacant inventory and settle their security deposit.')) {
+        return;
+      }
+
+      const payload = {
+        checkOutDate: document.getElementById('checkOutDateInput').value,
+        checkOutReason: document.getElementById('checkOutReasonInput').value,
+        noticePeriodServed: document.getElementById('checkOutNoticePeriod').checked,
+        maintenanceCharges: parseFloat(document.getElementById('settleMaintCharges').value) || 0,
+        damageCharges: parseFloat(document.getElementById('settleDamageCharges').value) || 0,
+        otherCharges: parseFloat(document.getElementById('settleOtherCharges').value) || 0,
+        refundMode: document.getElementById('settleRefundMode').value,
+        paymentReference: document.getElementById('settleReference').value,
+        checkOutRemarks: document.getElementById('checkOutRemarksInput').value,
+        notes: document.getElementById('checkOutRemarksInput').value
+      };
+
+      try {
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Finalizing Check-Out...';
+
+        const res = await fetch(`/api/admin/students/${studentId}/checkout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.success) {
+          const s = data.settlement;
+          alert(`Check-out completed successfully!\n\nSettlement Ref: ${s.settlementNumber}\nDeposit Held: ₹${s.depositHeld}\nTotal Deductions: ₹${s.totalDeductions}\n${s.netPayable >= 0 ? 'Refunded to Student: ₹' + s.refundAmount : 'Collected from Student: ₹' + s.amountCollected}\n\nBed released to vacant inventory.`);
+          closeModal('checkOutModal');
+          if (typeof fetchStudentsDatabase === 'function') fetchStudentsDatabase();
+          if (typeof fetchApplications === 'function') fetchApplications(true);
+          if (typeof fetchStatsAndRecent === 'function') fetchStatsAndRecent();
+          if (typeof fetchRooms === 'function') fetchRooms();
+          if (document.getElementById('studentDetailsModal').classList.contains('active')) {
+            closeModal('studentDetailsModal');
+          }
+        } else {
+          alert('Check-out failed: ' + data.message);
+        }
+      } catch (err) {
+        console.error('Check-out error:', err);
+        alert('Server error processing checkout.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerText = 'Confirm Check-Out & Release Bed';
+      }
+    }
+
+</script>
 </body>
 </html>
