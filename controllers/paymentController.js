@@ -745,11 +745,31 @@ async function getStudentFees(req, res) {
  */
 async function getAllPayments(req, res) {
   try {
-    const { search, status, month, method } = req.query;
+    const { search, status, month } = req.query;
     const db = await getDb();
 
     let query = `
-      SELECT p.*, s.id as studentId, s.studentName, s.phone, r.roomNumber, rm.receiptNumber, pt.gatewayOrderId, pt.gatewayPaymentId, pt.paymentMethod
+      SELECT 
+        p.id,
+        p.studentId,
+        p.billingMonth,
+        p.amountDue,
+        p.amountPaid,
+        p.status,
+        p.dueDate,
+        p.paidAt,
+        p.createdAt,
+        p.updatedAt,
+        s.id AS "studentId",
+        s.studentName AS "studentName",
+        s.phone AS "phone",
+        s.studentCustomId AS "studentCustomId",
+        s.applicationId AS "applicationId",
+        r.roomNumber AS "roomNumber",
+        rm.receiptNumber AS "receiptNumber",
+        pt.gatewayOrderId AS "gatewayOrderId",
+        pt.gatewayPaymentId AS "gatewayPaymentId",
+        pt.paymentMethod AS "paymentMethod"
       FROM payments p
       JOIN students s ON p.studentId = s.id
       LEFT JOIN rooms r ON s.roomId = r.id
@@ -758,24 +778,49 @@ async function getAllPayments(req, res) {
       WHERE 1=1
     `;
     const params = [];
+    let paramIdx = 1;
 
     if (status && status !== 'all') {
-      query += ` AND p.status = ?`;
+      query += ` AND p.status = $${paramIdx++}`;
       params.push(status);
     }
     if (month && month !== 'all') {
-      query += ` AND p.billingMonth = ?`;
+      query += ` AND p.billingMonth = $${paramIdx++}`;
       params.push(month);
     }
     if (search) {
-      query += ` AND (s.studentName LIKE ? OR s.phone LIKE ? OR r.roomNumber LIKE ? OR rm.receiptNumber LIKE ? OR pt.gatewayPaymentId LIKE ?)`;
-      const term = `%${search}%`;
-      params.push(term, term, term, term, term);
+      query += ` AND (s.studentName ILIKE $${paramIdx} OR s.phone ILIKE $${paramIdx} OR r.roomNumber ILIKE $${paramIdx} OR rm.receiptNumber ILIKE $${paramIdx} OR pt.gatewayPaymentId ILIKE $${paramIdx})`;
+      paramIdx++;
+      params.push(`%${search}%`);
     }
 
     query += ` ORDER BY p.billingMonth DESC, p.id DESC`;
 
-    const payments = (await (async () => { let args = [query, params]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows; })());
+    const { rows } = await db.query(query, params);
+
+    // Normalize each payment row so keys are consistently available regardless of DB lowercasing
+    const payments = rows.map(p => ({
+      id: p.id,
+      studentId: p.studentId || p.studentid,
+      studentName: p.studentName || p.studentname || 'Student',
+      phone: p.phone || '',
+      studentCustomId: p.studentCustomId || p.studentcustomid || p.applicationId || p.applicationid || (p.studentId || p.studentid ? `AKS${String(p.studentId || p.studentid).padStart(6, '0')}` : 'N/A'),
+      applicationId: p.applicationId || p.applicationid || '',
+      roomNumber: p.roomNumber || p.roomnumber || null,
+      billingMonth: p.billingMonth || p.billingmonth || '',
+      amountDue: Number(p.amountDue ?? p.amountdue ?? 0),
+      amountPaid: Number(p.amountPaid ?? p.amountpaid ?? 0),
+      status: p.status || 'pending',
+      dueDate: p.dueDate || p.duedate || null,
+      paidAt: p.paidAt || p.paidat || null,
+      createdAt: p.createdAt || p.createdat || null,
+      updatedAt: p.updatedAt || p.updatedat || null,
+      receiptNumber: p.receiptNumber || p.receiptnumber || null,
+      gatewayOrderId: p.gatewayOrderId || p.gatewayorderid || null,
+      gatewayPaymentId: p.gatewayPaymentId || p.gatewaypaymentid || null,
+      paymentMethod: p.paymentMethod || p.paymentmethod || null
+    }));
+
     res.status(200).json({ success: true, payments });
   } catch (err) {
     console.error('Admin Get All Payments Error:', err);
@@ -793,21 +838,21 @@ async function getPaymentStats(req, res) {
 
     // Total Collection ever
     const totalCollectedRes = (await (async () => { let args = [`SELECT SUM(amountPaid) as sum FROM payments WHERE status = 'paid'`]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
-    const totalCollected = totalCollectedRes && totalCollectedRes.sum ? totalCollectedRes.sum : 0;
+    const totalCollected = totalCollectedRes && totalCollectedRes.sum ? Number(totalCollectedRes.sum) : 0;
 
-    // Current Month Collection
+    // Current Month Collection (Postgres compatible)
     const currentMonthRes = (await (async () => { let args = [
-      `SELECT SUM(amountPaid) as sum FROM payments WHERE strftime('%Y-%m', updatedAt) = strftime('%Y-%m', 'now') AND status = 'paid'`
+      `SELECT SUM(amountPaid) as sum FROM payments WHERE to_char(updatedAt, 'YYYY-MM') = to_char(CURRENT_TIMESTAMP, 'YYYY-MM') AND status = 'paid'`
     ]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
-    const thisMonth = currentMonthRes && currentMonthRes.sum ? currentMonthRes.sum : 0;
+    const thisMonth = currentMonthRes && currentMonthRes.sum ? Number(currentMonthRes.sum) : 0;
 
     // Total Pending Dues
     const pendingRes = (await (async () => { let args = [`SELECT SUM(amountDue - amountPaid) as sum FROM payments WHERE status != 'paid'`]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
-    const pendingDues = pendingRes && pendingRes.sum ? pendingRes.sum : 0;
+    const pendingDues = pendingRes && pendingRes.sum ? Number(pendingRes.sum) : 0;
 
     // Total Failed Transactions
     const failedRes = (await (async () => { let args = [`SELECT COUNT(*) as count FROM paymentTransactions WHERE status = 'FAILED'`]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
-    const failedCount = failedRes ? failedRes.count : 0;
+    const failedCount = failedRes ? Number(failedRes.count) : 0;
 
     // Total Active Billed Students
     const billedStudentsRes = (await (async () => { let args = [`SELECT COUNT(DISTINCT studentId) as count FROM payments`]; const { rows } = await db.query(args[0], args.slice(1).length ? args.slice(1)[0] : []); return rows[0]; })());
@@ -820,8 +865,8 @@ async function getPaymentStats(req, res) {
         thisMonth,
         pendingDues,
         failedCount,
-        billedStudentsCount: billedStudentsRes ? billedStudentsRes.count : 0,
-        paidStudentsCount: paidStudentsRes ? paidStudentsRes.count : 0
+        billedStudentsCount: billedStudentsRes ? Number(billedStudentsRes.count) : 0,
+        paidStudentsCount: paidStudentsRes ? Number(paidStudentsRes.count) : 0
       }
     });
   } catch (err) {

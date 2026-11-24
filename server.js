@@ -58,26 +58,29 @@ app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Start DB and Express Server
+// Start Express Server and connect to Database
 async function startServer() {
+  const server = app.listen(PORT, () => {
+    console.log(`====================================================`);
+    console.log(`Akshaya Deluxe Hostel Management Server Active`);
+    console.log(`URL: http://localhost:${PORT}`);
+    console.log(`====================================================`);
+  });
+
   try {
     console.log('Connecting to database...');
     await getDb();
     console.log('Database initialized successfully.');
-
-    const server = app.listen(PORT, () => {
-      console.log(`====================================================`);
-      console.log(`Akshaya Deluxe Hostel Management Server Active`);
-      console.log(`URL: http://localhost:${PORT}`);
-      console.log(`====================================================`);
-    });
-
-    // Keep process active
-    setInterval(() => {}, 30000);
   } catch (err) {
-    console.error('Fatal: Server Failed to Start:', err);
-    process.exit(1);
+    console.error('Warning: Database initialization encountered an error:', err.message);
   }
+
+  // Keep process active
+  setInterval(() => {}, 30000);
 }
 
-startServer();
+if (!process.env.VERCEL) {
+  startServer();
+}
+
+module.exports = app;

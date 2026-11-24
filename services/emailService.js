@@ -101,4 +101,81 @@ async function sendPaymentReceiptEmail(options) {
   }
 }
 
-module.exports = { sendPaymentReceiptEmail };
+
+/**
+ * Send password reset email to student
+ * @param {Object} options Email options
+ * @param {string} options.to Student email
+ * @param {string} options.studentName Student name
+ * @param {string} options.resetUrl Password reset link
+ */
+async function sendPasswordResetEmail(options) {
+  try {
+    const host = process.env.SMTP_HOST;
+    const port = process.env.SMTP_PORT || 587;
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
+    const from = process.env.SMTP_FROM || '"Akshaya Deluxe Hostel" <no-reply@akshayapg.com>';
+
+    if (!host || !user || !pass) {
+      console.log(`[EmailService] SMTP credentials not configured. Skipping password reset email to ${options.to}.`);
+      return { success: false, message: 'SMTP not configured' };
+    }
+
+    const transporter = nodemailer.createTransport({
+      host,
+      port: Number(port),
+      secure: Number(port) === 465,
+      auth: { user, pass }
+    });
+
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+        <div style="background-color: #004D47; padding: 24px; text-align: center; color: white;">
+          <h1 style="margin: 0; font-size: 20px;">Akshaya Deluxe Boys Hostel</h1>
+          <p style="margin: 4px 0 0 0; font-size: 14px; opacity: 0.9;">Password Reset Request</p>
+        </div>
+        <div style="padding: 24px; background-color: #ffffff;">
+          <p style="font-size: 16px; color: #1e293b;">Hello <strong>${options.studentName || 'Student'}</strong>,</p>
+          <p style="color: #475569; font-size: 14px; line-height: 1.6;">
+            We received a request to reset the password for your Akshaya Deluxe Hostel account. Click the button below to choose a new password:
+          </p>
+          <div style="text-align: center; margin: 28px 0;">
+            <a href="${options.resetUrl}" style="background-color: #007a71; color: white; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 15px; display: inline-block;">
+              Reset My Password
+            </a>
+          </div>
+          <p style="color: #64748B; font-size: 13px; line-height: 1.5;">
+            This link is valid for <strong>30 minutes</strong> and can only be used once. If you did not request a password reset, please ignore this email; your account remains secure.
+          </p>
+          <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+          <p style="color: #94a3b8; font-size: 12px; word-break: break-all;">
+            If the button doesn't work, copy and paste this link into your browser:<br>
+            <a href="${options.resetUrl}" style="color: #007a71;">${options.resetUrl}</a>
+          </p>
+        </div>
+        <div style="background-color: #f1f5f9; padding: 16px; text-align: center; color: #64748B; font-size: 12px;">
+          Akshaya Deluxe Boys Hostel • Opp. Aurora Engineering College, Avushapur, Ghatkesar<br>
+          For assistance, contact hostel management.
+        </div>
+      </div>
+    `;
+
+    const mailOptions = {
+      from,
+      to: options.to,
+      subject: 'Password Reset Instructions - Akshaya Deluxe Hostel',
+      html: htmlContent
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`[EmailService] Password reset email sent to ${options.to}. MessageId: ${info.messageId}`);
+    return { success: true, messageId: info.messageId };
+  } catch (err) {
+    console.error('[EmailService] Password Reset Email Delivery Error:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+module.exports = { sendPaymentReceiptEmail, sendPasswordResetEmail };
+

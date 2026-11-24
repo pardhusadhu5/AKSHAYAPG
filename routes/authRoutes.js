@@ -1,12 +1,38 @@
 const express = require('express');
 const router = express.Router();
-const { upload, uploadApplicationFields } = require('../services/uploadService');
+const multer = require('multer');
+const { upload, uploadApplicationFields, syncReqFilesToCloudinary } = require('../services/uploadService');
 const authController = require('../controllers/authController');
-const { verifyToken } = require('../middleware/authMiddleware');
+const { verifyToken, rateLimiter } = require('../middleware/authMiddleware');
+
+const handleUploadApplication = (req, res, next) => {
+  uploadApplicationFields(req, res, async (err) => {
+    if (err) {
+      console.error('Upload Error during Student Application:', err);
+      if (err instanceof multer.MulterError) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ success: false, message: 'File size exceeds 5MB limit. Please upload a smaller photo.' });
+        }
+        return res.status(400).json({ success: false, message: `Upload error: ${err.message}` });
+      }
+      return res.status(400).json({ success: false, message: err.message || 'Error processing uploaded file.' });
+    }
+
+    try {
+      await syncReqFilesToCloudinary(req);
+    } catch (syncErr) {
+      console.warn('Cloudinary sync error ignored, proceeding with local file:', syncErr);
+    }
+
+    next();
+  });
+};
 
 // Routes
-router.post('/login', authController.login);
-router.post('/register-student-application', uploadApplicationFields, authController.registerStudentApplication);
+router.post('/login', rateLimiter({ windowMs: 15 * 60 * 1000, max: 15, message: 'Too many login attempts. Please try again after 15 minutes.' }), authController.login);
+router.post('/forgot-password', rateLimiter({ windowMs: 15 * 60 * 1000, max: 5, message: 'Too many password reset requests. Please try again later.' }), authController.forgotPassword);
+router.post('/reset-password', rateLimiter({ windowMs: 15 * 60 * 1000, max: 10, message: 'Too many reset attempts. Please try again later.' }), authController.resetPassword);
+router.post('/register-student-application', handleUploadApplication, authController.registerStudentApplication);
 router.get('/application-status', authController.getApplicationStatus);
 router.post('/forgot-password-request', authController.forgotPasswordRequest);
 

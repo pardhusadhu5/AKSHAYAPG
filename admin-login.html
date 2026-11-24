@@ -58,6 +58,31 @@
       color: var(--primary-deep);
       text-decoration: underline;
     }
+    .password-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .password-toggle {
+      position: absolute;
+      right: 12px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: var(--transition-fast);
+    }
+    .password-toggle:hover {
+      color: var(--primary-brand);
+    }
+    .password-toggle:focus {
+      outline: none;
+      color: var(--primary-brand);
+    }
     @media (max-width: 767px) {
       .auth-section {
         padding-top: 80px;
@@ -117,7 +142,12 @@
           
           <div class="form-group" style="margin-bottom: 20px;">
             <label class="form-label" for="adminPass">Password</label>
-            <input type="password" id="adminPass" class="form-input" placeholder="••••••••" required>
+            <div class="password-wrapper">
+              <input type="password" id="adminPass" class="form-input" placeholder="••••••••" required style="width: 100%; padding-right: 44px;">
+              <button type="button" class="password-toggle" id="toggleAdminPassBtn" aria-label="Toggle password visibility" title="Show or hide password">
+                <i data-lucide="eye" id="toggleAdminPassIcon"></i>
+              </button>
+            </div>
           </div>
           
           <a href="forgot-password.html" class="forgot-link" style="display: block; text-align: right; font-size: 0.85rem; color: var(--primary-brand); margin-top: -12px; margin-bottom: 24px; font-weight: 500; text-decoration: none;">Forgot Password?</a>
@@ -151,6 +181,29 @@
         return originalFetch(input, init);
       };
     })();
+
+    if (window.lucide) {
+      lucide.createIcons();
+    }
+
+    // Toggle Admin Password Visibility
+    const toggleAdminPassBtn = document.getElementById('toggleAdminPassBtn');
+    const adminPassInput = document.getElementById('adminPass');
+    const toggleAdminPassIcon = document.getElementById('toggleAdminPassIcon');
+
+    if (toggleAdminPassBtn && adminPassInput) {
+      toggleAdminPassBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const isPassword = adminPassInput.getAttribute('type') === 'password';
+        adminPassInput.setAttribute('type', isPassword ? 'text' : 'password');
+        if (toggleAdminPassIcon) {
+          toggleAdminPassIcon.setAttribute('data-lucide', isPassword ? 'eye-off' : 'eye');
+        }
+        if (window.lucide) {
+          lucide.createIcons();
+        }
+      });
+    }
 
     const form = document.getElementById('adminLoginForm');
     if (form) {

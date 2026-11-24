@@ -1,6 +1,8 @@
 const { getDb } = require('../config/db');
 const bcrypt = require('bcryptjs');
 const path = require('path');
+const { addAdminClient, broadcastAdminEvent } = require('../services/realtimeService');
+const { sendWelcomeWhatsApp } = require('../services/whatsappService');
 
 async function getStats(req, res) {
   try {
@@ -138,7 +140,7 @@ async function getStudentsList(req, res) {
     let query = `
       SELECT s.*, u.email, r.roomNumber, r.floor, r.block, b.bedNumber, b.bedLabel
       FROM students s
-      JOIN users u ON s.userId = u.id
+      LEFT JOIN users u ON s.userId = u.id
       LEFT JOIN rooms r ON s.roomId = r.id
       LEFT JOIN beds b ON s.bedId = b.id
       WHERE 1=1
@@ -146,7 +148,8 @@ async function getStudentsList(req, res) {
     const params = [];
     
     if (search && search.trim() !== '') {
-      params.push(`%${search.trim()}%`);
+      const cleanTerm = search.trim();
+      params.push(`%${cleanTerm}%`);
       const idx = params.length;
       query += ` AND (
         s.studentName ILIKE $${idx} OR 
@@ -154,6 +157,7 @@ async function getStudentsList(req, res) {
         s.phone ILIKE $${idx} OR 
         s.aadhaarNumber ILIKE $${idx} OR 
         s.collegeName ILIKE $${idx} OR 
+        s.applicationId ILIKE $${idx} OR
         r.roomNumber ILIKE $${idx} OR
         u.email ILIKE $${idx} OR
         CAST(s.id AS TEXT) ILIKE $${idx}
@@ -183,7 +187,41 @@ async function getStudentsList(req, res) {
     query += ` ORDER BY COALESCE(s.submittedAt, s.createdAt) DESC, s.id DESC`;
     
     const { rows: list } = await db.query(query, params);
-    res.status(200).json({ success: true, students: list });
+    const normalizedStudents = list.map(s => {
+      const bNum = s.bednumber || s.bedNumber;
+      const bLabel = s.bedlabel || s.bedLabel || (bNum ? `Bed ${bNum}` : null);
+      const rNum = s.roomnumber || s.roomNumber;
+      return {
+        ...s,
+        id: s.id,
+        userId: s.userid || s.userId,
+        studentName: s.studentname || s.studentName || `Student #${s.id}`,
+        studentCustomId: s.studentcustomid || s.studentCustomId || `AKS${String(s.id).padStart(6, '0')}`,
+        phone: s.phone || '',
+        email: s.email || '',
+        parentName: s.parentname || s.parentName || '',
+        parentPhone: s.parentphone || s.parentPhone || '',
+        aadhaarNumber: s.aadhaarnumber || s.aadhaarNumber || '',
+        collegeName: s.collegename || s.collegeName || '',
+        course: s.course || '',
+        year: s.year || '',
+        branch: s.branch || '',
+        roomId: s.roomid || s.roomId || null,
+        bedId: s.bedid || s.bedId || null,
+        roomNumber: rNum || null,
+        floor: s.floor || null,
+        block: s.block || null,
+        bedNumber: bNum || null,
+        bedLabel: bLabel,
+        monthlyRent: parseFloat(s.monthlyrent || s.monthlyRent || 0),
+        depositAmount: parseFloat(s.depositamount || s.depositAmount || 0),
+        paymentStatus: s.paymentstatus || s.paymentStatus || 'unpaid',
+        status: s.status || 'active',
+        applicationStatus: s.applicationstatus || s.applicationStatus || 'PENDING',
+        joinDate: s.joindate ? (typeof s.joindate === 'string' ? s.joindate.split('T')[0] : new Date(s.joindate).toISOString().split('T')[0]) : '—'
+      };
+    });
+    res.status(200).json({ success: true, students: normalizedStudents });
   } catch (err) {
     console.error('Students List Fetch Error:', err);
     res.status(500).json({ success: false, message: `Failed to fetch students list: ${err.message}` });
@@ -198,16 +236,48 @@ async function getStudentDetails(req, res) {
     const { rows: students } = await db.query(`
       SELECT s.*, u.email, r.roomNumber, r.floor, r.block, r.roomType, b.bedNumber, b.bedLabel
       FROM students s
-      JOIN users u ON s.userId = u.id
+      LEFT JOIN users u ON s.userId = u.id
       LEFT JOIN rooms r ON s.roomId = r.id
       LEFT JOIN beds b ON s.bedId = b.id
-      WHERE s.id = $1 OR s.studentCustomId = $1
-    `, [id]);
+      WHERE CAST(s.id AS TEXT) = $1 OR s.studentCustomId = $1
+    `, [String(id).trim()]);
 
-    const student = students[0];
-    if (!student) {
+    const rawStudent = students[0];
+    if (!rawStudent) {
       return res.status(404).json({ success: false, message: 'Student not found.' });
     }
+    const bNum = rawStudent.bednumber || rawStudent.bedNumber;
+    const bLabel = rawStudent.bedlabel || rawStudent.bedLabel || (bNum ? `Bed ${bNum}` : null);
+    const rNum = rawStudent.roomnumber || rawStudent.roomNumber;
+    const student = {
+      ...rawStudent,
+      id: rawStudent.id,
+      userId: rawStudent.userid || rawStudent.userId,
+      studentName: rawStudent.studentname || rawStudent.studentName || `Student #${rawStudent.id}`,
+      studentCustomId: rawStudent.studentcustomid || rawStudent.studentCustomId || `AKS${String(rawStudent.id).padStart(6, '0')}`,
+      phone: rawStudent.phone || '',
+      email: rawStudent.email || '',
+      parentName: rawStudent.parentname || rawStudent.parentName || '',
+      parentPhone: rawStudent.parentphone || rawStudent.parentPhone || '',
+      aadhaarNumber: rawStudent.aadhaarnumber || rawStudent.aadhaarNumber || '',
+      collegeName: rawStudent.collegename || rawStudent.collegeName || '',
+      course: rawStudent.course || '',
+      year: rawStudent.year || '',
+      branch: rawStudent.branch || '',
+      roomId: rawStudent.roomid || rawStudent.roomId || null,
+      bedId: rawStudent.bedid || rawStudent.bedId || null,
+      roomNumber: rNum || null,
+      floor: rawStudent.floor || null,
+      block: rawStudent.block || null,
+      bedNumber: bNum || null,
+      bedLabel: bLabel,
+      monthlyRent: parseFloat(rawStudent.monthlyrent || rawStudent.monthlyRent || 0),
+      depositAmount: parseFloat(rawStudent.depositamount || rawStudent.depositAmount || 0),
+      paymentStatus: rawStudent.paymentstatus || rawStudent.paymentStatus || 'unpaid',
+      status: rawStudent.status || 'active',
+      applicationStatus: rawStudent.applicationstatus || rawStudent.applicationStatus || 'PENDING',
+      joinDate: rawStudent.joindate ? (typeof rawStudent.joindate === 'string' ? rawStudent.joindate.split('T')[0] : new Date(rawStudent.joindate).toISOString().split('T')[0]) : '—'
+    };
 
     // Get payment history
     const { rows: payments } = await db.query(`
@@ -241,6 +311,19 @@ async function updatePaymentStatus(req, res) {
 
     if (rowCount === 0) {
       return res.status(404).json({ success: false, message: 'Student record not found.' });
+    }
+
+    // Keep payments table in sync with student payment status toggle
+    if (paymentStatus === 'paid') {
+      await db.query(
+        "UPDATE payments SET status = 'paid', amountPaid = amountDue, paidAt = CURRENT_TIMESTAMP, updatedAt = CURRENT_TIMESTAMP WHERE studentId = $1 AND status != 'paid'",
+        [id]
+      );
+    } else {
+      await db.query(
+        "UPDATE payments SET status = 'pending', amountPaid = 0, paidAt = NULL, updatedAt = CURRENT_TIMESTAMP WHERE studentId = $1 AND status = 'paid'",
+        [id]
+      );
     }
 
     res.status(200).json({ success: true, message: 'Payment status updated successfully.' });
@@ -625,6 +708,17 @@ async function downloadDbBackup(req, res) {
   }
 }
 
+function subscribeAdminEvents(req, res) {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'X-Accel-Buffering': 'no',
+    'Access-Control-Allow-Origin': '*'
+  });
+  addAdminClient(res, req);
+}
+
 async function getApplications(req, res) {
   try {
     const { status } = req.query;
@@ -645,35 +739,54 @@ async function getApplications(req, res) {
       query += ` AND UPPER(s.applicationStatus) = $${params.length}`;
     }
 
+    // Order descending by submission timestamp, fallback to createdAt, then ID
     query += ` ORDER BY COALESCE(s.submittedAt, s.createdAt) DESC, s.id DESC`;
 
     const { rows: applications } = await db.query(query, params);
-    const normalizedApps = applications.map(app => ({
-      ...app,
-      applicationStatus: app.applicationstatus || app.applicationStatus,
-      applicationId: app.applicationid || app.applicationId,
-      studentName: app.studentname || app.studentName,
-      studentCustomId: app.studentcustomid || app.studentCustomId,
-      parentName: app.parentname || app.parentName,
-      parentPhone: app.parentphone || app.parentPhone,
-      collegeName: app.collegename || app.collegeName,
-      preferredRoomType: app.preferredroomtype || app.preferredRoomType,
-      stayDuration: app.stayduration || app.stayDuration,
-      monthlyRent: app.monthlyrent || app.monthlyRent,
-      depositAmount: app.depositamount || app.depositAmount,
-      rejectionReason: app.rejectionreason || app.rejectionReason,
-      correctionReason: app.correctionreason || app.correctionReason,
-      aadhaarNumber: app.aadhaarnumber || app.aadhaarNumber,
-      dateOfBirth: app.dateofbirth || app.dateOfBirth,
-      emergencyContact: app.emergencycontact || app.emergencyContact,
-      rollNumber: app.rollnumber || app.rollNumber,
-      roomNumber: app.roomnumber || app.roomNumber,
-      bedNumber: app.bednumber || app.bedNumber,
-      bedLabel: app.bedlabel || app.bedLabel,
-      submittedAt: app.submittedat || app.submittedAt || app.createdat || app.createdAt,
-      createdAt: app.createdat || app.createdAt,
-      updatedAt: app.updatedat || app.updatedAt
-    }));
+    const normalizedApps = applications.map(app => {
+      const bNum = app.bednumber || app.bedNumber;
+      const bLabel = app.bedlabel || app.bedLabel || (bNum ? `Bed ${bNum}` : null);
+      const rNum = app.roomnumber || app.roomNumber;
+      return {
+        ...app,
+        id: app.id,
+        userId: app.userid || app.userId,
+        applicationStatus: (app.applicationstatus || app.applicationStatus || 'PENDING').toUpperCase(),
+        applicationId: app.applicationid || app.applicationId || `AKS-APP-${app.id}`,
+        studentName: app.studentname || app.studentName || 'N/A',
+        studentCustomId: app.studentcustomid || app.studentCustomId || `AKS${String(app.id).padStart(6, '0')}`,
+        phone: app.phone || 'N/A',
+        email: app.email || '',
+        parentName: app.parentname || app.parentName || '',
+        parentPhone: app.parentphone || app.parentPhone || '',
+        collegeName: app.collegename || app.collegeName || 'N/A',
+        course: app.course || '',
+        year: app.year || '',
+        branch: app.branch || '',
+        preferredRoomType: app.preferredroomtype || app.preferredRoomType || app.preferredsharingtype || app.preferredSharingType || '3 Sharing',
+        preferredFloor: app.preferredfloor || app.preferredFloor || '',
+        foodPreference: app.foodpreference || app.foodPreference || '',
+        stayDuration: app.stayduration || app.stayDuration || '',
+        monthlyRent: parseFloat(app.monthlyrent || app.monthlyRent || 0),
+        depositAmount: parseFloat(app.depositamount || app.depositAmount || 0),
+        rejectionReason: app.rejectionreason || app.rejectionReason,
+        correctionReason: app.correctionreason || app.correctionReason,
+        aadhaarNumber: app.aadhaarnumber || app.aadhaarNumber,
+        dateOfBirth: app.dateofbirth || app.dateOfBirth,
+        emergencyContact: app.emergencycontact || app.emergencyContact,
+        rollNumber: app.rollnumber || app.rollNumber,
+        roomId: app.roomid || app.roomId || null,
+        bedId: app.bedid || app.bedId || null,
+        roomNumber: rNum,
+        bedNumber: bNum,
+        bedLabel: bLabel,
+        submittedAt: app.submittedat || app.submittedAt || app.createdat || app.createdAt || null,
+        createdAt: app.createdat || app.createdAt || null,
+        whatsappStatus: app.whatsappstatus || app.whatsappStatus || 'NONE',
+        whatsappSentAt: app.whatsappsentat || app.whatsappSentAt,
+        whatsappError: app.whatsapperror || app.whatsappError
+      };
+    });
     res.status(200).json({ success: true, applications: normalizedApps });
   } catch (err) {
     console.error('Get Applications Error:', err);
@@ -699,11 +812,16 @@ async function reviewApplication(req, res) {
     }
 
     let targetAppStatus = 'PENDING';
+    let targetStudentStatus = student.status || 'APPLICANT';
+    let targetUserStatus = 'pending';
     let rejectionReason = null;
     let correctionReason = null;
+    let whatsappResult = null;
 
     if (action === 'APPROVE') {
       targetAppStatus = 'APPROVED';
+      targetStudentStatus = 'active';
+      targetUserStatus = 'active';
       const feeAmount = admissionFee ? parseFloat(admissionFee) : (parseFloat(student.monthlyRent) || 8500);
 
       // Check if admission invoice already generated in payments table
@@ -723,8 +841,20 @@ async function reviewApplication(req, res) {
         `INSERT INTO notifications (type, message) VALUES ($1, $2)`,
         ['application_approved', `Application ${student.applicationId || student.id} approved for ${student.studentName}. Initial fee invoice generated.`]
       );
+
+      // Send WhatsApp welcome message (safe async, non-blocking)
+      try {
+        whatsappResult = await sendWelcomeWhatsApp({
+          ...student,
+          applicationStatus: 'APPROVED'
+        });
+      } catch (waErr) {
+        console.error('WhatsApp Welcome Dispatch Error (non-fatal):', waErr);
+      }
     } else if (action === 'REJECT') {
       targetAppStatus = 'REJECTED';
+      targetStudentStatus = 'inactive';
+      targetUserStatus = 'rejected';
       rejectionReason = reason || 'Application rejected by hostel administration.';
       await db.query(
         `INSERT INTO notifications (type, message) VALUES ($1, $2)`,
@@ -739,17 +869,43 @@ async function reviewApplication(req, res) {
       );
     }
 
+    // Update students table
     await db.query(
       `UPDATE students 
-       SET applicationStatus = $1, rejectionReason = $2, correctionReason = $3, updatedAt = CURRENT_TIMESTAMP 
-       WHERE id = $4`,
-      [targetAppStatus, rejectionReason, correctionReason, id]
+       SET applicationStatus = $1, status = $2, rejectionReason = $3, correctionReason = $4, updatedAt = CURRENT_TIMESTAMP 
+       WHERE id = $5`,
+      [targetAppStatus, targetStudentStatus, rejectionReason, correctionReason, id]
     );
+
+    // Update users table to permit/block Student Portal login access
+    const targetUserId = student.userid || student.userId;
+    if (targetUserId && (action === 'APPROVE' || action === 'REJECT')) {
+      await db.query(
+        `UPDATE users SET status = $1, updatedAt = CURRENT_TIMESTAMP WHERE id = $2`,
+        [targetUserStatus, targetUserId]
+      );
+    }
+
+    // Broadcast real-time SSE update to all connected admin dashboards
+    try {
+      broadcastAdminEvent('application_updated', {
+        id: parseInt(id),
+        applicationId: student.applicationId || student.studentCustomId || `AKS-APP-${id}`,
+        studentName: student.studentName,
+        phone: student.phone,
+        applicationStatus: targetAppStatus,
+        whatsappStatus: whatsappResult ? whatsappResult.status : student.whatsappStatus || 'NONE',
+        updatedAt: new Date().toISOString()
+      });
+    } catch (sseErr) {
+      console.warn('Realtime update broadcast error (non-fatal):', sseErr);
+    }
 
     res.status(200).json({
       success: true,
       message: `Application status updated to ${targetAppStatus}.`,
-      applicationStatus: targetAppStatus
+      applicationStatus: targetAppStatus,
+      whatsapp: whatsappResult
     });
   } catch (err) {
     console.error('Review Application Error:', err);
@@ -813,20 +969,47 @@ async function allocateRoomToStudent(req, res) {
 
     await db.query('BEGIN');
 
-    if (student.bedId && student.bedId !== parseInt(bedId)) {
-      await db.query(`UPDATE beds SET status = 'vacant', userId = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = $1`, [student.bedId]);
+    const studentUserId = student.userid || student.userId;
+    const currentBedId = student.bedid || student.bedId;
+
+    // Release any OTHER bed currently held by this student's userId to prevent beds_userid_key violation
+    if (studentUserId) {
+      await db.query(
+        `UPDATE beds SET status = 'vacant', userId = NULL, updatedAt = CURRENT_TIMESTAMP WHERE userId = $1 AND id != $2`,
+        [studentUserId, bedId]
+      );
+    }
+    // Also release student.bedId if different
+    if (currentBedId && parseInt(currentBedId) !== parseInt(bedId)) {
+      await db.query(
+        `UPDATE beds SET status = 'vacant', userId = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = $1`,
+        [currentBedId]
+      );
     }
 
-    await db.query(`UPDATE beds SET status = 'occupied', userId = $1, updatedAt = CURRENT_TIMESTAMP WHERE id = $2`, [student.userId, bedId]);
+    // Set target bed to occupied
+    await db.query(`UPDATE beds SET status = 'occupied', userId = $1, updatedAt = CURRENT_TIMESTAMP WHERE id = $2`, [studentUserId, bedId]);
+
+    // Fetch room fee
+    const { rows: rRows } = await db.query('SELECT monthlyFee FROM rooms WHERE id = $1', [roomId]);
+    const roomFee = rRows[0] ? parseFloat(rRows[0].monthlyfee || rRows[0].monthlyFee || 8500) : 8500;
 
     await db.query(
       `UPDATE students 
-       SET roomId = $1, bedId = $2, status = 'active', applicationStatus = 'APPROVED', updatedAt = CURRENT_TIMESTAMP 
-       WHERE id = $3`,
-      [roomId, bedId, id]
+       SET roomId = $1, bedId = $2, monthlyRent = $3, status = 'active', applicationStatus = 'ADMISSION_CONFIRMED', updatedAt = CURRENT_TIMESTAMP 
+       WHERE id = $4`,
+      [roomId, bedId, roomFee, id]
     );
 
-    await db.query(`UPDATE users SET status = 'active' WHERE id = $1`, [student.userId]);
+    if (studentUserId) {
+      await db.query(`UPDATE users SET status = 'active', updatedAt = CURRENT_TIMESTAMP WHERE id = $1`, [studentUserId]);
+    }
+
+    // Mark previous active allocations as vacated
+    await db.query(
+      `UPDATE allocations SET status = 'vacated', vacatedAt = CURRENT_TIMESTAMP WHERE studentId = $1 AND status = 'active'`,
+      [id]
+    );
 
     await db.query(
       `INSERT INTO allocations (studentId, roomId, bedId, status) VALUES ($1, $2, $3, 'active')`,
@@ -907,6 +1090,7 @@ module.exports = {
   verifyDocument,
   allocateRoomToStudent,
   getPasswordResetRequests,
-  adminResetPassword
+  adminResetPassword,
+  subscribeAdminEvents
 };
 

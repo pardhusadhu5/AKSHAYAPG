@@ -8,6 +8,7 @@ router.use(verifyToken);
 router.use(requireRole(['admin', 'manager']));
 
 router.get('/stats', dashboardController.getStats);
+router.get('/events', dashboardController.subscribeAdminEvents);
 router.get('/students', dashboardController.getStudentsList);
 router.get('/applications', dashboardController.getApplications);
 router.post('/applications/:id/review', dashboardController.reviewApplication);

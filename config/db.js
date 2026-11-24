@@ -186,6 +186,10 @@ async function initializeDatabase(db) {
       ADD COLUMN IF NOT EXISTS expectedDuration INTEGER,
       ADD COLUMN IF NOT EXISTS stayDuration INTEGER,
       ADD COLUMN IF NOT EXISTS applicationRemarks TEXT,
+      ADD COLUMN IF NOT EXISTS whatsappStatus VARCHAR(50) DEFAULT 'NONE',
+      ADD COLUMN IF NOT EXISTS whatsappSentAt TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS whatsappMessageId VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS whatsappError TEXT,
       DROP CONSTRAINT IF EXISTS students_status_check;
     UPDATE students SET submittedAt = createdAt WHERE submittedAt IS NULL;
   `).catch((err) => { console.error('Migration notice:', err.message); });
@@ -236,6 +240,20 @@ async function initializeDatabase(db) {
       requestedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  // 6b. Secure Token-Based Password Resets Table
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS password_resets (
+      id SERIAL PRIMARY KEY,
+      userId INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      token VARCHAR(255) NOT NULL,
+      expiresAt TIMESTAMP NOT NULL,
+      isUsed BOOLEAN DEFAULT false,
+      createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token);`).catch(() => {});
+  await db.query(`CREATE INDEX IF NOT EXISTS idx_password_resets_userid ON password_resets(userId);`).catch(() => {});
 
   // Drop legacy OTP table if present (OTP System Completely Removed)
   await db.query(`DROP TABLE IF EXISTS otps;`).catch(() => {});

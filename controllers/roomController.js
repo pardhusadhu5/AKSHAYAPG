@@ -296,21 +296,62 @@ async function getRoomDetails(req, res) {
     `, [id]);
 
     // Get recent room allocation history
-    const { rows: history } = await db.query(`
+    const { rows: history } = await db.query(
       SELECT a.*, s.studentName, s.studentCustomId, s.phone, b.bedLabel, b.bedNumber
       FROM allocations a
       JOIN students s ON a.studentId = s.id
       LEFT JOIN beds b ON a.bedId = b.id
-      WHERE a.roomId = $1 OR a.fromRoomId = $1
+      WHERE a.roomId =  OR a.fromRoomId = 
       ORDER BY a.allocatedAt DESC
       LIMIT 10
-    `, [id]);
+    , [id]);
+
+    const normalizedBeds = beds.map(b => {
+      const bNum = b.bednumber || b.bedNumber;
+      const bLabel = b.bedlabel || b.bedLabel || (bNum ? Bed  : Bed #);
+      return {
+        ...b,
+        id: b.id,
+        roomId: b.roomid || b.roomId,
+        bedNumber: bNum,
+        bednumber: bNum,
+        bedLabel: bLabel,
+        bedlabel: bLabel,
+        status: b.status,
+        userId: b.userid || b.userId,
+        studentId: b.studentid || b.studentId || null,
+        studentCustomId: b.studentcustomid || b.studentCustomId || null,
+        studentName: b.studentname || b.studentName || null,
+        phone: b.phone || null,
+        joinDate: b.joindate || b.joinDate || null
+      };
+    });
+
+    const normalizedStudents = students.map(s => {
+      const bNum = s.bednumber || s.bedNumber;
+      const bLabel = s.bedlabel || s.bedLabel || (bNum ? Bed  : null);
+      return {
+        ...s,
+        id: s.id,
+        studentName: s.studentname || s.studentName,
+        studentCustomId: s.studentcustomid || s.studentCustomId,
+        phone: s.phone,
+        email: s.email,
+        roomId: s.roomid || s.roomId,
+        bedId: s.bedid || s.bedId,
+        bedNumber: bNum,
+        bedLabel: bLabel,
+        monthlyRent: parseFloat(s.monthlyrent || s.monthlyRent || 0),
+        status: s.status,
+        applicationStatus: s.applicationstatus || s.applicationStatus
+      };
+    });
 
     res.status(200).json({
       success: true,
       room,
-      beds,
-      students,
+      beds: normalizedBeds,
+      students: normalizedStudents,
       history
     });
   } catch (err) {
@@ -600,7 +641,30 @@ async function getBeds(req, res) {
     sql += ` ORDER BY r.roomNumber ASC, b.bedNumber ASC`;
 
     const { rows: beds } = await db.query(sql, params);
-    res.status(200).json({ success: true, beds });
+    const normalizedBeds = beds.map(b => {
+      const bNum = b.bednumber || b.bedNumber;
+      const bLabel = b.bedlabel || b.bedLabel || (bNum ? `Bed ${bNum}` : `Bed #${b.id}`);
+      return {
+        ...b,
+        id: b.id,
+        roomId: b.roomid || b.roomId,
+        bedNumber: bNum,
+        bednumber: bNum,
+        bedLabel: bLabel,
+        bedlabel: bLabel,
+        status: b.status,
+        userId: b.userid || b.userId,
+        roomNumber: b.roomnumber || b.roomNumber,
+        floor: b.floor,
+        block: b.block,
+        studentId: b.studentid || b.studentId || null,
+        studentCustomId: b.studentcustomid || b.studentCustomId || null,
+        studentName: b.studentname || b.studentName || null,
+        phone: b.phone || null,
+        joinDate: b.joindate || b.joinDate || null
+      };
+    });
+    res.status(200).json({ success: true, beds: normalizedBeds });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -615,7 +679,13 @@ async function getVacantBeds(req, res) {
       `SELECT id, bedNumber, bedLabel, status FROM beds WHERE roomId = $1 AND status = 'vacant' ORDER BY bedNumber ASC`,
       [roomId]
     );
-    res.status(200).json({ success: true, beds });
+    const normalizedBeds = beds.map(b => ({
+      id: b.id,
+      bedNumber: b.bednumber || b.bedNumber,
+      bedLabel: b.bedlabel || b.bedLabel || `Bed ${b.bednumber || b.bedNumber}`,
+      status: b.status
+    }));
+    res.status(200).json({ success: true, beds: normalizedBeds });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -685,9 +755,18 @@ async function allocateStudent(req, res) {
       return res.status(404).json({ success: false, message: 'Student record not found.' });
     }
 
-    if (student.roomId || student.bedId) {
+    const studentNameVal = student.studentName || student.studentname || 'Student';
+    const studentUserIdVal = student.userId || student.userid;
+    const currentRoomId = student.roomId || student.roomid;
+    const currentBedId = student.bedId || student.bedid;
+
+    // If already allocated to this exact bed and room: return success directly
+    if (currentRoomId && currentBedId && parseInt(currentRoomId) === parseInt(roomId) && parseInt(currentBedId) === parseInt(bedId)) {
       await db.query('ROLLBACK');
-      return res.status(400).json({ success: false, message: `${student.studentName} is already allocated to a room. Deallocate or transfer first.` });
+      return res.status(200).json({
+        success: true,
+        message: `${studentNameVal} is already allocated to this room and bed.`
+      });
     }
 
     // 2. Verify Room
@@ -709,18 +788,39 @@ async function allocateStudent(req, res) {
       await db.query('ROLLBACK');
       return res.status(404).json({ success: false, message: 'Selected bed not found in target room.' });
     }
-    if (bed.status !== 'vacant') {
+    // Allow allocation if bed is vacant OR if it was already held by this student
+    if (bed.status !== 'vacant' && (!studentUserIdVal || bed.userid !== studentUserIdVal)) {
       await db.query('ROLLBACK');
       return res.status(400).json({ success: false, message: 'Selected bed is not available (occupied, reserved, or maintenance).' });
     }
 
-    const studentNameVal = student.studentName || student.studentname;
-    const studentUserIdVal = student.userId || student.userid;
     const roomNumberVal = room.roomNumber || room.roomnumber;
     const bedLabelVal = bed.bedLabel || bed.bedlabel || `Bed ${bed.bedNumber || bed.bednumber}`;
     const monthlyRentFee = room.monthlyfee || room.monthlyFee || student.monthlyRent || student.monthlyrent || 8500;
 
-    // Update Student to active resident
+    // 4. CRITICAL FIX FOR UNIQUE CONSTRAINT "beds_userid_key":
+    // Release any OTHER bed that is currently occupied by this student's userId
+    if (studentUserIdVal) {
+      await db.query(
+        `UPDATE beds SET status = 'vacant', userId = NULL, updatedAt = CURRENT_TIMESTAMP WHERE userId = $1 AND id != $2`,
+        [studentUserIdVal, bedId]
+      );
+    }
+    // Also release any bed previously listed in student.bedId if different
+    if (currentBedId && parseInt(currentBedId) !== parseInt(bedId)) {
+      await db.query(
+        `UPDATE beds SET status = 'vacant', userId = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = $1`,
+        [currentBedId]
+      );
+    }
+
+    // 5. Update Target Bed to occupied
+    await db.query(
+      `UPDATE beds SET status = 'occupied', userId = $1, updatedAt = CURRENT_TIMESTAMP WHERE id = $2`,
+      [studentUserIdVal, bedId]
+    );
+
+    // 6. Update Student to active resident with assigned room & bed
     await db.query(
       `UPDATE students 
        SET roomId = $1, bedId = $2, monthlyRent = $3, status = 'active', applicationStatus = 'ADMISSION_CONFIRMED', updatedAt = CURRENT_TIMESTAMP 
@@ -730,17 +830,26 @@ async function allocateStudent(req, res) {
 
     // Update Bed to occupied
     await db.query(
-      `UPDATE beds SET status = 'occupied', userId = $1, blockedReason = NULL, reservedFor = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = $2`,
+      UPDATE beds SET status = 'occupied', userId = , blockedReason = NULL, reservedFor = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = ,
       [studentUserIdVal, bedId]
     );
 
-    // Record Allocation
+    // 7. Update User account status if exists
+    if (studentUserIdVal) {
+      await db.query(UPDATE users SET status = 'active', updatedAt = CURRENT_TIMESTAMP WHERE id = , [studentUserIdVal]);
+    }
+
+    // 8. Update Allocation history
+    await db.query(
+      `UPDATE allocations SET status = 'vacated', vacatedAt = CURRENT_TIMESTAMP WHERE studentId = $1 AND status = 'active'`,
+      [studentId]
+    );
     await db.query(
       `INSERT INTO allocations (studentId, roomId, bedId, reason, notes, status) VALUES ($1, $2, $3, $4, $5, $6)`,
       [studentId, roomId, bedId, reason || 'Admission Allocation', notes || null, 'active']
     );
 
-    // Add Notification
+    // 9. Add Notification
     await db.query(
       `INSERT INTO notifications (type, message) VALUES ($1, $2)`,
       ['bed_allocated', `Allocated ${studentNameVal} to Room ${roomNumberVal} (${bedLabelVal}).`]
@@ -788,17 +897,25 @@ async function deallocateStudent(req, res) {
 
     await db.query('BEGIN');
 
-    // Vacate bed
+    const studentUserId = student.userid || student.userId;
+
+    // Vacate bed by studentBedId AND by studentUserId to prevent orphan assignments
     if (studentBedId) {
       await db.query(
         `UPDATE beds SET status = 'vacant', userId = NULL, blockedReason = NULL, reservedFor = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = $1`,
         [studentBedId]
       );
     }
+    if (studentUserId) {
+      await db.query(
+        `UPDATE beds SET status = 'vacant', userId = NULL, updatedAt = CURRENT_TIMESTAMP WHERE userId = $1`,
+        [studentUserId]
+      );
+    }
 
-    // Reset student room/bed
+    // Reset student room/bed & set status
     await db.query(
-      `UPDATE students SET roomId = NULL, bedId = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = $1`,
+      `UPDATE students SET roomId = NULL, bedId = NULL, status = 'APPLICANT', updatedAt = CURRENT_TIMESTAMP WHERE id = $1`,
       [studentId]
     );
 
@@ -871,11 +988,14 @@ async function transferStudent(req, res) {
 
     await db.query('BEGIN');
 
-    // Vacate old bed & update old allocation
+    // Vacate old bed & clean up any prior bed assigned to studentUserId
     if (oldBedId) {
-      await db.query(`UPDATE beds SET status = 'vacant', userId = NULL, blockedReason = NULL, reservedFor = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = $1`, [oldBedId]);
-      await db.query(`UPDATE allocations SET vacatedAt = CURRENT_TIMESTAMP, reason = COALESCE($2, reason), status = 'transferred' WHERE studentId = $1 AND status = 'active'`, [studentId, reason]);
+      await db.query(UPDATE beds SET status = 'vacant', userId = NULL, blockedReason = NULL, reservedFor = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = , [oldBedId]);
     }
+    if (studentUserId) {
+      await db.query(`UPDATE beds SET status = 'vacant', userId = NULL, updatedAt = CURRENT_TIMESTAMP WHERE userId = $1 AND id != $2`, [studentUserId, targetBedId]);
+    }
+    await db.query(`UPDATE allocations SET vacatedAt = CURRENT_TIMESTAMP, status = 'transferred' WHERE studentId = $1 AND status = 'active'`, [studentId]);
 
     // Occupy target bed
     await db.query(`UPDATE beds SET status = 'occupied', userId = $1, blockedReason = NULL, reservedFor = NULL, updatedAt = CURRENT_TIMESTAMP WHERE id = $2`, [studentUserId, targetBedId]);
