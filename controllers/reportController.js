@@ -36,7 +36,7 @@ function normalizePrivateKey(rawKey) {
 async function downloadReport(req, res) {
   try {
     const { type } = req.query; // 'student', 'room', 'occupancy', 'income', 'pending'
-    if (!['student', 'room', 'occupancy', 'income', 'pending'].includes(type)) {
+    if (!['student', 'room', 'occupancy', 'income', 'pending', 'monthly_rent_collection', 'rent_collection'].includes(type)) {
       return res.status(400).json({ success: false, message: 'Invalid report type requested.' });
     }
 
@@ -109,6 +109,28 @@ async function downloadReport(req, res) {
         const outstanding = p.amountDue - p.amountPaid;
         csvContent += `"${p.billingMonth}","${p.studentName}","${p.phone}","Room ${p.roomNumber || 'N/A'}","${p.amountDue}","${p.amountPaid}","${outstanding}","${p.status}"\n`;
       });
+    } else if (type === 'monthly_rent_collection' || type === 'rent_collection') {
+      csvContent = 'Invoice Number,Student ID,Student Name,Phone,Room Number,Billing Month,Cycle Type,Amount Due,Late Fee,Amount Paid,Pending Balance,Advance Paid,Status,Due Date,Paid Date\n';
+      const { rows: rentRecords } = await db.query(`
+        SELECT p.invoiceNumber, p.studentId, s.studentName, s.phone, r.roomNumber, p.billingMonth,
+               p.billingCycleType, p.amountDue, p.lateFee, p.amountPaid, p.advancePaid,
+               (p.amountDue + p.lateFee - p.amountPaid) as pendingBalance,
+               p.status, p.dueDate, p.paidAt
+        FROM payments p
+        JOIN students s ON p.studentId = s.id
+        LEFT JOIN rooms r ON s.roomId = r.id
+        ORDER BY p.billingMonth DESC, p.id DESC
+      `);
+      rentRecords.forEach(p => {
+        const due = parseFloat(p.amountdue || p.amountDue || 0);
+        const late = parseFloat(p.latefee || p.lateFee || 0);
+        const paid = parseFloat(p.amountpaid || p.amountPaid || 0);
+        const advance = parseFloat(p.advancepaid || p.advancePaid || 0);
+        const bal = Math.max(0, (due + late) - paid);
+        const dueStr = p.duedate || p.dueDate ? new Date(p.duedate || p.dueDate).toLocaleDateString('en-IN') : '';
+        const paidStr = p.paidat || p.paidAt ? new Date(p.paidat || p.paidAt).toLocaleDateString('en-IN') : '';
+        csvContent += `"${p.invoicenumber || p.invoiceNumber || ''}","${p.studentid || p.studentId}","${p.studentname || p.studentName}","${p.phone || ''}","Room ${p.roomnumber || p.roomNumber || 'Unassigned'}","${p.billingmonth || p.billingMonth}","${p.billingcycletype || p.billingCycleType || 'CALENDAR_MONTH'}","${due}","${late}","${paid}","${bal}","${advance}","${p.status}","${dueStr}","${paidStr}"\n`;
+      });
     }
 
     res.setHeader('Content-Type', 'text/csv');
@@ -124,7 +146,7 @@ async function downloadReport(req, res) {
 async function exportGoogleSheet(req, res) {
   try {
     const { type } = req.query; // 'student', 'room', 'occupancy', 'income', 'pending'
-    if (!['student', 'room', 'occupancy', 'income', 'pending'].includes(type)) {
+    if (!['student', 'room', 'occupancy', 'income', 'pending', 'monthly_rent_collection', 'rent_collection'].includes(type)) {
       return res.status(400).json({ success: false, message: 'Invalid report type requested.' });
     }
 

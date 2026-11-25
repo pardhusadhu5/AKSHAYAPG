@@ -7,6 +7,7 @@ const { verifyToken, requireRole } = require('../middleware/authMiddleware');
 router.post('/send', verifyToken, requireRole(['admin', 'manager']), reminderController.sendIndividualReminder);
 router.post('/send-bulk', verifyToken, requireRole(['admin', 'manager']), reminderController.sendBulkReminders);
 router.post('/send-targeted', verifyToken, requireRole(['admin', 'manager']), reminderController.sendTargetedReminder);
+router.post('/send-due-reminders', verifyToken, requireRole(['admin', 'manager']), reminderController.sendDueReminders);
 router.get('/logs', verifyToken, requireRole(['admin', 'manager']), reminderController.getReminderLogs);
 
 module.exports = router;

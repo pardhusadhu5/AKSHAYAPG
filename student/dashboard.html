@@ -593,18 +593,19 @@
           <table class="data-table" id="paymentsHistoryTable">
             <thead>
               <tr>
+                <th>Invoice #</th>
                 <th>Billing Cycle</th>
-                <th>Amount</th>
+                <th>Due Date</th>
+                <th>Amount (Due/Late)</th>
+                <th>Paid / Balance</th>
                 <th>Status</th>
-                <th>Payment Method</th>
-                <th>Payment ID</th>
                 <th>Receipt #</th>
                 <th>Paid Date</th>
                 <th style="text-align:center;">Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td colspan="8" style="text-align:center;">Loading fee records...</td></tr>
+              <tr><td colspan="9" style="text-align:center;">Loading fee records...</td></tr>
             </tbody>
           </table>
         </div>
@@ -1643,7 +1644,7 @@ Thank you for staying with us!
       const token = localStorage.getItem('token');
       const tableBody = document.querySelector('#paymentsHistoryTable tbody');
       if (tableBody) {
-        tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">Fetching live fee ledger...</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px;">Fetching live fee ledger...</td></tr>';
       }
 
       try {
@@ -1662,13 +1663,49 @@ Thank you for staying with us!
           const currentFeeAmount = document.getElementById('currentFeeAmount');
           const payNowBtn = document.getElementById('payNowBtn');
 
-          if (currentFeeMonthLabel) currentFeeMonthLabel.innerText = currentFee.billingMonth || 'Current Month';
-          if (currentFeeAmount) currentFeeAmount.innerText = `₹${Number(currentFee.amountDue || 8500).toLocaleString('en-IN')}`;
+          const dueAmt = parseFloat(currentFee.amountDue || 8500);
+          const lateAmt = parseFloat(currentFee.lateFee || 0);
+          const paidAmt = parseFloat(currentFee.amountPaid || 0);
+          const pendingAmt = parseFloat(currentFee.pendingBalance ?? Math.max(0, (dueAmt + lateAmt) - paidAmt));
 
-          const isPaid = currentFee.status === 'paid';
+          if (currentFeeMonthLabel) {
+            const cycleText = currentFee.billingMonth || 'Current Month';
+            const invText = currentFee.invoiceNumber ? ` (${currentFee.invoiceNumber})` : '';
+            currentFeeMonthLabel.innerText = `${cycleText}${invText}`;
+          }
+
+          if (currentFeeAmount) {
+            currentFeeAmount.innerText = `₹${pendingAmt.toLocaleString('en-IN')}`;
+            const dueLabelSpan = currentFeeAmount.nextElementSibling;
+            if (dueLabelSpan) {
+              const dueStr = currentFee.dueDate ? new Date(currentFee.dueDate).toLocaleDateString('en-IN') : '05th';
+              dueLabelSpan.innerText = `Due: ${dueStr}${lateAmt > 0 ? ` (+₹${lateAmt} Late Fee)` : ''}`;
+            }
+          }
+
+          const curStatus = (currentFee.status || 'unpaid').toLowerCase();
+          const isPaid = curStatus === 'paid';
+          const isOverdue = curStatus === 'overdue';
+          const isPartial = curStatus === 'partial';
+
           if (currentMonthBadge) {
-            currentMonthBadge.innerText = isPaid ? 'PAID' : 'UNPAID';
-            currentMonthBadge.className = `status-badge ${isPaid ? 'active' : 'inactive'}`;
+            if (isPaid) {
+              currentMonthBadge.innerText = 'PAID';
+              currentMonthBadge.className = 'status-badge active';
+              currentMonthBadge.style.cssText = '';
+            } else if (isOverdue) {
+              currentMonthBadge.innerText = 'OVERDUE';
+              currentMonthBadge.className = 'status-badge inactive';
+              currentMonthBadge.style.cssText = 'background:#fee2e2; color:#b91c1c; border-color:#fca5a5;';
+            } else if (isPartial) {
+              currentMonthBadge.innerText = 'PARTIALLY PAID';
+              currentMonthBadge.className = 'status-badge partially';
+              currentMonthBadge.style.cssText = '';
+            } else {
+              currentMonthBadge.innerText = 'UNPAID';
+              currentMonthBadge.className = 'status-badge inactive';
+              currentMonthBadge.style.cssText = '';
+            }
           }
 
           if (payNowBtn) {
@@ -1691,7 +1728,7 @@ Thank you for staying with us!
           const duesBadge2 = document.getElementById('duesBadge2');
           [duesBadge, duesBadge2].forEach(badge => {
             if (badge) {
-              badge.innerText = isPaid ? 'Paid' : 'Unpaid';
+              badge.innerText = isPaid ? 'Paid' : (isOverdue ? 'Overdue' : 'Unpaid');
               badge.className = `status-badge ${isPaid ? 'active' : 'inactive'}`;
             }
           });
@@ -1707,10 +1744,12 @@ Thank you for staying with us!
               previousDues.forEach(due => {
                 const item = document.createElement('div');
                 item.style.cssText = 'display:flex; justify-content:space-between; align-items:center; background:#fef2f2; padding:12px 16px; border-radius:8px; border:1px solid #fecaca;';
+                const bal = due.pendingBalance || due.amountDue;
+                const dStr = due.dueDate ? new Date(due.dueDate).toLocaleDateString('en-IN') : 'N/A';
                 item.innerHTML = `
                   <div>
-                    <h4 style="margin:0; font-size:0.95rem; color:#991b1b;">${due.billingMonth} Fee</h4>
-                    <span style="font-size:0.8rem; color:#b91c1c; font-weight:700;">₹${Number(due.amountDue).toLocaleString('en-IN')} • OVERDUE</span>
+                    <h4 style="margin:0; font-size:0.95rem; color:#991b1b;">${due.billingMonth} Fee ${due.invoiceNumber ? `(${due.invoiceNumber})` : ''}</h4>
+                    <span style="font-size:0.8rem; color:#b91c1c; font-weight:700;">₹${Number(bal).toLocaleString('en-IN')} &bull; ${due.status.toUpperCase()} &bull; Due: ${dStr}</span>
                   </div>
                   <button class="btn btn-primary" style="background:#ef4444; border-color:#ef4444; padding:6px 14px; font-size:0.85rem;" onclick='openPaymentConfirmModal(${JSON.stringify(due)})'>Pay Due</button>
                 `;
@@ -1725,29 +1764,51 @@ Thank you for staying with us!
           if (tableBody) {
             tableBody.innerHTML = '';
             if (history.length === 0) {
-              tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center;">No payment records found.</td></tr>';
+              tableBody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:20px;">No payment records found.</td></tr>';
             } else {
               history.forEach(h => {
                 const isPaidStatus = h.status === 'paid';
+                const isOverdueStatus = h.status === 'overdue';
+                const isPartialStatus = h.status === 'partial';
+
+                const dueVal = parseFloat(h.amountDue || 0);
+                const lateVal = parseFloat(h.lateFee || 0);
+                const paidVal = parseFloat(h.amountPaid || 0);
+                const balVal = parseFloat(h.pendingBalance ?? Math.max(0, (dueVal + lateVal) - paidVal));
+                const dStr = h.dueDate ? new Date(h.dueDate).toLocaleDateString('en-IN') : '—';
+                const pDateStr = h.paidAt ? new Date(h.paidAt).toLocaleDateString('en-IN') : '—';
+                const invNo = h.invoiceNumber || `INV-${h.id}`;
+
                 const row = document.createElement('tr');
                 row.innerHTML = `
+                  <td style="font-family:monospace; font-weight:700; color:var(--primary-deep);">${invNo}</td>
                   <td><strong>${h.billingMonth}</strong></td>
-                  <td>₹${Number(h.amountPaid || h.amountDue).toLocaleString('en-IN')}</td>
-                  <td><span class="status-badge ${isPaidStatus ? 'active' : 'inactive'}">${h.status.toUpperCase()}</span></td>
-                  <td>${h.paymentMethod || 'Online Gateway'}</td>
-                  <td><code style="font-size:0.8rem; background:#f1f5f9; padding:2px 6px; border-radius:4px;">${h.gatewayPaymentId || 'N/A'}</code></td>
-                  <td>${h.receiptNumber ? `<strong style="color:var(--primary-brand);">${h.receiptNumber}</strong>` : '--'}</td>
-                  <td>${h.paidAt ? h.paidAt.split(' ')[0] : '--'}</td>
+                  <td style="font-size:0.8rem; color:${isOverdueStatus ? '#dc2626' : 'inherit'}; font-weight:${isOverdueStatus ? '700' : 'normal'};">${dStr}</td>
+                  <td>₹${dueVal.toLocaleString('en-IN')}${lateVal > 0 ? ` <span style="color:#ef4444; font-size:0.75rem;">(+₹${lateVal})</span>` : ''}</td>
+                  <td>
+                    <span style="color:#10b981; font-weight:700;">₹${paidVal.toLocaleString('en-IN')}</span>
+                    ${balVal > 0 ? `<div style="font-size:0.75rem; color:#ef4444;">Due: ₹${balVal.toLocaleString('en-IN')}</div>` : ''}
+                  </td>
+                  <td>
+                    <span class="status-badge ${isPaidStatus ? 'active' : (isPartialStatus ? 'partially' : 'inactive')}" style="${isOverdueStatus ? 'background:#fee2e2; color:#b91c1c; border-color:#fca5a5;' : ''}">
+                      ${h.status.toUpperCase()}
+                    </span>
+                  </td>
+                  <td>${h.receiptNumber ? `<strong style="color:var(--primary-brand); font-size:0.8rem;">${h.receiptNumber}</strong>` : '--'}</td>
+                  <td style="font-size:0.8rem;">${pDateStr}</td>
                   <td style="text-align:center;">
-                    ${isPaidStatus ? `
-                      <button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem;" onclick="downloadReceiptPdf('${h.receiptNumber || h.id}')">
-                        <i data-lucide="download" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:2px;"></i> Receipt PDF
-                      </button>
-                    ` : `
-                      <button class="btn btn-primary" style="padding:4px 8px; font-size:0.75rem;" onclick='openPaymentConfirmModal(${JSON.stringify(h)})'>
-                        Pay Now
-                      </button>
-                    `}
+                    <div style="display:flex; gap:6px; justify-content:center;">
+                      ${h.receiptNumber ? `
+                        <button class="btn btn-outline" style="padding:4px 8px; font-size:0.75rem; color:#2563eb; border-color:#93c5fd;" onclick="window.open('/api/payments/receipt/${h.receiptNumber}/pdf', '_blank')" title="Download Receipt PDF">
+                          <i data-lucide="download" style="width:13px; height:13px; margin-right:3px;"></i> Receipt
+                        </button>
+                      ` : ''}
+                      ${!isPaidStatus ? `
+                        <button class="btn btn-primary" style="padding:4px 8px; font-size:0.75rem; background:#16a34a; border-color:#16a34a;" onclick='openPaymentConfirmModal(${JSON.stringify(h)})'>
+                          Pay
+                        </button>
+                      ` : ''}
+                    </div>
                   </td>
                 `;
                 tableBody.appendChild(row);
@@ -1762,7 +1823,7 @@ Thank you for staying with us!
       }
     }
 
-    // Open Payment Confirmation Modal
+        // Open Payment Confirmation Modal
     function openPaymentConfirmModal(feeObj) {
       if (!feeObj || !feeObj.id) {
         alert('Fee invoice record not found. Generating invoice...');

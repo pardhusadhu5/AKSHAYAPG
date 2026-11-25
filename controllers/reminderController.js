@@ -208,9 +208,70 @@ async function sendTargetedReminder(req, res) {
   }
 }
 
+// Send automated reminders for due / overdue rent
+async function sendDueReminders(req, res) {
+  try {
+    const db = await getDb();
+    const { rows: unpaidList } = await db.query(
+      `SELECT p.id as paymentId, p.invoiceNumber, p.billingMonth, p.amountDue, p.lateFee, p.amountPaid, p.dueDate, p.status,
+              s.id as studentId, s.studentName, s.phone, s.parentPhone, r.roomNumber
+       FROM payments p
+       JOIN students s ON p.studentId = s.id
+       LEFT JOIN rooms r ON s.roomId = r.id
+       WHERE p.status IN ('pending', 'partial', 'overdue')
+         AND s.status = 'active'
+       ORDER BY p.dueDate ASC`
+    );
+
+    if (unpaidList.length === 0) {
+      return res.status(200).json({ success: true, message: 'All student accounts are cleared! No pending or overdue dues found.' });
+    }
+
+    await db.query('BEGIN');
+    let sentCount = 0;
+
+    for (const item of unpaidList) {
+      const sId = item.studentId || item.studentid;
+      const sName = item.studentName || item.studentname || 'Student';
+      const bMonth = item.billingMonth || item.billingmonth || '';
+      const curStatus = (item.status || 'pending').toUpperCase();
+      const balance = Math.max(0, (parseFloat(item.amountDue || item.amountdue || 0) + parseFloat(item.lateFee || item.latefee || 0)) - parseFloat(item.amountPaid || item.amountpaid || 0));
+      const dueStr = (item.dueDate || item.duedate) ? new Date(item.dueDate || item.duedate).toLocaleDateString('en-IN') : 'immediate';
+      const msg = `Dear ${sName}, your hostel rent of ₹${balance.toLocaleString('en-IN')} for ${bMonth} is ${curStatus} (${dueStr}). Please complete payment to avoid late fees. - Akshaya Deluxe Boys Hostel`;
+
+      await db.query(
+        `INSERT INTO reminders (studentId, title, message, channel, status) VALUES ($1, $2, $3, 'whatsapp', 'sent')`,
+        [sId, `Rent ${curStatus}: ${bMonth}`, msg]
+      );
+      sentCount++;
+    }
+
+    await db.query(
+      `INSERT INTO notifications (type, message) VALUES ($1, $2)`,
+      ['reminder_sent', `Dispatched rent payment reminders to ${sentCount} student accounts.`]
+    );
+
+    await db.query('COMMIT');
+
+    res.status(200).json({
+      success: true,
+      message: `Dispatched payment reminders to ${sentCount} student account(s).`,
+      count: sentCount
+    });
+  } catch (err) {
+    try {
+      const db = await getDb();
+      await db.query('ROLLBACK');
+    } catch (_) {}
+    console.error('Send Due Reminders Error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
 module.exports = {
   sendIndividualReminder,
   sendBulkReminders,
   sendTargetedReminder,
-  getReminderLogs
+  getReminderLogs,
+  sendDueReminders
 };

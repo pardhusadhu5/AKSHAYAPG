@@ -20,6 +20,10 @@ router.get('/admin/all', verifyToken, requireRole(['admin', 'manager']), payment
 router.get('/admin/stats', verifyToken, requireRole(['admin', 'manager']), paymentController.getPaymentStats);
 router.post('/admin/generate-monthly', verifyToken, requireRole(['admin', 'manager']), paymentController.generateMonthlyFee);
 router.post('/:id/record', verifyToken, requireRole(['admin', 'manager']), paymentController.recordPayment);
+router.get('/admin/settings', verifyToken, requireRole(['admin', 'manager']), paymentController.getBillingSettings);
+router.put('/admin/settings', verifyToken, requireRole(['admin', 'manager']), paymentController.updateBillingSettings);
+router.get('/admin/student/:studentId', verifyToken, requireRole(['admin', 'manager']), paymentController.getStudentRentHistory);
+router.post('/admin/send-reminders', verifyToken, requireRole(['admin', 'manager']), paymentController.sendDueReminders);
 
 // Legacy routes for compatibility
 router.get('/', verifyToken, requireRole(['admin', 'manager']), paymentController.getAllPayments);

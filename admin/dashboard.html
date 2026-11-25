@@ -1123,49 +1123,88 @@
 
     <!-- 4. PAYMENTS PANEL -->
     <div class="panel-view" id="paymentsPanel">
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:20px; margin-bottom:24px;">
-        <div class="stat-widget" style="background:white; padding:20px; border-radius:12px; border:1px solid #E5E7EB;">
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:18px; margin-bottom:24px;">
+        <div class="stat-widget" style="background:white; padding:18px 20px; border-radius:12px; border:1px solid #E5E7EB; border-left:4px solid #10b981;">
           <div class="sw-info">
-            <h4 style="margin:0 0 6px 0; font-size:0.8rem; color:var(--text-muted);">Total Collected (Mo)</h4>
-            <h3 id="paymentCollectedHeader" style="margin:0; font-size:1.5rem; font-weight:800; color:#10b981;">₹0</h3>
+            <h4 style="margin:0 0 6px 0; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted);">Total Collected</h4>
+            <h3 id="paymentCollectedHeader" style="margin:0; font-size:1.45rem; font-weight:800; color:#10b981;">₹0</h3>
           </div>
         </div>
-        <div class="stat-widget" style="background:white; padding:20px; border-radius:12px; border:1px solid #E5E7EB;">
+        <div class="stat-widget" style="background:white; padding:18px 20px; border-radius:12px; border:1px solid #E5E7EB; border-left:4px solid #f59e0b;">
           <div class="sw-info">
-            <h4 style="margin:0 0 6px 0; font-size:0.8rem; color:var(--text-muted);">Total Outstanding</h4>
-            <h3 id="paymentOutstandingHeader" style="margin:0; font-size:1.5rem; font-weight:800; color:#ef4444;">₹0</h3>
+            <h4 style="margin:0 0 6px 0; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted);">Outstanding Balance</h4>
+            <h3 id="paymentOutstandingHeader" style="margin:0; font-size:1.45rem; font-weight:800; color:#f59e0b;">₹0</h3>
           </div>
         </div>
-        <div class="stat-widget" style="background:white; padding:20px; border-radius:12px; border:1px solid #E5E7EB;">
+        <div class="stat-widget" style="background:white; padding:18px 20px; border-radius:12px; border:1px solid #E5E7EB; border-left:4px solid #ef4444;">
           <div class="sw-info">
-            <h4 style="margin:0 0 6px 0; font-size:0.8rem; color:var(--text-muted);">Collection Rate</h4>
-            <h3 id="paymentCollectionRateHeader" style="margin:0; font-size:1.5rem; font-weight:800; color:var(--primary-brand);">0%</h3>
+            <h4 style="margin:0 0 6px 0; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted);">Overdue Rent Dues</h4>
+            <h3 id="paymentOverdueHeader" style="margin:0; font-size:1.45rem; font-weight:800; color:#ef4444;">0 (₹0)</h3>
+          </div>
+        </div>
+        <div class="stat-widget" style="background:white; padding:18px 20px; border-radius:12px; border:1px solid #E5E7EB; border-left:4px solid var(--primary-brand);">
+          <div class="sw-info">
+            <h4 style="margin:0 0 6px 0; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted);">Collection Rate</h4>
+            <h3 id="paymentCollectionRateHeader" style="margin:0; font-size:1.45rem; font-weight:800; color:var(--primary-brand);">0%</h3>
           </div>
         </div>
       </div>
 
       <div class="list-container-card" style="background:white; padding:24px; border-radius:12px; border:1px solid #E5E7EB;">
-        <div class="lcc-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-          <h3 style="margin:0; font-size:1.1rem; font-weight:800;">Rent & Payments Ledger</h3>
-          <button class="btn btn-primary" style="padding:6px 12px; font-size:0.8rem;" onclick="triggerMonthlyBillingRun()">Billing Invoice Run</button>
+        <div class="lcc-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h3 style="margin:0; font-size:1.2rem; font-weight:800; color:var(--dark-slate);">Monthly Rent Invoices & Ledger</h3>
+            <p style="margin:4px 0 0 0; font-size:0.8rem; color:var(--text-muted);">Generate automatic monthly rent invoices, record partial/advance payments, manage late fee penalties, and trigger payment reminders.</p>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <button class="btn btn-primary" style="padding:7px 13px; font-size:0.8rem; display:inline-flex; align-items:center; gap:5px;" onclick="triggerMonthlyBillingRun()">
+              <i data-lucide="file-plus" style="width:14px; height:14px;"></i> Billing Invoice Run
+            </button>
+            <button class="btn btn-outline" style="padding:7px 13px; font-size:0.8rem; color:#d97706; border-color:#f59e0b; display:inline-flex; align-items:center; gap:5px;" onclick="triggerDueReminders()">
+              <i data-lucide="bell" style="width:14px; height:14px;"></i> Send Due Reminders
+            </button>
+            <button class="btn btn-outline" style="padding:7px 13px; font-size:0.8rem; color:#475569; border-color:#cbd5e1; display:inline-flex; align-items:center; gap:5px;" onclick="openBillingSettingsModal()">
+              <i data-lucide="settings" style="width:14px; height:14px;"></i> Billing Settings
+            </button>
+            <button class="btn btn-outline" style="padding:7px 13px; font-size:0.8rem; color:#2563eb; border-color:#93c5fd; display:inline-flex; align-items:center; gap:5px;" onclick="triggerReportDownload('monthly_rent_collection')">
+              <i data-lucide="download" style="width:14px; height:14px;"></i> Export Ledger CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px; padding:12px 14px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
+          <div style="display:flex; gap:6px; flex-wrap:wrap;" id="paymentStatusFilters">
+            <button class="btn btn-primary btn-sm pay-filter-btn" id="filterBtnAll" style="padding:5px 11px; font-size:0.75rem;" onclick="filterPaymentsByStatus('all', this)">All</button>
+            <button class="btn btn-outline btn-sm pay-filter-btn" id="filterBtnPending" style="padding:5px 11px; font-size:0.75rem; color:#2563eb; border-color:#bfdbfe;" onclick="filterPaymentsByStatus('pending', this)">Pending</button>
+            <button class="btn btn-outline btn-sm pay-filter-btn" id="filterBtnOverdue" style="padding:5px 11px; font-size:0.75rem; color:#dc2626; border-color:#fca5a5;" onclick="filterPaymentsByStatus('overdue', this)">Overdue</button>
+            <button class="btn btn-outline btn-sm pay-filter-btn" id="filterBtnPartial" style="padding:5px 11px; font-size:0.75rem; color:#d97706; border-color:#fde68a;" onclick="filterPaymentsByStatus('partial', this)">Partially Paid</button>
+            <button class="btn btn-outline btn-sm pay-filter-btn" id="filterBtnPaid" style="padding:5px 11px; font-size:0.75rem; color:#10b981; border-color:#a7f3d0;" onclick="filterPaymentsByStatus('paid', this)">Paid</button>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center; flex-grow:1; max-width:360px;">
+            <input type="text" id="paymentSearchInput" placeholder="Search student, room, invoice #..." oninput="handlePaymentSearch(event)" style="padding:6px 12px; font-size:0.8rem; border:1px solid #d1d5db; border-radius:6px; width:100%;">
+            <button class="btn btn-outline btn-sm" style="padding:6px 10px;" onclick="fetchPaymentsLedger()" title="Refresh Ledger"><i data-lucide="refresh-cw" style="width:13px; height:13px;"></i></button>
+          </div>
         </div>
 
         <div class="table-responsive">
           <table class="data-table" id="paymentsLedgerTable">
             <thead>
               <tr>
-                <th style="min-width: 200px;">Student (ID)</th>
-                <th style="min-width: 120px;" class="text-center">Room</th>
-                <th style="min-width: 130px;" class="text-center">Fee Month</th>
-                <th style="min-width: 120px;" class="text-right">Amount</th>
+                <th style="min-width: 140px;">Invoice #</th>
+                <th style="min-width: 180px;">Student (ID)</th>
+                <th style="min-width: 90px;" class="text-center">Room</th>
+                <th style="min-width: 120px;" class="text-center">Fee Month</th>
+                <th style="min-width: 110px;" class="text-center">Due Date</th>
+                <th style="min-width: 110px;" class="text-right">Amount Due</th>
+                <th style="min-width: 110px;" class="text-right">Late Fee</th>
+                <th style="min-width: 120px;" class="text-right">Paid / Balance</th>
                 <th style="min-width: 110px;" class="text-center">Status</th>
-                <th style="min-width: 120px;" class="text-center">Payment Date</th>
-                <th style="min-width: 130px;" class="text-center">Reference</th>
-                <th style="min-width: 120px;" class="text-center">Actions</th>
+                <th style="min-width: 150px;" class="text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td colspan="8" style="text-align:center; padding:24px; color:var(--text-muted);">Loading ledger...</td></tr>
+              <tr><td colspan="10" style="text-align:center; padding:24px; color:var(--text-muted);">Loading ledger...</td></tr>
             </tbody>
           </table>
         </div>
@@ -2112,6 +2151,161 @@
           <button type="submit" class="btn btn-primary" id="confirmCheckOutBtn" style="background:#dc2626; border-color:#dc2626;">Confirm Check-Out & Release Bed</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- Phase 3 Modal 1: Record Manual / Partial / Advance Payment Modal -->
+  <div class="modal-overlay" id="recordPaymentModal" style="display:none;">
+    <div class="modal-card" style="max-width: 540px;">
+      <div class="modal-header">
+        <h3 id="recordPaymentModalTitle">Record Rent Payment</h3>
+        <button class="modal-close-btn" onclick="closeModal('recordPaymentModal')">&times;</button>
+      </div>
+      <form id="recordPaymentForm" onsubmit="submitRecordPayment(event)">
+        <input type="hidden" id="recPayInvoiceId">
+        <div style="background:#f8fafc; padding:12px 16px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:18px;">
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; font-size:0.85rem;">
+            <div><strong>Student:</strong> <span id="recPayStudentName">--</span></div>
+            <div><strong>Room:</strong> <span id="recPayRoom">--</span></div>
+            <div><strong>Invoice #:</strong> <span id="recPayInvoiceNum" style="font-family:monospace; color:var(--primary-deep);">--</span></div>
+            <div><strong>Billing Cycle:</strong> <span id="recPayMonth">--</span></div>
+          </div>
+          <div style="margin-top:10px; padding-top:10px; border-top:1px dashed #cbd5e1; display:flex; justify-content:space-between; font-size:0.85rem;">
+            <div>Original Due: <strong id="recPayAmountDue">₹0</strong></div>
+            <div style="color:#ef4444;">Late Fee: <strong id="recPayLateFee">₹0</strong></div>
+            <div>Already Paid: <strong id="recPayAlreadyPaid" style="color:#10b981;">₹0</strong></div>
+            <div>Pending: <strong id="recPayRemainingDue" style="color:#2563eb; font-size:0.95rem;">₹0</strong></div>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label style="display:block; font-size:0.85rem; font-weight:700; margin-bottom:4px;">Payment Amount (₹) *</label>
+          <input type="number" step="0.01" min="1" id="recPayAmount" required style="width:100%; padding:9px 12px; font-size:1rem; font-weight:700; border:1px solid #cbd5e1; border-radius:6px;" oninput="calculateRecordPaymentPreview()">
+          <span style="font-size:0.75rem; color:var(--text-muted);" id="recPayAmountHint">Enter amount to record partial, exact, or advance payment.</span>
+        </div>
+
+        <div style="margin-bottom:14px;" id="recPayWaiveLateFeeGroup">
+          <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; cursor:pointer;">
+            <input type="checkbox" id="recPayWaiveLateFee" onchange="calculateRecordPaymentPreview()">
+            <span>Waive Late Fee penalty for this invoice</span>
+          </label>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
+          <div class="form-group">
+            <label style="display:block; font-size:0.85rem; font-weight:700; margin-bottom:4px;">Payment Mode *</label>
+            <select id="recPayMode" required style="width:100%; padding:9px 10px; font-size:0.85rem; border:1px solid #cbd5e1; border-radius:6px;">
+              <option value="UPI">UPI (Google Pay / PhonePe / Paytm)</option>
+              <option value="Cash">Cash</option>
+              <option value="Bank Transfer">Bank Transfer / NEFT / IMPS</option>
+              <option value="Debit/Credit Card">Debit / Credit Card</option>
+              <option value="Cheque">Cheque</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label style="display:block; font-size:0.85rem; font-weight:700; margin-bottom:4px;">Transaction / UTR Reference</label>
+            <input type="text" id="recPayReference" placeholder="e.g. UTR293817392" style="width:100%; padding:9px 10px; font-size:0.85rem; border:1px solid #cbd5e1; border-radius:6px;">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:18px;">
+          <label style="display:block; font-size:0.85rem; font-weight:700; margin-bottom:4px;">Remarks / Notes</label>
+          <input type="text" id="recPayNotes" placeholder="Optional notes for hostel receipt" style="width:100%; padding:8px 12px; font-size:0.85rem; border:1px solid #cbd5e1; border-radius:6px;">
+        </div>
+
+        <div style="padding:10px 14px; background:#eff6ff; border-radius:6px; border:1px solid #bfdbfe; font-size:0.8rem; margin-bottom:18px;" id="recPayResultPreview">
+          <div>Resulting Status: <strong id="recPayResultStatus" style="color:#2563eb;">--</strong></div>
+          <div>New Remaining Balance: <strong id="recPayNewBalance">₹0</strong></div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('recordPaymentModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="recPaySubmitBtn" style="background:#10b981; border-color:#10b981;">Save & Issue Receipt</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Phase 3 Modal 2: Billing & Rent Settings Modal -->
+  <div class="modal-overlay" id="billingSettingsModal" style="display:none;">
+    <div class="modal-card" style="max-width: 580px;">
+      <div class="modal-header">
+        <h3>Hostel Rent Billing Configuration</h3>
+        <button class="modal-close-btn" onclick="closeModal('billingSettingsModal')">&times;</button>
+      </div>
+      <form id="billingSettingsForm" onsubmit="submitBillingSettings(event)">
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0; margin-bottom:16px;">Configure monthly invoice generation schedules, rent due dates, and late payment penalties.</p>
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label style="display:block; font-size:0.85rem; font-weight:700; margin-bottom:4px;">Billing Cycle Type</label>
+          <select id="cfgBillingCycleType" style="width:100%; padding:9px 10px; font-size:0.85rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <option value="CALENDAR_MONTH">Calendar Month (1st to Month End, e.g. 1st Nov – 30th Nov)</option>
+            <option value="JOINING_DATE">Joining-Date Based (e.g. 15th Nov – 14th Dec based on student join date)</option>
+          </select>
+          <span style="font-size:0.75rem; color:var(--text-muted);">Calendar Month bills all students simultaneously each month. Joining-Date creates cycle per student.</span>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
+          <div class="form-group">
+            <label style="display:block; font-size:0.85rem; font-weight:700; margin-bottom:4px;">Rent Due Day *</label>
+            <input type="number" id="cfgRentDueDay" min="1" max="28" required style="width:100%; padding:8px 10px; font-size:0.85rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <span style="font-size:0.75rem; color:var(--text-muted);">e.g. 5th of each month</span>
+          </div>
+          <div class="form-group">
+            <label style="display:block; font-size:0.85rem; font-weight:700; margin-bottom:4px;">Grace Period (Days) *</label>
+            <input type="number" id="cfgGracePeriodDays" min="0" max="30" required style="width:100%; padding:8px 10px; font-size:0.85rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <span style="font-size:0.75rem; color:var(--text-muted);">Days after due date before late fee applies</span>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
+          <div class="form-group">
+            <label style="display:block; font-size:0.85rem; font-weight:700; margin-bottom:4px;">Late Fee Charge Type</label>
+            <select id="cfgLateFeeType" style="width:100%; padding:8px 10px; font-size:0.85rem; border:1px solid #cbd5e1; border-radius:6px;">
+              <option value="FIXED">Fixed Amount (₹)</option>
+              <option value="PERCENTAGE">Percentage (%) of Pending Rent</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label style="display:block; font-size:0.85rem; font-weight:700; margin-bottom:4px;">Late Fee Amount / Rate *</label>
+            <input type="number" id="cfgLateFeeAmount" min="0" step="1" required style="width:100%; padding:8px 10px; font-size:0.85rem; border:1px solid #cbd5e1; border-radius:6px;">
+            <span style="font-size:0.75rem; color:var(--text-muted);">e.g. 200 for ₹200, or 5 for 5%</span>
+          </div>
+        </div>
+
+        <div style="background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:18px;">
+          <label style="display:flex; align-items:center; gap:8px; font-size:0.85rem; font-weight:700; cursor:pointer; margin-bottom:8px;">
+            <input type="checkbox" id="cfgAutoReminderEnabled">
+            <span>Enable Automated Payment Reminders</span>
+          </label>
+          <div style="display:flex; align-items:center; gap:8px; font-size:0.8rem; color:var(--text-muted);">
+            <span>Send automated alert</span>
+            <input type="number" id="cfgAutoReminderDays" min="1" max="10" style="width:60px; padding:4px 6px; font-size:0.8rem; border:1px solid #cbd5e1; border-radius:4px;">
+            <span>days before rent due date.</span>
+          </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('billingSettingsModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Settings</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Phase 3 Modal 3: Student-Wise Rent History Modal -->
+  <div class="modal-overlay" id="studentRentHistoryModal" style="display:none;">
+    <div class="modal-card" style="max-width: 780px;">
+      <div class="modal-header">
+        <h3 id="rentHistoryStudentName">Student Rent & Invoices Ledger</h3>
+        <button class="modal-close-btn" onclick="closeModal('studentRentHistoryModal')">&times;</button>
+      </div>
+      <div id="studentRentHistoryContent">
+        <!-- Rendered dynamically -->
+      </div>
+      <div style="margin-top:20px; display:flex; justify-content:flex-end;">
+        <button class="btn btn-outline" onclick="closeModal('studentRentHistoryModal')">Close</button>
+      </div>
     </div>
   </div>
 
@@ -4770,15 +4964,27 @@
     });
 
     // Payments Ledger Module Loader
+        let activePaymentStatusFilter = 'all';
+    let paymentSearchQuery = '';
+    let paymentSearchDebounceTimer = null;
+
     async function fetchPaymentsLedger() {
       const token = localStorage.getItem('token');
       const tableBody = document.querySelector('#paymentsLedgerTable tbody');
       if (!tableBody) return;
-      tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--text-muted);"><i data-lucide="loader-2" class="spin" style="margin-right:8px; display:inline-block; vertical-align:middle;"></i>Loading ledger...</td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:24px; color:var(--text-muted);"><i data-lucide="loader-2" class="spin" style="margin-right:8px; display:inline-block; vertical-align:middle;"></i>Loading ledger...</td></tr>';
       if (typeof lucide !== 'undefined') lucide.createIcons();
 
       try {
-        const res = await fetch('/api/payments/admin/all', {
+        const queryParams = new URLSearchParams();
+        if (activePaymentStatusFilter && activePaymentStatusFilter !== 'all') {
+          queryParams.set('status', activePaymentStatusFilter);
+        }
+        if (paymentSearchQuery && paymentSearchQuery.trim()) {
+          queryParams.set('search', paymentSearchQuery.trim());
+        }
+
+        const res = await fetch(`/api/payments/admin/all?${queryParams.toString()}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -4786,32 +4992,34 @@
         if (data.success && Array.isArray(data.payments)) {
           tableBody.innerHTML = '';
           if (data.payments.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:32px; color:var(--text-muted);">No payment invoices generated yet. Click <strong>Billing Invoice Run</strong> above.</td></tr>';
-            updatePaymentHeaderCards([], 0, 0);
+            tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:32px; color:var(--text-muted);">No payment invoices matching criteria. Click <strong>Billing Invoice Run</strong> to generate invoices.</td></tr>';
+            updatePaymentHeaderCards(data.stats);
             return;
           }
 
-          let totalCollected = 0;
-          let totalOutstanding = 0;
+          updatePaymentHeaderCards(data.stats);
 
           data.payments.forEach(pay => {
             const row = document.createElement('tr');
 
-            // 1. Student details & ID mapping (never undefined)
-            const studentId = pay.studentId || pay.studentid;
-            const studentName = (pay.studentName || pay.studentname || 'Student').trim();
-            const rawCustomId = pay.studentCustomId || pay.studentcustomid || pay.applicationId || pay.applicationid;
-            const displayId = rawCustomId || (studentId ? `AKS${String(studentId).padStart(6, '0')}` : 'ID Pending');
+            // 1. Invoice Number
+            const invNumber = pay.invoiceNumber || `INV-${String(pay.id).padStart(5, '0')}`;
+            const invHtml = `<span style="font-family:monospace; font-weight:700; color:var(--primary-deep); font-size:0.75rem; background:#f1f5f9; padding:3px 7px; border-radius:4px; border:1px solid #cbd5e1;">${invNumber}</span>`;
+
+            // 2. Student details & ID mapping
+            const studentId = pay.studentId;
+            const studentName = (pay.studentName || 'Student').trim();
+            const displayId = pay.studentCustomId || (studentId ? `AKS${String(studentId).padStart(6, '0')}` : 'ID Pending');
             const phone = pay.phone || 'No phone';
 
-            // 2. Room number mapping (never Room Unassigned / undefined)
-            const rawRoom = pay.roomNumber || pay.roomnumber;
+            // 3. Room number mapping
+            const rawRoom = pay.roomNumber;
             const roomHtml = rawRoom
               ? `<span class="room-pill"><i data-lucide="door-closed" style="width:13px; height:13px;"></i>Room ${rawRoom}</span>`
               : `<span class="room-pill unassigned"><i data-lucide="help-circle" style="width:13px; height:13px;"></i>Unassigned</span>`;
 
-            // 3. Fee month mapping (never undefined)
-            const rawMonth = pay.billingMonth || pay.billingmonth || '';
+            // 4. Fee month mapping
+            const rawMonth = pay.billingMonth || '';
             let monthLabel = rawMonth;
             let isAdmission = false;
             if (!rawMonth || rawMonth === 'ADMISSION' || rawMonth.toLowerCase() === 'admission') {
@@ -4825,118 +5033,138 @@
               } catch (_) {
                 monthLabel = rawMonth;
               }
-            } else {
-              monthLabel = rawMonth || 'General Fee';
             }
             const monthHtml = `<span class="month-pill ${isAdmission ? 'admission' : ''}">${monthLabel}</span>`;
 
-            // 4. Amount formatting (guaranteed never ₹NaN)
-            const dueVal = Number(pay.amountDue ?? pay.amountdue ?? 0);
-            const paidVal = Number(pay.amountPaid ?? pay.amountpaid ?? 0);
-            const validDue = isNaN(dueVal) ? 0 : dueVal;
-            const validPaid = isNaN(paidVal) ? 0 : paidVal;
-            const formattedAmount = '₹' + validDue.toLocaleString('en-IN');
-
-            // 5. Payment status mapping
-            const statusStr = (pay.status || 'pending').toLowerCase();
-            const isPaid = statusStr === 'paid';
-            const isPartial = statusStr === 'partial';
-            let badgeClass = 'inactive';
-            let badgeText = 'PENDING';
-            if (isPaid) {
-              badgeClass = 'active';
-              badgeText = 'PAID';
-              totalCollected += validPaid > 0 ? validPaid : validDue;
-            } else if (isPartial) {
-              badgeClass = 'partially';
-              badgeText = 'PARTIAL';
-              totalCollected += validPaid;
-              totalOutstanding += (validDue - validPaid);
-            } else {
-              badgeClass = 'inactive';
-              badgeText = 'UNPAID';
-              totalOutstanding += validDue;
-            }
-            const statusBadge = `<span class="status-badge ${badgeClass}" style="font-weight:700; padding:3px 8px; font-size:0.72rem; text-transform:uppercase;">${badgeText}</span>`;
-
-            // 6. Payment date formatting (never undefined)
-            let dateDisplay = '--';
-            const rawPaidAt = pay.paidAt || pay.paidat || (isPaid ? (pay.updatedAt || pay.updatedat) : null);
-            if (rawPaidAt) {
-              try {
-                const d = new Date(rawPaidAt);
-                if (!isNaN(d.getTime())) {
-                  dateDisplay = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
-                } else {
-                  dateDisplay = String(rawPaidAt).split('T')[0].split(' ')[0];
-                }
-              } catch (_) {
-                dateDisplay = String(rawPaidAt).split('T')[0].split(' ')[0];
-              }
-            } else if (isPaid) {
-              dateDisplay = 'Settled';
+            // 5. Due Date
+            let dueHtml = '—';
+            if (pay.dueDate) {
+              const dDate = new Date(pay.dueDate);
+              const isPastDue = pay.status === 'overdue' || (pay.status !== 'paid' && new Date() > dDate);
+              dueHtml = `<span style="font-size:0.8rem; font-weight:${isPastDue ? '700' : '500'}; color:${isPastDue ? '#dc2626' : 'var(--dark-slate)'};">
+                ${dDate.toLocaleDateString('en-IN')}
+                ${isPastDue && pay.status !== 'paid' ? '<span style="display:block; font-size:0.65rem; color:#dc2626; font-weight:700;">OVERDUE</span>' : ''}
+              </span>`;
             }
 
-            // 7. Reference number formatting (never undefined)
-            const refVal = pay.receiptNumber || pay.receiptnumber || pay.gatewayPaymentId || pay.gatewaypaymentid || pay.referenceNumber || pay.referencenumber;
-            const refDisplay = refVal 
-              ? `<span style="font-family:monospace; font-size:0.75rem; background:#f1f5f9; padding:2px 6px; border-radius:4px; color:#334155;">${refVal}</span>` 
-              : `<span style="font-size:0.75rem; color:var(--text-muted);">${isPaid ? 'Cash / Desk' : '--'}</span>`;
+            // 6. Amounts & Late Fee
+            const dueVal = Number(pay.amountDue || 0);
+            const lateVal = Number(pay.lateFee || 0);
+            const paidVal = Number(pay.amountPaid || 0);
+            const balanceVal = Number(pay.pendingAmount ?? Math.max(0, (dueVal + lateVal) - paidVal));
 
-            // 8. Action button with valid student ID
-            const actionBtn = studentId ? `
-              <button class="btn btn-outline" style="padding:5px 10px; font-size:0.72rem; font-weight:700; border-radius:6px; color:${isPaid ? '#10b981' : '#007a71'}; border-color:${isPaid ? '#a7f3d0' : '#007a71'}; cursor:pointer;" onclick="togglePaymentStatus(${studentId}, '${isPaid ? 'paid' : 'unpaid'}')">
-                ${isPaid ? 'Mark Unpaid' : 'Mark Paid'}
-              </button>
-            ` : `
-              <span style="font-size:0.72rem; color:var(--text-muted);">--</span>
+            const lateHtml = lateVal > 0 
+              ? `<span style="color:#dc2626; font-weight:700; font-size:0.8rem;">+₹${lateVal.toLocaleString('en-IN')}</span>` 
+              : `<span style="color:var(--text-muted); font-size:0.8rem;">—</span>`;
+
+            const paidBalanceHtml = `
+              <div style="font-size:0.8rem;">
+                <span style="color:#10b981; font-weight:700;">₹${paidVal.toLocaleString('en-IN')}</span>
+                ${balanceVal > 0 ? `<div style="color:#ef4444; font-size:0.75rem;">Due: ₹${balanceVal.toLocaleString('en-IN')}</div>` : ''}
+              </div>
             `;
 
+            // 7. Status badge
+            const statusStr = (pay.status || 'pending').toLowerCase();
+            let badgeClass = 'inactive';
+            let badgeText = 'PENDING';
+            if (statusStr === 'paid') {
+              badgeClass = 'active';
+              badgeText = 'PAID';
+            } else if (statusStr === 'partial') {
+              badgeClass = 'partially';
+              badgeText = 'PARTIAL';
+            } else if (statusStr === 'overdue') {
+              badgeClass = 'inactive';
+              badgeText = 'OVERDUE';
+            }
+            const statusBadge = `<span class="status-badge ${badgeClass}" style="${statusStr === 'overdue' ? 'background:#fee2e2; color:#b91c1c; border-color:#fca5a5;' : ''}">${badgeText}</span>`;
+
+            // 8. Action Buttons
+            const canRecord = statusStr !== 'paid';
+            const escName = studentName.replace(/'/g, "\\'");
+            const escRoom = (rawRoom || 'Unassigned').replace(/'/g, "\\'");
+            const escMonth = (rawMonth || '').replace(/'/g, "\\'");
+            const escInv = invNumber.replace(/'/g, "\\'");
+
+            const recordBtn = canRecord
+              ? `<button class="btn btn-primary" style="padding:4px 8px; font-size:0.7rem; background:#10b981; border-color:#10b981;" onclick="openRecordPaymentModal(${pay.id}, '${escInv}', '${escName}', '${escRoom}', '${escMonth}', ${dueVal}, ${lateVal}, ${paidVal})" title="Record Payment">Record</button>`
+              : '';
+
+            const ledgerBtn = `<button class="btn btn-outline" style="padding:4px 8px; font-size:0.7rem;" onclick="openStudentRentHistoryModal(${studentId})" title="View Student History"><i data-lucide="book-open" style="width:12px; height:12px;"></i></button>`;
+
+            const receiptBtn = (paidVal > 0 && pay.receiptNumber)
+              ? `<button class="btn btn-outline" style="padding:4px 8px; font-size:0.7rem; color:#2563eb; border-color:#bfdbfe;" onclick="window.open('/api/payments/receipt/${pay.receiptNumber}/pdf', '_blank')" title="PDF Receipt"><i data-lucide="file-text" style="width:12px; height:12px;"></i></button>`
+              : '';
+
             row.innerHTML = `
-              <td>
-                <div class="student-primary-name">${studentName}</div>
-                <div class="student-sub-info">
-                  <span style="font-family:monospace; font-weight:600; color:var(--primary-brand);">${displayId}</span>
-                  <span>•</span>
-                  <span>${phone}</span>
+              <td style="vertical-align:middle;">${invHtml}</td>
+              <td style="vertical-align:middle;">
+                <div style="font-weight:700; color:var(--dark-slate); font-size:0.85rem;">${studentName}</div>
+                <div style="font-size:0.75rem; color:var(--text-muted);">${displayId} &bull; ${phone}</div>
+              </td>
+              <td class="text-center" style="vertical-align:middle;">${roomHtml}</td>
+              <td class="text-center" style="vertical-align:middle;">${monthHtml}</td>
+              <td class="text-center" style="vertical-align:middle;">${dueHtml}</td>
+              <td class="text-right" style="vertical-align:middle; font-weight:700; font-size:0.85rem;">₹${dueVal.toLocaleString('en-IN')}</td>
+              <td class="text-right" style="vertical-align:middle;">${lateHtml}</td>
+              <td class="text-right" style="vertical-align:middle;">${paidBalanceHtml}</td>
+              <td class="text-center" style="vertical-align:middle;">${statusBadge}</td>
+              <td class="text-center" style="vertical-align:middle;">
+                <div style="display:flex; gap:4px; justify-content:center; align-items:center;">
+                  ${recordBtn}
+                  ${ledgerBtn}
+                  ${receiptBtn}
                 </div>
               </td>
-              <td class="text-center">${roomHtml}</td>
-              <td class="text-center">${monthHtml}</td>
-              <td class="text-right"><span class="amount-display">${formattedAmount}</span></td>
-              <td class="text-center">${statusBadge}</td>
-              <td class="text-center" style="font-size:0.8rem; color:#475569;">${dateDisplay}</td>
-              <td class="text-center">${refDisplay}</td>
-              <td class="text-center">${actionBtn}</td>
             `;
             tableBody.appendChild(row);
           });
 
-          // Update summary metric cards
-          updatePaymentHeaderCards(data.payments, totalCollected, totalOutstanding);
-
           if (typeof lucide !== 'undefined') lucide.createIcons();
-        } else {
-          tableBody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding:24px; color:var(--error);">${data.message || 'Failed to load ledger records.'}</td></tr>`;
         }
       } catch (err) {
-        console.error('Ledger error:', err);
-        const tbody = document.querySelector('#paymentsLedgerTable tbody');
-        if (tbody) tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:24px; color:#ef4444;">Failed to load payments. Server error.</td></tr>';
+        console.error('Fetch payments error:', err);
+        tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:24px; color:#ef4444;">Failed to load rent ledger. Check backend connection.</td></tr>';
       }
     }
 
-    function updatePaymentHeaderCards(payments, totalCollected, totalOutstanding) {
-      const colEl = document.getElementById('paymentCollectedHeader');
+    function updatePaymentHeaderCards(stats) {
+      if (!stats) return;
+      const collEl = document.getElementById('paymentCollectedHeader');
       const outEl = document.getElementById('paymentOutstandingHeader');
+      const overEl = document.getElementById('paymentOverdueHeader');
       const rateEl = document.getElementById('paymentCollectionRateHeader');
 
-      if (colEl) colEl.innerText = '₹' + Math.round(totalCollected).toLocaleString('en-IN');
-      if (outEl) outEl.innerText = '₹' + Math.round(totalOutstanding).toLocaleString('en-IN');
+      if (collEl) collEl.innerText = `₹${Number(stats.totalCollected || 0).toLocaleString('en-IN')}`;
+      if (outEl) outEl.innerText = `₹${Number(stats.totalOutstanding || 0).toLocaleString('en-IN')}`;
+      if (overEl) {
+        const oCount = Number(stats.totalOverdueCount ?? stats.overdueCount ?? 0);
+        const oAmt = Number(stats.totalOverdueAmount ?? stats.overdueAmount ?? 0);
+        overEl.innerText = `${oCount} (₹${oAmt.toLocaleString('en-IN')})`;
+      }
+      if (rateEl) rateEl.innerText = `${stats.collectionRate || 0}%`;
+    }
 
-      const totalBilled = totalCollected + totalOutstanding;
-      const rate = totalBilled > 0 ? Math.round((totalCollected / totalBilled) * 100) : 0;
-      if (rateEl) rateEl.innerText = `${rate}%`;
+    function filterPaymentsByStatus(status, btn) {
+      activePaymentStatusFilter = status;
+      document.querySelectorAll('.pay-filter-btn').forEach(b => {
+        b.classList.remove('btn-primary');
+        b.classList.add('btn-outline');
+      });
+      if (btn) {
+        btn.classList.remove('btn-outline');
+        btn.classList.add('btn-primary');
+      }
+      fetchPaymentsLedger();
+    }
+
+    function handlePaymentSearch(event) {
+      paymentSearchQuery = event.target.value;
+      clearTimeout(paymentSearchDebounceTimer);
+      paymentSearchDebounceTimer = setTimeout(() => {
+        fetchPaymentsLedger();
+      }, 300);
     }
 
     async function triggerMonthlyBillingRun() {
@@ -4963,6 +5191,338 @@
         fetchStatsAndRecent();
       } catch (err) {
         alert('Billing run failed: ' + err.message);
+      }
+    }
+
+    async function triggerDueReminders() {
+      if (!confirm('Send automated payment reminders to all active students with pending or overdue rent?')) {
+        return;
+      }
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch('/api/payments/admin/send-reminders', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const data = await res.json();
+        alert(data.message || 'Payment reminders sent successfully.');
+        fetchPaymentsLedger();
+      } catch (err) {
+        alert('Failed to send reminders: ' + err.message);
+      }
+    }
+
+    // Modal: Record Payment
+    let currentRecPay = {};
+    function openRecordPaymentModal(id, invoiceNum, studentName, room, month, amountDue, lateFee, amountPaid) {
+      currentRecPay = {
+        id,
+        invoiceNum,
+        studentName,
+        room,
+        month,
+        amountDue: parseFloat(amountDue || 0),
+        lateFee: parseFloat(lateFee || 0),
+        amountPaid: parseFloat(amountPaid || 0)
+      };
+
+      document.getElementById('recPayInvoiceId').value = id;
+      document.getElementById('recPayStudentName').innerText = studentName;
+      document.getElementById('recPayRoom').innerText = room || 'Unassigned';
+      document.getElementById('recPayInvoiceNum').innerText = invoiceNum;
+      document.getElementById('recPayMonth').innerText = month;
+      document.getElementById('recPayAmountDue').innerText = `₹${currentRecPay.amountDue.toLocaleString('en-IN')}`;
+      document.getElementById('recPayLateFee').innerText = `₹${currentRecPay.lateFee.toLocaleString('en-IN')}`;
+      document.getElementById('recPayAlreadyPaid').innerText = `₹${currentRecPay.amountPaid.toLocaleString('en-IN')}`;
+
+      const waiveGroup = document.getElementById('recPayWaiveLateFeeGroup');
+      const waiveCheck = document.getElementById('recPayWaiveLateFee');
+      if (waiveGroup && waiveCheck) {
+        waiveGroup.style.display = currentRecPay.lateFee > 0 ? 'block' : 'none';
+        waiveCheck.checked = false;
+      }
+
+      const pendingBalance = Math.max(0, (currentRecPay.amountDue + currentRecPay.lateFee) - currentRecPay.amountPaid);
+      document.getElementById('recPayRemainingDue').innerText = `₹${pendingBalance.toLocaleString('en-IN')}`;
+
+      // Default amount input to remaining balance
+      const amtInput = document.getElementById('recPayAmount');
+      amtInput.value = pendingBalance > 0 ? pendingBalance : currentRecPay.amountDue;
+      document.getElementById('recPayReference').value = '';
+      document.getElementById('recPayNotes').value = '';
+
+      calculateRecordPaymentPreview();
+      openModal('recordPaymentModal');
+    }
+
+    function calculateRecordPaymentPreview() {
+      const amtInput = document.getElementById('recPayAmount');
+      const waiveCheck = document.getElementById('recPayWaiveLateFee');
+      const statusEl = document.getElementById('recPayResultStatus');
+      const balEl = document.getElementById('recPayNewBalance');
+
+      const payAmt = parseFloat(amtInput.value || 0);
+      const isWaived = waiveCheck && waiveCheck.checked;
+      const effLate = isWaived ? 0 : currentRecPay.lateFee;
+      const totalDue = currentRecPay.amountDue + effLate;
+      const newTotalPaid = currentRecPay.amountPaid + payAmt;
+
+      if (newTotalPaid >= totalDue) {
+        const advance = newTotalPaid - totalDue;
+        statusEl.innerText = advance > 0 ? `PAID (Advance: ₹${advance.toLocaleString('en-IN')})` : 'PAID (Fully Cleared)';
+        statusEl.style.color = '#10b981';
+        balEl.innerText = '₹0';
+      } else if (newTotalPaid > 0) {
+        const remaining = totalDue - newTotalPaid;
+        statusEl.innerText = 'PARTIALLY PAID';
+        statusEl.style.color = '#d97706';
+        balEl.innerText = `₹${remaining.toLocaleString('en-IN')}`;
+      } else {
+        statusEl.innerText = 'PENDING';
+        statusEl.style.color = '#2563eb';
+        balEl.innerText = `₹${(totalDue - newTotalPaid).toLocaleString('en-IN')}`;
+      }
+    }
+
+    async function submitRecordPayment(e) {
+      e.preventDefault();
+      const token = localStorage.getItem('token');
+      const id = document.getElementById('recPayInvoiceId').value;
+      const amount = parseFloat(document.getElementById('recPayAmount').value);
+      const paymentMode = document.getElementById('recPayMode').value;
+      const referenceNumber = document.getElementById('recPayReference').value;
+      const notes = document.getElementById('recPayNotes').value;
+      const waiveLateFee = document.getElementById('recPayWaiveLateFee')?.checked || false;
+
+      const submitBtn = document.getElementById('recPaySubmitBtn');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerText = 'Recording...';
+      }
+
+      try {
+        const res = await fetch(`/api/payments/${id}/record`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            amount,
+            paymentMode,
+            referenceNumber,
+            notes,
+            waiveLateFee
+          })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          alert(`Payment recorded successfully!\nReceipt #: ${data.receiptNumber}\nStatus: ${data.status.toUpperCase()}`);
+          closeModal('recordPaymentModal');
+          fetchPaymentsLedger();
+          fetchStatsAndRecent();
+        } else {
+          alert(data.message || 'Failed to record payment.');
+        }
+      } catch (err) {
+        alert('Server error recording payment: ' + err.message);
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerText = 'Save & Issue Receipt';
+        }
+      }
+    }
+
+    // Modal: Billing Settings
+    async function openBillingSettingsModal() {
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch('/api/payments/admin/settings', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success && data.settings) {
+          const s = data.settings;
+          document.getElementById('cfgBillingCycleType').value = s.billingCycleType || 'CALENDAR_MONTH';
+          document.getElementById('cfgRentDueDay').value = s.rentDueDay || '5';
+          document.getElementById('cfgGracePeriodDays').value = s.gracePeriodDays || '3';
+          document.getElementById('cfgLateFeeType').value = s.lateFeeType || 'FIXED';
+          document.getElementById('cfgLateFeeAmount').value = s.lateFeeAmount || '200';
+          document.getElementById('cfgAutoReminderEnabled').checked = s.autoReminderEnabled === 'true' || s.autoReminderEnabled === true;
+          document.getElementById('cfgAutoReminderDays').value = s.autoReminderDaysBeforeDue || '2';
+        }
+        openModal('billingSettingsModal');
+      } catch (err) {
+        alert('Failed to load billing settings: ' + err.message);
+      }
+    }
+
+    async function submitBillingSettings(e) {
+      e.preventDefault();
+      const token = localStorage.getItem('token');
+      const body = {
+        billingCycleType: document.getElementById('cfgBillingCycleType').value,
+        rentDueDay: document.getElementById('cfgRentDueDay').value,
+        gracePeriodDays: document.getElementById('cfgGracePeriodDays').value,
+        lateFeeType: document.getElementById('cfgLateFeeType').value,
+        lateFeeAmount: document.getElementById('cfgLateFeeAmount').value,
+        autoReminderEnabled: document.getElementById('cfgAutoReminderEnabled').checked,
+        autoReminderDaysBeforeDue: document.getElementById('cfgAutoReminderDays').value
+      };
+
+      try {
+        const res = await fetch('/api/payments/admin/settings', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('Billing configuration saved successfully!');
+          closeModal('billingSettingsModal');
+          fetchPaymentsLedger();
+        } else {
+          alert(data.message || 'Failed to update billing settings.');
+        }
+      } catch (err) {
+        alert('Server error saving settings: ' + err.message);
+      }
+    }
+
+    // Modal: Student Rent History
+    async function openStudentRentHistoryModal(studentId) {
+      const token = localStorage.getItem('token');
+      const container = document.getElementById('studentRentHistoryContent');
+      if (!container) return;
+
+      container.innerHTML = '<div style="text-align:center; padding:30px;"><i data-lucide="loader-2" class="spin"></i> Loading rent history...</div>';
+      openModal('studentRentHistoryModal');
+
+      try {
+        const res = await fetch(`/api/payments/admin/student/${studentId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          const s = data.student;
+          const sum = data.summary;
+          const invoices = data.invoices || [];
+          const txns = data.transactions || [];
+
+          document.getElementById('rentHistoryStudentName').innerText = `${s.name} — Rent Ledger`;
+
+          container.innerHTML = `
+            <div style="background:#f8fafc; padding:14px 18px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:18px;">
+              <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px; font-size:0.85rem;">
+                <div><strong>Custom ID:</strong> ${s.customId}</div>
+                <div><strong>Room / Bed:</strong> Room ${s.roomNumber} (${s.bedLabel})</div>
+                <div><strong>Monthly Rent:</strong> ₹${parseFloat(s.monthlyRent || 0).toLocaleString('en-IN')}</div>
+                <div><strong>Phone:</strong> ${s.phone}</div>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:12px; margin-bottom:18px;">
+              <div style="background:white; padding:12px; border:1px solid #e2e8f0; border-radius:8px; text-align:center;">
+                <div style="font-size:0.75rem; color:var(--text-muted);">Total Billed</div>
+                <div style="font-size:1.15rem; font-weight:800; color:var(--dark-slate);">₹${sum.totalBilled.toLocaleString('en-IN')}</div>
+              </div>
+              <div style="background:white; padding:12px; border:1px solid #e2e8f0; border-radius:8px; text-align:center;">
+                <div style="font-size:0.75rem; color:var(--text-muted);">Total Paid</div>
+                <div style="font-size:1.15rem; font-weight:800; color:#10b981;">₹${sum.totalPaid.toLocaleString('en-IN')}</div>
+              </div>
+              <div style="background:white; padding:12px; border:1px solid #e2e8f0; border-radius:8px; text-align:center;">
+                <div style="font-size:0.75rem; color:var(--text-muted);">Pending Balance</div>
+                <div style="font-size:1.15rem; font-weight:800; color:${sum.totalPending > 0 ? '#ef4444' : '#10b981'};">₹${sum.totalPending.toLocaleString('en-IN')}</div>
+              </div>
+              <div style="background:white; padding:12px; border:1px solid #e2e8f0; border-radius:8px; text-align:center;">
+                <div style="font-size:0.75rem; color:var(--text-muted);">Total Invoices</div>
+                <div style="font-size:1.15rem; font-weight:800; color:var(--primary-deep);">${sum.invoiceCount}</div>
+              </div>
+            </div>
+
+            <h4 style="margin:16px 0 8px 0; font-size:0.95rem; font-weight:800;">Generated Invoices</h4>
+            <div style="max-height:180px; overflow-y:auto; border:1px solid #E5E7EB; border-radius:6px; margin-bottom:18px;">
+              <table class="data-table" style="width:100%; font-size:0.75rem;">
+                <thead style="background:#f8fafc;">
+                  <tr>
+                    <th style="padding:6px 8px;">Invoice #</th>
+                    <th style="padding:6px 8px;">Month</th>
+                    <th style="padding:6px 8px;">Due Date</th>
+                    <th style="padding:6px 8px; text-align:right;">Due</th>
+                    <th style="padding:6px 8px; text-align:right;">Late</th>
+                    <th style="padding:6px 8px; text-align:right;">Paid</th>
+                    <th style="padding:6px 8px; text-align:center;">Status</th>
+                    <th style="padding:6px 8px; text-align:center;">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${invoices.length > 0 ? invoices.map(inv => {
+                    const due = parseFloat(inv.amountDue || inv.amountdue || 0);
+                    const late = parseFloat(inv.lateFee || inv.latefee || 0);
+                    const paid = parseFloat(inv.amountPaid || inv.amountpaid || 0);
+                    const st = (inv.status || 'pending').toLowerCase();
+                    const dStr = (inv.dueDate || inv.duedate) ? new Date(inv.dueDate || inv.duedate).toLocaleDateString('en-IN') : '—';
+                    const invNo = inv.invoiceNumber || inv.invoicenumber || `INV-${inv.id}`;
+                    return `
+                      <tr>
+                        <td style="padding:6px 8px; font-family:monospace; font-weight:700;">${invNo}</td>
+                        <td style="padding:6px 8px;">${inv.billingMonth || inv.billingmonth}</td>
+                        <td style="padding:6px 8px;">${dStr}</td>
+                        <td style="padding:6px 8px; text-align:right;">₹${due.toLocaleString('en-IN')}</td>
+                        <td style="padding:6px 8px; text-align:right; color:#ef4444;">${late > 0 ? '+₹' + late.toLocaleString('en-IN') : '—'}</td>
+                        <td style="padding:6px 8px; text-align:right; color:#10b981; font-weight:700;">₹${paid.toLocaleString('en-IN')}</td>
+                        <td style="padding:6px 8px; text-align:center;"><span class="status-badge ${st === 'paid' ? 'active' : (st === 'partial' ? 'partially' : 'inactive')}">${st.toUpperCase()}</span></td>
+                        <td style="padding:6px 8px; text-align:center;">
+                          ${st !== 'paid' ? `<button class="btn btn-primary" style="padding:3px 7px; font-size:0.65rem; background:#10b981; border-color:#10b981;" onclick="closeModal('studentRentHistoryModal'); openRecordPaymentModal(${inv.id}, '${invNo.replace(/'/g, "\\'")}', '${(s.name || '').replace(/'/g, "\\'")}', '${(s.roomNumber || '').replace(/'/g, "\\'")}', '${inv.billingMonth || inv.billingmonth}', ${due}, ${late}, ${paid})">Pay</button>` : ''}
+                        </td>
+                      </tr>
+                    `;
+                  }).join('') : '<tr><td colspan="8" style="text-align:center; padding:12px; color:var(--text-muted);">No invoices generated for this student.</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+
+            <h4 style="margin:16px 0 8px 0; font-size:0.95rem; font-weight:800;">Payment Transactions</h4>
+            <div style="max-height:160px; overflow-y:auto; border:1px solid #E5E7EB; border-radius:6px;">
+              <table class="data-table" style="width:100%; font-size:0.75rem;">
+                <thead style="background:#f8fafc;">
+                  <tr>
+                    <th style="padding:6px 8px;">Date</th>
+                    <th style="padding:6px 8px;">Cycle</th>
+                    <th style="padding:6px 8px;">Mode</th>
+                    <th style="padding:6px 8px;">Reference #</th>
+                    <th style="padding:6px 8px; text-align:right;">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${txns.length > 0 ? txns.map(tx => `
+                    <tr>
+                      <td style="padding:6px 8px;">${new Date(tx.paymentDate || tx.paymentdate || tx.createdAt).toLocaleDateString('en-IN')}</td>
+                      <td style="padding:6px 8px;">${tx.billingMonth || tx.billingmonth || '—'}</td>
+                      <td style="padding:6px 8px;">${tx.paymentMode || tx.paymentmode}</td>
+                      <td style="padding:6px 8px; font-family:monospace;">${tx.referenceNumber || tx.referencenumber || '—'}</td>
+                      <td style="padding:6px 8px; text-align:right; font-weight:700; color:#10b981;">₹${parseFloat(tx.amount || 0).toLocaleString('en-IN')}</td>
+                    </tr>
+                  `).join('') : '<tr><td colspan="5" style="text-align:center; padding:12px; color:var(--text-muted);">No transaction receipts found.</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+          `;
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        } else {
+          container.innerHTML = `<div style="text-align:center; padding:20px; color:#ef4444;">${data.message || 'Failed to load student history.'}</div>`;
+        }
+      } catch (err) {
+        container.innerHTML = `<div style="text-align:center; padding:20px; color:#ef4444;">Server error: ${err.message}</div>`;
       }
     }
 

@@ -309,8 +309,70 @@ async function initializeDatabase(db) {
     )
   `);
 
-  try { await db.query("ALTER TABLE payments ADD COLUMN dueDate TIMESTAMP"); } catch (_) {}
-  try { await db.query("ALTER TABLE payments ADD COLUMN paidAt TIMESTAMP"); } catch (_) {}
+  // Phase 3: Monthly Rent Management schema enhancements
+  await db.query(`
+    ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_status_check;
+    ALTER TABLE payments ADD CONSTRAINT payments_status_check CHECK (status IN ('paid', 'pending', 'partial', 'late', 'overdue'));
+  `);
+
+  await db.query(`
+    ALTER TABLE paymenthistory DROP CONSTRAINT IF EXISTS paymenthistory_paymentmode_check;
+    ALTER TABLE paymenthistory ADD CONSTRAINT paymenthistory_paymentmode_check 
+      CHECK (LOWER(paymentmode) IN ('cash', 'upi', 'online', 'bank transfer', 'card', 'debit/credit card', 'cheque'));
+  `);
+
+  await db.query(`
+    ALTER TABLE payments
+      ADD COLUMN IF NOT EXISTS invoiceNumber VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS dueDate TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS paidAt TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS lateFee NUMERIC NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS lateFeeApplied BOOLEAN NOT NULL DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS billingCycleType VARCHAR(50) NOT NULL DEFAULT 'CALENDAR_MONTH',
+      ADD COLUMN IF NOT EXISTS cycleStartDate DATE,
+      ADD COLUMN IF NOT EXISTS cycleEndDate DATE,
+      ADD COLUMN IF NOT EXISTS advancePaid NUMERIC NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS notes TEXT
+  `);
+
+  await db.query(`
+    CREATE INDEX IF NOT EXISTS idx_payments_student ON payments(studentId);
+    CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
+    CREATE INDEX IF NOT EXISTS idx_payments_month ON payments(billingMonth);
+  `);
+
+  // Backfill invoice numbers for existing payments where missing
+  await db.query(`
+    UPDATE payments 
+    SET invoiceNumber = CASE 
+      WHEN billingMonth = 'ADMISSION' THEN 'INV-ADM-' || LPAD(id::text, 5, '0')
+      ELSE 'INV-' || REPLACE(billingMonth, '-', '') || '-' || LPAD(studentId::text, 4, '0') || '-' || LPAD(id::text, 4, '0')
+    END
+    WHERE invoiceNumber IS NULL
+  `);
+
+  // Ensure unique index on invoiceNumber
+  await db.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_payments_invoicenumber ON payments(invoiceNumber);
+  `);
+
+  // Phase 3: Seed default billing settings if not present
+  const defaultBillingSettings = [
+    { key: 'billingCycleType', value: 'CALENDAR_MONTH' }, // 'CALENDAR_MONTH' or 'JOINING_DATE'
+    { key: 'rentDueDay', value: '5' },                    // 5th of each month
+    { key: 'lateFeeType', value: 'FIXED' },               // 'FIXED' or 'PERCENTAGE'
+    { key: 'lateFeeAmount', value: '200' },               // ₹200 or 5%
+    { key: 'gracePeriodDays', value: '3' },               // Grace days past due date before late fee applies
+    { key: 'autoReminderEnabled', value: 'true' },        // Automatic reminders enabled
+    { key: 'autoReminderDaysBeforeDue', value: '2' }      // Days before due date to remind
+  ];
+  for (const bs of defaultBillingSettings) {
+    await db.query(`
+      INSERT INTO hostelSettings (key, value)
+      VALUES ($1, $2)
+      ON CONFLICT (key) DO NOTHING
+    `, [bs.key, bs.value]);
+  }
 
   // 7. Payment History Table
   await db.query(`
