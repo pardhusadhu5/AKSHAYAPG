@@ -277,6 +277,9 @@ async function getStudentDetails(req, res) {
       bedLabel: bLabel,
       monthlyRent: parseFloat(rawStudent.monthlyrent || rawStudent.monthlyRent || 0),
       depositAmount: parseFloat(rawStudent.depositamount || rawStudent.depositAmount || 0),
+      depositStatus: rawStudent.depositstatus || rawStudent.depositStatus || 'HELD',
+      depositRefundedAmount: parseFloat(rawStudent.depositrefundedamount || rawStudent.depositRefundedAmount || 0),
+      depositDeductionsAmount: parseFloat(rawStudent.depositdeductionsamount || rawStudent.depositDeductionsAmount || 0),
       paymentStatus: rawStudent.paymentstatus || rawStudent.paymentStatus || 'unpaid',
       status: rawStudent.status || 'active',
       applicationStatus: rawStudent.applicationstatus || rawStudent.applicationStatus || 'PENDING',
@@ -317,7 +320,16 @@ async function getStudentDetails(req, res) {
       ORDER BY st.id DESC
     `, [student.id]);
 
-    res.status(200).json({ success: true, student, payments, stayHistory, settlements });
+    // Get security deposits (Phase 4)
+    const { rows: securityDeposits } = await db.query(`
+      SELECT sd.*, st.settlementNumber
+      FROM security_deposits sd
+      LEFT JOIN settlements st ON sd.settlementId = st.id
+      WHERE sd.studentId = $1
+      ORDER BY sd.transactionDate DESC, sd.id DESC
+    `, [student.id]);
+
+    res.status(200).json({ success: true, student, payments, stayHistory, settlements, securityDeposits });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -1360,12 +1372,12 @@ async function checkOutStudent(req, res) {
     const stayId = activeStay.length > 0 ? activeStay[0].id : null;
 
     // 2. Insert into settlements
-    await db.query(
+    const { rows: settlementRes } = await db.query(
       `INSERT INTO settlements (
         settlementNumber, studentId, stayId, checkOutDate, securityDepositHeld, 
         pendingRentAmount, maintenanceCharges, damageCharges, otherCharges, totalDeductions, 
         netPayableAmount, refundAmount, amountCollected, refundMode, paymentReference, status, notes
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17) RETURNING id`,
       [
         settlementNumber, id, stayId, effectiveCheckOut, depositHeld,
         pendingRent, maintFee, damageFee, otherFee, totalDeductions,
@@ -1373,6 +1385,76 @@ async function checkOutStudent(req, res) {
         'COMPLETED', notes || checkOutRemarks || ''
       ]
     );
+    const settlementId = settlementRes.length > 0 ? settlementRes[0].id : null;
+
+    // Phase 4: Record checkout security deposit ledger transactions
+    let runningDepositBalance = depositHeld;
+
+    // A. Itemized damage charges deduction
+    if (damageFee > 0) {
+      runningDepositBalance = Math.max(0, runningDepositBalance - damageFee);
+      await db.query(`
+        INSERT INTO security_deposits (
+          depositNumber, studentId, transactionType, category, amount, balanceAfter,
+          paymentMode, referenceNumber, reason, status, settlementId, recordedBy, transactionDate
+        ) VALUES ($1, $2, 'DEDUCTION', 'DAMAGE_CHARGES', $3, $4, 'ADJUSTMENT', $5, $6, 'COMPLETED', $7, 'Checkout Settlement', CURRENT_TIMESTAMP)
+      `, [`DEP-DED-${Date.now().toString().slice(-6)}-${id}-DMG`, id, damageFee, runningDepositBalance, paymentReference || null, 'Checkout damage charges deduction', settlementId]);
+    }
+
+    // B. Itemized maintenance charges deduction
+    if (maintFee > 0) {
+      runningDepositBalance = Math.max(0, runningDepositBalance - maintFee);
+      await db.query(`
+        INSERT INTO security_deposits (
+          depositNumber, studentId, transactionType, category, amount, balanceAfter,
+          paymentMode, referenceNumber, reason, status, settlementId, recordedBy, transactionDate
+        ) VALUES ($1, $2, 'DEDUCTION', 'MAINTENANCE_CHARGES', $3, $4, 'ADJUSTMENT', $5, $6, 'COMPLETED', $7, 'Checkout Settlement', CURRENT_TIMESTAMP)
+      `, [`DEP-DED-${Date.now().toString().slice(-6)}-${id}-MNT`, id, maintFee, runningDepositBalance, paymentReference || null, 'Checkout maintenance charges deduction', settlementId]);
+    }
+
+    // C. Itemized other charges deduction
+    if (otherFee > 0) {
+      runningDepositBalance = Math.max(0, runningDepositBalance - otherFee);
+      await db.query(`
+        INSERT INTO security_deposits (
+          depositNumber, studentId, transactionType, category, amount, balanceAfter,
+          paymentMode, referenceNumber, reason, status, settlementId, recordedBy, transactionDate
+        ) VALUES ($1, $2, 'DEDUCTION', 'OTHER_CHARGES', $3, $4, 'ADJUSTMENT', $5, $6, 'COMPLETED', $7, 'Checkout Settlement', CURRENT_TIMESTAMP)
+      `, [`DEP-DED-${Date.now().toString().slice(-6)}-${id}-OTH`, id, otherFee, runningDepositBalance, paymentReference || null, 'Checkout other charges deduction', settlementId]);
+    }
+
+    // D. Pending rent adjustment against deposit
+    if (pendingRent > 0) {
+      runningDepositBalance = Math.max(0, runningDepositBalance - pendingRent);
+      await db.query(`
+        INSERT INTO security_deposits (
+          depositNumber, studentId, transactionType, category, amount, balanceAfter,
+          paymentMode, referenceNumber, reason, status, settlementId, recordedBy, transactionDate
+        ) VALUES ($1, $2, 'ADJUSTMENT', 'RENT_ADJUSTMENT', $3, $4, 'ADJUSTMENT', $5, $6, 'COMPLETED', $7, 'Checkout Settlement', CURRENT_TIMESTAMP)
+      `, [`DEP-ADJ-${Date.now().toString().slice(-6)}-${id}-RNT`, id, pendingRent, runningDepositBalance, paymentReference || null, `Checkout pending rent adjustment (₹${pendingRent})`, settlementId]);
+    }
+
+    // E. Refund transaction (Completed or Pending)
+    const isPendingRefund = refundAmount > 0 && (refundMode === 'Pay Later' || refundMode === 'Pending');
+    if (refundAmount > 0) {
+      await db.query(`
+        INSERT INTO security_deposits (
+          depositNumber, studentId, transactionType, category, amount, balanceAfter,
+          paymentMode, referenceNumber, reason, status, settlementId, recordedBy, transactionDate
+        ) VALUES ($1, $2, 'REFUND', 'CHECKOUT_REFUND', $3, 0, $4, $5, $6, $7, $8, 'Checkout Settlement', CURRENT_TIMESTAMP)
+      `, [
+        `DEP-REF-${Date.now().toString().slice(-6)}-${id}`,
+        id,
+        refundAmount,
+        refundMode || 'Direct UPI/Cash',
+        paymentReference || null,
+        `Checkout security deposit refund (${settlementNumber})`,
+        isPendingRefund ? 'PENDING' : 'COMPLETED',
+        settlementId
+      ]);
+    }
+
+    const finalDepositStatus = refundAmount > 0 ? (isPendingRefund ? 'PENDING_REFUND' : 'REFUNDED') : 'SETTLED';
 
     // 3. Mark pending rent as paid/adjusted against security deposit if settled
     if (pendingRent > 0) {
@@ -1408,13 +1490,18 @@ async function checkOutStudent(req, res) {
       [checkOutReason || 'Student Checkout', id]
     );
 
-    // 6. Update Student record
+    // 6. Update Student record (with deposit settlement status)
     await db.query(
       `UPDATE students 
        SET roomId = NULL, bedId = NULL, stayStatus = 'CHECKED_OUT', status = 'CHECKED_OUT', 
-           checkOutDate = $1, checkOutReason = $2, checkOutRemarks = $3, updatedAt = CURRENT_TIMESTAMP 
-       WHERE id = $4`,
-      [effectiveCheckOut, checkOutReason || 'Vacating Hostel', checkOutRemarks || notes || '', id]
+           checkOutDate = $1, checkOutReason = $2, checkOutRemarks = $3,
+           depositAmount = 0,
+           depositStatus = $4,
+           depositRefundedAmount = $5,
+           depositDeductionsAmount = $6,
+           updatedAt = CURRENT_TIMESTAMP 
+       WHERE id = $7`,
+      [effectiveCheckOut, checkOutReason || 'Vacating Hostel', checkOutRemarks || notes || '', finalDepositStatus, isPendingRefund ? 0 : refundAmount, totalDeductions, id]
     );
 
     // 7. Notification

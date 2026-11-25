@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const paymentController = require('../controllers/paymentController');
+const depositController = require('../controllers/depositController');
 const { verifyToken, requireRole } = require('../middleware/authMiddleware');
 
 // Public Razorpay Webhook Endpoint
@@ -24,6 +25,17 @@ router.get('/admin/settings', verifyToken, requireRole(['admin', 'manager']), pa
 router.put('/admin/settings', verifyToken, requireRole(['admin', 'manager']), paymentController.updateBillingSettings);
 router.get('/admin/student/:studentId', verifyToken, requireRole(['admin', 'manager']), paymentController.getStudentRentHistory);
 router.post('/admin/send-reminders', verifyToken, requireRole(['admin', 'manager']), paymentController.sendDueReminders);
+
+// Phase 4: Security Deposit Management Routes
+router.get('/deposits/stats', verifyToken, requireRole(['admin', 'manager']), depositController.getDepositStats);
+router.get('/deposits/ledger', verifyToken, requireRole(['admin', 'manager']), depositController.getDepositLedger);
+router.post('/deposits/collect', verifyToken, requireRole(['admin', 'manager']), depositController.recordDepositCollection);
+router.post('/deposits/deduct', verifyToken, requireRole(['admin', 'manager']), depositController.recordDepositDeduction);
+router.post('/deposits/refund', verifyToken, requireRole(['admin', 'manager']), depositController.processDepositRefund);
+router.get('/deposits/pending-refunds', verifyToken, requireRole(['admin', 'manager']), depositController.getPendingRefunds);
+router.get('/deposits/config', verifyToken, requireRole(['admin', 'manager']), depositController.getDepositConfig);
+router.put('/deposits/config', verifyToken, requireRole(['admin', 'manager']), depositController.updateDepositConfig);
+router.get('/deposits/student/:studentId', verifyToken, depositController.getStudentDepositHistory);
 
 // Legacy routes for compatibility
 router.get('/', verifyToken, requireRole(['admin', 'manager']), paymentController.getAllPayments);

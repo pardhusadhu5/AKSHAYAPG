@@ -28,3 +28,6 @@ scratch/
 # Operating System Files
 .DS_Store
 Thumbs.db
+
+.neon
+*.db

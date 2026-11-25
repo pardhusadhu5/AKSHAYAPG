@@ -813,6 +813,12 @@ async function getStudentFees(req, res) {
       };
     });
 
+    // Fetch security deposit transactions for student portal (Phase 4)
+    const { rows: depositTransactions } = await db.query(
+      `SELECT * FROM security_deposits WHERE studentId = $1 ORDER BY transactionDate DESC, id DESC`,
+      [student.id]
+    );
+
     res.status(200).json({
       success: true,
       studentInfo: {
@@ -828,12 +834,17 @@ async function getStudentFees(req, res) {
         roomNumber: student.roomNumber || student.roomnumber || 'Unassigned',
         bedNumber: student.bedNumber || student.bednumber || 'Unassigned',
         floor: student.floor || 'Ground Floor',
-        monthlyRent: student.monthlyRent || student.monthlyrent
+        monthlyRent: student.monthlyRent || student.monthlyrent,
+        depositAmount: parseFloat(student.depositAmount || student.depositamount || 0),
+        depositStatus: student.depositStatus || student.depositstatus || 'HELD',
+        depositRefundedAmount: parseFloat(student.depositRefundedAmount || student.depositrefundedamount || 0),
+        depositDeductionsAmount: parseFloat(student.depositDeductionsAmount || student.depositdeductionsamount || 0)
       },
       admissionFeeInvoice,
       currentFee,
       previousDues,
-      history
+      history,
+      securityDeposits: depositTransactions
     });
   } catch (err) {
     console.error('Get Student Fees Error:', err);

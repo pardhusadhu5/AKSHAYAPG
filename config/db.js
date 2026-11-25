@@ -491,6 +491,72 @@ async function initializeDatabase(db) {
     CREATE INDEX IF NOT EXISTS idx_settlements_student ON settlements(studentId);
   `).catch(() => {});
 
+  // 14. Security Deposits Table (Phase 4)
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS security_deposits (
+      id SERIAL PRIMARY KEY,
+      depositNumber VARCHAR(100) UNIQUE NOT NULL,
+      studentId INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+      transactionType VARCHAR(50) NOT NULL CHECK (transactionType IN ('COLLECTION', 'REFUND', 'DEDUCTION', 'ADJUSTMENT')),
+      category VARCHAR(100) NOT NULL DEFAULT 'ADMISSION_DEPOSIT',
+      amount NUMERIC NOT NULL,
+      balanceAfter NUMERIC NOT NULL DEFAULT 0,
+      paymentMode VARCHAR(50) NOT NULL DEFAULT 'UPI',
+      referenceNumber VARCHAR(255),
+      reason TEXT,
+      status VARCHAR(50) NOT NULL DEFAULT 'COMPLETED' CHECK (status IN ('COMPLETED', 'PENDING', 'CANCELLED')),
+      settlementId INTEGER REFERENCES settlements(id) ON DELETE SET NULL,
+      recordedBy VARCHAR(255) DEFAULT 'Hostel Management',
+      transactionDate TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await db.query(`
+    ALTER TABLE students
+      ADD COLUMN IF NOT EXISTS depositStatus VARCHAR(50) NOT NULL DEFAULT 'HELD',
+      ADD COLUMN IF NOT EXISTS depositRefundedAmount NUMERIC NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS depositDeductionsAmount NUMERIC NOT NULL DEFAULT 0;
+
+    CREATE INDEX IF NOT EXISTS idx_security_deposits_student ON security_deposits(studentId);
+    CREATE INDEX IF NOT EXISTS idx_security_deposits_type ON security_deposits(transactionType);
+    CREATE INDEX IF NOT EXISTS idx_security_deposits_status ON security_deposits(status);
+    CREATE INDEX IF NOT EXISTS idx_security_deposits_date ON security_deposits(transactionDate DESC);
+  `).catch((err) => { console.error('Deposit migration notice:', err.message); });
+
+  // Backfill initial deposit collection records for active students with depositAmount > 0 if not present
+  await db.query(`
+    INSERT INTO security_deposits (depositNumber, studentId, transactionType, category, amount, balanceAfter, paymentMode, reason, status, transactionDate)
+    SELECT 
+      'DEP-COL-' || LPAD(s.id::text, 4, '0') || '-INIT',
+      s.id,
+      'COLLECTION',
+      'ADMISSION_DEPOSIT',
+      COALESCE(s.depositAmount, 3000),
+      COALESCE(s.depositAmount, 3000),
+      'Online/Admission',
+      'Initial admission security deposit',
+      'COMPLETED',
+      COALESCE(s.joinDate, s.createdAt)
+    FROM students s
+    WHERE COALESCE(s.depositAmount, 0) > 0
+    AND NOT EXISTS (SELECT 1 FROM security_deposits sd WHERE sd.studentId = s.id)
+    ON CONFLICT (depositNumber) DO NOTHING;
+  `).catch((err) => { console.error('Deposit backfill notice:', err.message); });
+
+  // Phase 4: Seed default deposit settings if not present
+  const defaultDepositSettings = [
+    { key: 'depositAmount', value: '3000' },
+    { key: 'depositRefundPolicy', value: 'Security deposits are fully refundable within 3-5 business days of checkout after room inspection and clearance of pending dues.' }
+  ];
+  for (const ds of defaultDepositSettings) {
+    await db.query(`
+      INSERT INTO hostelSettings (key, value)
+      VALUES ($1, $2)
+      ON CONFLICT (key) DO NOTHING
+    `, [ds.key, ds.value]);
+  }
+
   // Backfill initial active stay record for current residents if not yet tracked
   await db.query(`
     INSERT INTO stay_history (studentId, roomId, bedId, checkInDate, status, checkInRemarks)

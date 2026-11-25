@@ -36,7 +36,7 @@ function normalizePrivateKey(rawKey) {
 async function downloadReport(req, res) {
   try {
     const { type } = req.query; // 'student', 'room', 'occupancy', 'income', 'pending'
-    if (!['student', 'room', 'occupancy', 'income', 'pending', 'monthly_rent_collection', 'rent_collection'].includes(type)) {
+    if (!['student', 'room', 'occupancy', 'income', 'pending', 'monthly_rent_collection', 'rent_collection', 'security_deposits', 'deposits'].includes(type)) {
       return res.status(400).json({ success: false, message: 'Invalid report type requested.' });
     }
 
@@ -108,6 +108,19 @@ async function downloadReport(req, res) {
       pending.forEach(p => {
         const outstanding = p.amountDue - p.amountPaid;
         csvContent += `"${p.billingMonth}","${p.studentName}","${p.phone}","Room ${p.roomNumber || 'N/A'}","${p.amountDue}","${p.amountPaid}","${outstanding}","${p.status}"\n`;
+      });
+    } else if (type === 'security_deposits' || type === 'deposits') {
+      csvContent = 'Deposit Number,Student ID,Student Name,Phone,Room,Transaction Type,Category,Amount,Balance After,Payment Mode,Reference Number,Reason,Status,Date\n';
+      const { rows: depositRecords } = await db.query(`
+        SELECT sd.*, s.studentName, s.phone, r.roomNumber
+        FROM security_deposits sd
+        JOIN students s ON sd.studentId = s.id
+        LEFT JOIN rooms r ON s.roomId = r.id
+        ORDER BY sd.transactionDate DESC, sd.id DESC
+      `);
+      depositRecords.forEach(d => {
+        const dt = d.transactiondate || d.transactionDate ? new Date(d.transactiondate || d.transactionDate).toLocaleString('en-IN') : '';
+        csvContent += `"${d.depositnumber || d.depositNumber}","${d.studentid || d.studentId}","${d.studentname || d.studentName}","${d.phone || ''}","Room ${d.roomnumber || d.roomNumber || '—'}","${d.transactiontype || d.transactionType}","${d.category || ''}","${d.amount}","${d.balanceafter || d.balanceAfter}","${d.paymentmode || d.paymentMode}","${d.referencenumber || d.referenceNumber || ''}","${d.reason || ''}","${d.status}","${dt}"\n`;
       });
     } else if (type === 'monthly_rent_collection' || type === 'rent_collection') {
       csvContent = 'Invoice Number,Student ID,Student Name,Phone,Room Number,Billing Month,Cycle Type,Amount Due,Late Fee,Amount Paid,Pending Balance,Advance Paid,Status,Due Date,Paid Date\n';

@@ -1123,6 +1123,18 @@
 
     <!-- 4. PAYMENTS PANEL -->
     <div class="panel-view" id="paymentsPanel">
+      <!-- Finance Sub-Tabs Navigation (Monthly Rent vs Security Deposits) -->
+      <div style="display:flex; gap:10px; margin-bottom:20px; border-bottom:2px solid #E5E7EB; padding-bottom:8px;">
+        <button id="tabBtnMonthlyRent" class="btn btn-primary btn-sm" onclick="switchFinanceTab('rent')" style="padding:8px 16px; font-weight:700; border-radius:6px; display:inline-flex; align-items:center; gap:6px;">
+          <i data-lucide="receipt" style="width:15px; height:15px;"></i> Monthly Rent & Invoices
+        </button>
+        <button id="tabBtnSecurityDeposits" class="btn btn-outline btn-sm" onclick="switchFinanceTab('deposits')" style="padding:8px 16px; font-weight:700; border-radius:6px; display:inline-flex; align-items:center; gap:6px; color:var(--dark-slate);">
+          <i data-lucide="shield" style="width:15px; height:15px;"></i> Security Deposits Ledger
+        </button>
+      </div>
+
+      <!-- SECTION A: MONTHLY RENT & INVOICES (Phase 3) -->
+      <div id="financeMonthlyRentSection">
       <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:18px; margin-bottom:24px;">
         <div class="stat-widget" style="background:white; padding:18px 20px; border-radius:12px; border:1px solid #E5E7EB; border-left:4px solid #10b981;">
           <div class="sw-info">
@@ -1209,6 +1221,101 @@
           </table>
         </div>
       </div>
+      </div><!-- End #financeMonthlyRentSection -->
+
+      <!-- SECTION B: SECURITY DEPOSIT MANAGEMENT (Phase 4) -->
+      <div id="financeSecurityDepositSection" style="display:none;">
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:18px; margin-bottom:24px;">
+          <div class="stat-widget" style="background:white; padding:18px 20px; border-radius:12px; border:1px solid #E5E7EB; border-left:4px solid #10b981;">
+            <div class="sw-info">
+              <h4 style="margin:0 0 6px 0; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted);">Deposits Held (Active)</h4>
+              <h3 id="depositHeldHeader" style="margin:0; font-size:1.45rem; font-weight:800; color:#10b981;">₹0</h3>
+            </div>
+          </div>
+          <div class="stat-widget" style="background:white; padding:18px 20px; border-radius:12px; border:1px solid #E5E7EB; border-left:4px solid #2563eb;">
+            <div class="sw-info">
+              <h4 style="margin:0 0 6px 0; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted);">Total Refunded</h4>
+              <h3 id="depositRefundedHeader" style="margin:0; font-size:1.45rem; font-weight:800; color:#2563eb;">₹0</h3>
+            </div>
+          </div>
+          <div class="stat-widget" style="background:white; padding:18px 20px; border-radius:12px; border:1px solid #E5E7EB; border-left:4px solid #ef4444;">
+            <div class="sw-info">
+              <h4 style="margin:0 0 6px 0; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted);">Damage Deductions</h4>
+              <h3 id="depositDeductionsHeader" style="margin:0; font-size:1.45rem; font-weight:800; color:#ef4444;">₹0</h3>
+            </div>
+          </div>
+          <div class="stat-widget" style="background:white; padding:18px 20px; border-radius:12px; border:1px solid #E5E7EB; border-left:4px solid #f59e0b;">
+            <div class="sw-info">
+              <h4 style="margin:0 0 6px 0; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.5px; color:var(--text-muted);">Pending Refunds</h4>
+              <h3 id="depositPendingHeader" style="margin:0; font-size:1.45rem; font-weight:800; color:#f59e0b;">0 (₹0)</h3>
+            </div>
+          </div>
+        </div>
+
+        <div class="list-container-card" style="background:white; padding:24px; border-radius:12px; border:1px solid #E5E7EB;">
+          <div class="lcc-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+            <div>
+              <h3 style="margin:0; font-size:1.2rem; font-weight:800; color:var(--dark-slate);">Security Deposits Ledger & Escrow</h3>
+              <p style="margin:4px 0 0 0; font-size:0.8rem; color:var(--text-muted);">Track student security deposit collections, itemized damage/repair deductions, checkout settlements, and refund disbursements.</p>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+              <button class="btn btn-primary" style="padding:7px 13px; font-size:0.8rem; display:inline-flex; align-items:center; gap:5px; background:#10b981; border-color:#10b981;" onclick="openCollectDepositModal()">
+                <i data-lucide="plus-circle" style="width:14px; height:14px;"></i> Collect Deposit
+              </button>
+              <button class="btn btn-outline" style="padding:7px 13px; font-size:0.8rem; color:#dc2626; border-color:#fca5a5; display:inline-flex; align-items:center; gap:5px;" onclick="openDepositDeductionModal()">
+                <i data-lucide="minus-circle" style="width:14px; height:14px;"></i> Record Deduction
+              </button>
+              <button class="btn btn-outline" style="padding:7px 13px; font-size:0.8rem; color:#2563eb; border-color:#93c5fd; display:inline-flex; align-items:center; gap:5px;" onclick="openProcessDepositRefundModal()">
+                <i data-lucide="corner-down-left" style="width:14px; height:14px;"></i> Process Refund
+              </button>
+              <button class="btn btn-outline" style="padding:7px 13px; font-size:0.8rem; color:#475569; border-color:#cbd5e1; display:inline-flex; align-items:center; gap:5px;" onclick="openDepositConfigModal()">
+                <i data-lucide="settings" style="width:14px; height:14px;"></i> Configure Deposit
+              </button>
+              <button class="btn btn-outline" style="padding:7px 13px; font-size:0.8rem; color:#059669; border-color:#6ee7b7; display:inline-flex; align-items:center; gap:5px;" onclick="triggerReportDownload('security_deposits')">
+                <i data-lucide="download" style="width:14px; height:14px;"></i> Export Deposits CSV
+              </button>
+            </div>
+          </div>
+
+          <!-- Filter bar -->
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px; padding:12px 14px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
+            <div style="display:flex; gap:6px; flex-wrap:wrap;" id="depositTypeFilters">
+              <button class="btn btn-primary btn-sm dep-filter-btn" id="filterDepBtnAll" style="padding:5px 11px; font-size:0.75rem;" onclick="filterDepositsByType('all', this)">All</button>
+              <button class="btn btn-outline btn-sm dep-filter-btn" id="filterDepBtnCol" style="padding:5px 11px; font-size:0.75rem; color:#059669; border-color:#a7f3d0;" onclick="filterDepositsByType('COLLECTION', this)">Collections</button>
+              <button class="btn btn-outline btn-sm dep-filter-btn" id="filterDepBtnDed" style="padding:5px 11px; font-size:0.75rem; color:#dc2626; border-color:#fca5a5;" onclick="filterDepositsByType('DEDUCTION', this)">Deductions</button>
+              <button class="btn btn-outline btn-sm dep-filter-btn" id="filterDepBtnRef" style="padding:5px 11px; font-size:0.75rem; color:#2563eb; border-color:#bfdbfe;" onclick="filterDepositsByType('REFUND', this)">Refunds</button>
+              <button class="btn btn-outline btn-sm dep-filter-btn" id="filterDepBtnPend" style="padding:5px 11px; font-size:0.75rem; color:#d97706; border-color:#fde68a;" onclick="filterDepositsByType('PENDING', this)">Pending Refunds</button>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center; flex-grow:1; max-width:360px;">
+              <input type="text" id="depositSearchInput" placeholder="Search student, deposit #, room..." oninput="handleDepositSearch(event)" style="padding:6px 12px; font-size:0.8rem; border:1px solid #d1d5db; border-radius:6px; width:100%;">
+              <button class="btn btn-outline btn-sm" style="padding:6px 10px;" onclick="fetchDepositLedger()" title="Refresh Deposits"><i data-lucide="refresh-cw" style="width:13px; height:13px;"></i></button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table" id="securityDepositsTable">
+              <thead>
+                <tr>
+                  <th style="min-width: 140px;">Deposit #</th>
+                  <th style="min-width: 170px;">Student (ID)</th>
+                  <th style="min-width: 90px;" class="text-center">Room</th>
+                  <th style="min-width: 110px;" class="text-center">Type</th>
+                  <th style="min-width: 130px;">Category / Reason</th>
+                  <th style="min-width: 100px;" class="text-right">Amount</th>
+                  <th style="min-width: 100px;" class="text-right">Balance</th>
+                  <th style="min-width: 130px;" class="text-center">Mode / Ref</th>
+                  <th style="min-width: 100px;" class="text-center">Status</th>
+                  <th style="min-width: 110px;" class="text-center">Date</th>
+                  <th style="min-width: 140px;" class="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><td colspan="11" style="text-align:center; padding:24px; color:var(--text-muted);">Loading deposit ledger...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div><!-- End #financeSecurityDepositSection -->
     </div>
 
     <!-- 5. REPORTS PANEL -->
@@ -2309,6 +2416,225 @@
     </div>
   </div>
 
+  <!-- Phase 4 Modal 1: Collect Security Deposit Modal -->
+  <div class="modal-overlay" id="collectDepositModal" style="display:none;">
+    <div class="modal-card" style="max-width: 540px;">
+      <div class="modal-header">
+        <h3>Collect Security Deposit</h3>
+        <button class="modal-close-btn" onclick="closeModal('collectDepositModal')">&times;</button>
+      </div>
+      <form id="collectDepositForm" onsubmit="submitCollectDeposit(event)">
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0; margin-bottom:16px;">Record admission security deposit or additional deposit top-up for a student.</p>
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label" for="colDepStudentSelect">Student *</label>
+          <select id="colDepStudentSelect" class="form-input" required onchange="onCollectDepositStudentChange()">
+            <option value="">-- Select Active Student --</option>
+          </select>
+          <span style="font-size:0.75rem; color:var(--text-muted);" id="colDepStudentInfo"></span>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
+          <div class="form-group">
+            <label class="form-label" for="colDepAmount">Deposit Amount (₹) *</label>
+            <input type="number" step="1" min="1" id="colDepAmount" class="form-input" required value="3000">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="colDepCategory">Deposit Category</label>
+            <select id="colDepCategory" class="form-input">
+              <option value="ADMISSION_DEPOSIT">Admission Deposit</option>
+              <option value="ADDITIONAL_DEPOSIT">Additional Top-Up</option>
+              <option value="KEY_ASSET_DEPOSIT">Key / Asset Deposit</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
+          <div class="form-group">
+            <label class="form-label" for="colDepMode">Payment Mode *</label>
+            <select id="colDepMode" class="form-input" required>
+              <option value="UPI">UPI (GPay / PhonePe / Paytm)</option>
+              <option value="Cash">Cash</option>
+              <option value="Bank Transfer">Bank Transfer / NEFT / IMPS</option>
+              <option value="Card">Debit / Credit Card</option>
+              <option value="Cheque">Cheque</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="colDepRef">Txn / UTR Reference</label>
+            <input type="text" id="colDepRef" class="form-input" placeholder="e.g. UTR382910482">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:18px;">
+          <label class="form-label" for="colDepReason">Remarks / Notes</label>
+          <input type="text" id="colDepReason" class="form-input" placeholder="Admission security deposit held in escrow">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('collectDepositModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="colDepSubmitBtn" style="background:#10b981; border-color:#10b981;">Record Deposit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Phase 4 Modal 2: Record Security Deposit Deduction Modal -->
+  <div class="modal-overlay" id="depositDeductionModal" style="display:none;">
+    <div class="modal-card" style="max-width: 540px;">
+      <div class="modal-header">
+        <h3 style="color:#dc2626;">Record Deposit Deduction / Damage Charge</h3>
+        <button class="modal-close-btn" onclick="closeModal('depositDeductionModal')">&times;</button>
+      </div>
+      <form id="depositDeductionForm" onsubmit="submitDepositDeduction(event)">
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0; margin-bottom:16px;">Apply approved damage, repair, or penalty deduction against student's security deposit.</p>
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label" for="dedDepStudentSelect">Student *</label>
+          <select id="dedDepStudentSelect" class="form-input" required onchange="onDeductionStudentChange()">
+            <option value="">-- Select Student --</option>
+          </select>
+          <div style="margin-top:6px; font-size:0.8rem; font-weight:700; color:#10b981;" id="dedDepHeldNotice">
+            Available Deposit Balance: ₹0
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
+          <div class="form-group">
+            <label class="form-label" for="dedDepCategory">Deduction Category *</label>
+            <select id="dedDepCategory" class="form-input" required>
+              <option value="ROOM_DAMAGE">Room / Wall Damage</option>
+              <option value="APPLIANCE_DAMAGE">Fan / Geyser / Switch Repair</option>
+              <option value="CLEANING_PENALTY">Deep Cleaning Penalty</option>
+              <option value="FURNITURE_DAMAGE">Bed / Cupboard / Mattress Damage</option>
+              <option value="LOST_KEY">Lost Keys Replacement</option>
+              <option value="RULE_VIOLATION">Hostel Policy Violation Penalty</option>
+              <option value="OTHER">Other Approved Deduction</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="dedDepAmount">Deduction Amount (₹) *</label>
+            <input type="number" step="1" min="1" id="dedDepAmount" class="form-input" required placeholder="Amount to deduct">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label" for="dedDepReason">Reason / Itemized Explanation *</label>
+          <textarea id="dedDepReason" class="form-input" rows="2" required placeholder="e.g. Broken switchboard in Room 102 and wall paint stains"></textarea>
+        </div>
+
+        <div class="form-group" style="margin-bottom:18px;">
+          <label class="form-label" for="dedDepNotes">Repair Invoice / Inspection Ref</label>
+          <input type="text" id="dedDepNotes" class="form-input" placeholder="e.g. Electrician Bill #492">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('depositDeductionModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="dedDepSubmitBtn" style="background:#dc2626; border-color:#dc2626;">Apply Deduction</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Phase 4 Modal 3: Process Security Deposit Refund Modal -->
+  <div class="modal-overlay" id="processDepositRefundModal" style="display:none;">
+    <div class="modal-card" style="max-width: 540px;">
+      <div class="modal-header">
+        <h3 style="color:#2563eb;">Process Deposit Refund</h3>
+        <button class="modal-close-btn" onclick="closeModal('processDepositRefundModal')">&times;</button>
+      </div>
+      <form id="processDepositRefundForm" onsubmit="submitProcessDepositRefund(event)">
+        <input type="hidden" id="refDepDepositId">
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0; margin-bottom:16px;">Disburse security deposit refund to student via UPI, Bank Transfer, or Cash.</p>
+
+        <div class="form-group" style="margin-bottom:14px;" id="refDepStudentGroup">
+          <label class="form-label" for="refDepStudentSelect">Student *</label>
+          <select id="refDepStudentSelect" class="form-input" onchange="onRefundStudentChange()">
+            <option value="">-- Select Student --</option>
+          </select>
+          <div style="margin-top:6px; font-size:0.8rem; font-weight:700; color:#2563eb;" id="refDepHeldNotice">
+            Refundable Deposit Held: ₹0
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:14px;">
+          <div class="form-group">
+            <label class="form-label" for="refDepAmount">Refund Amount (₹) *</label>
+            <input type="number" step="1" min="1" id="refDepAmount" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="refDepMode">Disbursement Mode *</label>
+            <select id="refDepMode" class="form-input" required>
+              <option value="UPI">UPI Transfer (GPay / PhonePe / Paytm)</option>
+              <option value="Bank Transfer">Bank Account Transfer / NEFT</option>
+              <option value="Cash">Cash Handover</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label" for="refDepRef">Payment Reference / UTR Number</label>
+          <input type="text" id="refDepRef" class="form-input" placeholder="e.g. UPI Ref 382910482019">
+        </div>
+
+        <div class="form-group" style="margin-bottom:18px;">
+          <label class="form-label" for="refDepNotes">Refund Remarks / Bank Details</label>
+          <input type="text" id="refDepNotes" class="form-input" placeholder="Full deposit refund post room clearance">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('processDepositRefundModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="refDepSubmitBtn" style="background:#2563eb; border-color:#2563eb;">Disburse Refund</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Phase 4 Modal 4: Deposit Configuration Modal -->
+  <div class="modal-overlay" id="depositConfigModal" style="display:none;">
+    <div class="modal-card" style="max-width: 540px;">
+      <div class="modal-header">
+        <h3>Security Deposit Configuration</h3>
+        <button class="modal-close-btn" onclick="closeModal('depositConfigModal')">&times;</button>
+      </div>
+      <form id="depositConfigForm" onsubmit="submitDepositConfig(event)">
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0; margin-bottom:16px;">Configure standard admission security deposit amount and refund terms.</p>
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label" for="cfgDepositAmount">Standard Security Deposit Amount (₹) *</label>
+          <input type="number" step="1" min="0" id="cfgDepositAmount" class="form-input" required value="3000">
+          <span style="font-size:0.75rem; color:var(--text-muted);">Default deposit collected from new students during admission.</span>
+        </div>
+
+        <div class="form-group" style="margin-bottom:18px;">
+          <label class="form-label" for="cfgDepositPolicy">Refund Policy & Terms</label>
+          <textarea id="cfgDepositPolicy" class="form-input" rows="3" placeholder="Policy terms shown on receipts and student portal"></textarea>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('depositConfigModal')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Configuration</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Phase 4 Modal 5: Student-Wise Security Deposit History Modal -->
+  <div class="modal-overlay" id="studentDepositHistoryModal" style="display:none;">
+    <div class="modal-card" style="max-width: 780px;">
+      <div class="modal-header">
+        <h3 id="depHistoryStudentName">Student Security Deposit Audit Ledger</h3>
+        <button class="modal-close-btn" onclick="closeModal('studentDepositHistoryModal')">&times;</button>
+      </div>
+      <div id="studentDepositHistoryContent">
+        <!-- Rendered dynamically -->
+      </div>
+      <div style="margin-top:20px; display:flex; justify-content:flex-end;">
+        <button class="btn btn-outline" onclick="closeModal('studentDepositHistoryModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal 8: Edit Student Details Modal -->
   <div class="modal-overlay" id="editStudentModal">
     <div class="modal-card" style="max-width: 600px;">
@@ -2941,8 +3267,45 @@
             </div>
             ` : ''}
 
+            <!-- Phase 4: Security Deposit Section in Student Profile -->
+            <div class="detail-section-title" style="margin-top:16px;">Security Deposit Audit & Ledger</div>
+            <div style="display:flex; justify-content:space-between; align-items:center; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px 12px; margin-top:8px; margin-bottom:8px; font-size:0.8rem;">
+              <div>Currently Held: <strong style="color:#10b981;">₹${parseFloat(s.depositAmount || 0).toLocaleString('en-IN')}</strong></div>
+              <div>Approved Deductions: <strong style="color:#ef4444;">₹${parseFloat(s.depositDeductionsAmount || 0).toLocaleString('en-IN')}</strong></div>
+              <div>Refunded: <strong style="color:#2563eb;">₹${parseFloat(s.depositRefundedAmount || 0).toLocaleString('en-IN')}</strong></div>
+            </div>
+            <div style="max-height:140px; overflow-y:auto; border:1px solid #E5E7EB; border-radius:6px;">
+              <table class="data-table" style="width:100%; font-size:0.75rem;">
+                <thead style="background:#f8fafc;">
+                  <tr>
+                    <th style="padding:5px 8px;">Date</th>
+                    <th style="padding:5px 8px;">Deposit #</th>
+                    <th style="padding:5px 8px;">Type</th>
+                    <th style="padding:5px 8px;">Reason / Category</th>
+                    <th style="padding:5px 8px; text-align:right;">Amount</th>
+                    <th style="padding:5px 8px; text-align:right;">Balance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${(data.securityDeposits && data.securityDeposits.length > 0) ? data.securityDeposits.map(d => `
+                    <tr>
+                      <td style="padding:5px 8px; white-space:nowrap;">${new Date(d.transactionDate || d.transactiondate || d.createdAt).toLocaleDateString('en-IN')}</td>
+                      <td style="padding:5px 8px; font-family:monospace; font-weight:700;">${d.depositNumber || d.depositnumber}</td>
+                      <td style="padding:5px 8px;"><span style="font-weight:700; font-size:0.65rem; color:${d.transactionType === 'COLLECTION' ? '#059669' : (d.transactionType === 'REFUND' ? '#2563eb' : '#dc2626')};">${d.transactionType || d.transactiontype}</span></td>
+                      <td style="padding:5px 8px;">${(d.category || '').replace(/_/g, ' ')}${d.reason ? ' • ' + d.reason : ''}</td>
+                      <td style="padding:5px 8px; text-align:right; font-weight:700; color:${d.transactionType === 'COLLECTION' ? '#059669' : (d.transactionType === 'REFUND' ? '#2563eb' : '#dc2626')};">₹${Number(d.amount).toLocaleString('en-IN')}</td>
+                      <td style="padding:5px 8px; text-align:right; font-weight:600;">₹${Number(d.balanceAfter || d.balanceafter || 0).toLocaleString('en-IN')}</td>
+                    </tr>
+                  `).join('') : '<tr><td colspan="6" style="text-align:center; padding:10px; color:var(--text-muted);">No security deposit transactions found.</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+
             <!-- Stay Action Buttons in Modal Body -->
             <div style="margin-top:20px; padding-top:14px; border-top:1px solid #E5E7EB; display:flex; gap:10px; justify-content:flex-end;">
+              <button class="btn btn-outline" style="font-size:0.8rem;" onclick="closeModal('studentDetailsModal'); openStudentDepositHistoryModal(${s.id});">
+                Deposit Audit
+              </button>
               ${(s.roomId || s.roomid) && s.stayStatus !== 'CHECKED_IN' ? `
                 <button class="btn btn-primary" style="background:#10b981; border-color:#10b981;" onclick="closeModal('studentDetailsModal'); openCheckInModal(${s.id}, '${(s.studentName || '').replace(/'/g, "\\'")}')">
                   Check In Student
@@ -6512,6 +6875,611 @@
       }
     }
 
+
+    // ============================================================
+    // PHASE 4: SECURITY DEPOSIT MANAGEMENT JAVASCRIPT
+    // ============================================================
+    let activeDepositFilter = 'all';
+    let depositSearchQuery = '';
+    let cachedActiveStudents = [];
+
+    function switchFinanceTab(tab) {
+      const rentTabBtn = document.getElementById('tabBtnMonthlyRent');
+      const depTabBtn = document.getElementById('tabBtnSecurityDeposits');
+      const rentSec = document.getElementById('financeMonthlyRentSection');
+      const depSec = document.getElementById('financeSecurityDepositSection');
+
+      if (tab === 'deposits') {
+        rentTabBtn.className = 'btn btn-outline btn-sm';
+        rentTabBtn.style.color = 'var(--dark-slate)';
+        depTabBtn.className = 'btn btn-primary btn-sm';
+        depTabBtn.style.color = '#fff';
+        rentSec.style.display = 'none';
+        depSec.style.display = 'block';
+        fetchDepositStats();
+        fetchDepositLedger();
+      } else {
+        rentTabBtn.className = 'btn btn-primary btn-sm';
+        rentTabBtn.style.color = '#fff';
+        depTabBtn.className = 'btn btn-outline btn-sm';
+        depTabBtn.style.color = 'var(--dark-slate)';
+        rentSec.style.display = 'block';
+        depSec.style.display = 'none';
+        fetchPaymentsLedger();
+      }
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    async function fetchDepositStats() {
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch('/api/payments/deposits/stats', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success && data.stats) {
+          const s = data.stats;
+          document.getElementById('depositHeldHeader').innerText = '₹' + s.totalDepositsHeld.toLocaleString('en-IN');
+          document.getElementById('depositRefundedHeader').innerText = '₹' + s.totalRefunded.toLocaleString('en-IN');
+          document.getElementById('depositDeductionsHeader').innerText = '₹' + s.totalDeductions.toLocaleString('en-IN');
+          document.getElementById('depositPendingHeader').innerText = `${s.pendingRefundsCount} (₹${s.pendingRefundsAmount.toLocaleString('en-IN')})`;
+        }
+      } catch (err) {
+        console.error('fetchDepositStats error:', err);
+      }
+    }
+
+    async function fetchDepositLedger() {
+      const token = localStorage.getItem('token');
+      const tableBody = document.querySelector('#securityDepositsTable tbody');
+      if (!tableBody) return;
+
+      tableBody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:24px; color:var(--text-muted);"><i data-lucide="loader-2" class="spin"></i> Loading deposit transactions...</td></tr>';
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+
+      try {
+        const queryParams = new URLSearchParams();
+        if (activeDepositFilter && activeDepositFilter !== 'all') {
+          queryParams.set('type', activeDepositFilter);
+        }
+        if (depositSearchQuery && depositSearchQuery.trim()) {
+          queryParams.set('search', depositSearchQuery.trim());
+        }
+
+        const res = await fetch(`/api/payments/deposits/ledger?${queryParams.toString()}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        if (data.success && Array.isArray(data.transactions)) {
+          tableBody.innerHTML = '';
+          if (data.transactions.length === 0) {
+            tableBody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:32px; color:var(--text-muted);">No security deposit transactions matching criteria.</td></tr>';
+            return;
+          }
+
+          data.transactions.forEach(tx => {
+            const row = document.createElement('tr');
+
+            // 1. Deposit #
+            const depNumHtml = `<span style="font-family:monospace; font-weight:700; color:var(--primary-deep); font-size:0.75rem; background:#f1f5f9; padding:3px 7px; border-radius:4px; border:1px solid #cbd5e1;">${tx.depositNumber}</span>`;
+
+            // 2. Student (ID)
+            const sHtml = `
+              <div>
+                <strong style="color:var(--dark-slate); font-size:0.85rem;">${tx.studentName}</strong>
+                <div style="font-size:0.75rem; color:var(--text-muted);">${tx.studentCustomId} • ${tx.phone || ''}</div>
+              </div>`;
+
+            // 3. Room
+            const roomHtml = tx.roomNumber && tx.roomNumber !== '—'
+              ? `<span class="room-pill"><i data-lucide="door-closed" style="width:13px; height:13px;"></i>Room ${tx.roomNumber}</span>`
+              : `<span class="room-pill unassigned">—</span>`;
+
+            // 4. Type pill
+            let typeColor = '#059669';
+            let typeBg = '#ecfdf5';
+            let typeBorder = '#a7f3d0';
+            if (tx.transactionType === 'DEDUCTION') {
+              typeColor = '#dc2626';
+              typeBg = '#fef2f2';
+              typeBorder = '#fecaca';
+            } else if (tx.transactionType === 'REFUND') {
+              typeColor = '#2563eb';
+              typeBg = '#eff6ff';
+              typeBorder = '#bfdbfe';
+            } else if (tx.transactionType === 'ADJUSTMENT') {
+              typeColor = '#d97706';
+              typeBg = '#fffbeb';
+              typeBorder = '#fde68a';
+            }
+            const typePill = `<span style="background:${typeBg}; color:${typeColor}; border:1px solid ${typeBorder}; padding:2px 8px; border-radius:12px; font-size:0.7rem; font-weight:700;">${tx.transactionType}</span>`;
+
+            // 5. Category / Reason
+            const catLabel = (tx.category || '').replace(/_/g, ' ');
+            const reasonHtml = `
+              <div>
+                <span style="font-weight:600; font-size:0.8rem; color:var(--dark-slate);">${catLabel}</span>
+                ${tx.reason ? `<div style="font-size:0.72rem; color:var(--text-muted); max-width:200px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="${tx.reason}">${tx.reason}</div>` : ''}
+              </div>`;
+
+            // 6. Amount
+            const amtPrefix = tx.transactionType === 'COLLECTION' ? '+' : '-';
+            const amtColor = tx.transactionType === 'COLLECTION' ? '#059669' : (tx.transactionType === 'REFUND' ? '#2563eb' : '#dc2626');
+            const amtHtml = `<span style="font-weight:700; color:${amtColor}; font-size:0.9rem;">${amtPrefix}₹${tx.amount.toLocaleString('en-IN')}</span>`;
+
+            // 7. Balance After
+            const balHtml = `<span style="font-weight:600; color:var(--dark-slate); font-size:0.85rem;">₹${tx.balanceAfter.toLocaleString('en-IN')}</span>`;
+
+            // 8. Mode / Ref
+            const modeHtml = `
+              <div style="font-size:0.75rem;">
+                <strong>${tx.paymentMode}</strong>
+                ${tx.referenceNumber ? `<div style="color:var(--text-muted); font-size:0.7rem; font-family:monospace;">Ref: ${tx.referenceNumber}</div>` : ''}
+              </div>`;
+
+            // 9. Status
+            let statusBadge = '';
+            if (tx.status === 'COMPLETED') {
+              statusBadge = `<span class="status-badge active" style="font-size:0.65rem;">COMPLETED</span>`;
+            } else if (tx.status === 'PENDING') {
+              statusBadge = `<span class="status-badge partially" style="font-size:0.65rem; background:#fef3c7; color:#b45309; border:1px solid #fde68a;">PENDING</span>`;
+            } else {
+              statusBadge = `<span class="status-badge inactive" style="font-size:0.65rem;">${tx.status}</span>`;
+            }
+
+            // 10. Date
+            const dtStr = tx.transactionDate ? new Date(tx.transactionDate).toLocaleDateString('en-IN') : '—';
+
+            // 11. Actions
+            let actionsHtml = `
+              <div style="display:flex; gap:6px; justify-content:center;">
+                <button class="btn btn-outline btn-sm" style="padding:4px 8px; font-size:0.75rem;" onclick="openStudentDepositHistoryModal(${tx.studentId})" title="View Student Deposit Ledger">
+                  <i data-lucide="history" style="width:13px; height:13px;"></i> Audit
+                </button>
+            `;
+            if (tx.status === 'PENDING' && tx.transactionType === 'REFUND') {
+              actionsHtml += `
+                <button class="btn btn-primary btn-sm" style="padding:4px 8px; font-size:0.75rem; background:#2563eb; border-color:#2563eb;" onclick="openProcessDepositRefundModal(${tx.id}, ${tx.studentId}, ${tx.amount})" title="Disburse Refund Now">
+                  <i data-lucide="check-circle" style="width:13px; height:13px;"></i> Disburse
+                </button>
+              `;
+            }
+            actionsHtml += `</div>`;
+
+            row.innerHTML = `
+              <td>${depNumHtml}</td>
+              <td>${sHtml}</td>
+              <td class="text-center">${roomHtml}</td>
+              <td class="text-center">${typePill}</td>
+              <td>${reasonHtml}</td>
+              <td class="text-right">${amtHtml}</td>
+              <td class="text-right">${balHtml}</td>
+              <td class="text-center">${modeHtml}</td>
+              <td class="text-center">${statusBadge}</td>
+              <td class="text-center" style="font-size:0.8rem;">${dtStr}</td>
+              <td class="text-center">${actionsHtml}</td>
+            `;
+            tableBody.appendChild(row);
+          });
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+      } catch (err) {
+        console.error('fetchDepositLedger error:', err);
+        tableBody.innerHTML = '<tr><td colspan="11" style="text-align:center; padding:24px; color:#ef4444;">Failed to load deposit ledger. Please try again.</td></tr>';
+      }
+    }
+
+    function filterDepositsByType(type, btn) {
+      activeDepositFilter = type;
+      document.querySelectorAll('.dep-filter-btn').forEach(b => {
+        b.className = 'btn btn-outline btn-sm dep-filter-btn';
+      });
+      if (btn) {
+        btn.className = 'btn btn-primary btn-sm dep-filter-btn';
+      }
+      fetchDepositLedger();
+    }
+
+    function handleDepositSearch(e) {
+      depositSearchQuery = e.target.value;
+      clearTimeout(window._depSearchTimeout);
+      window._depSearchTimeout = setTimeout(() => {
+        fetchDepositLedger();
+      }, 350);
+    }
+
+    // Populate active students cache for deposit modals
+    async function loadActiveStudentsForDeposits() {
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch('/api/admin/students', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success && Array.isArray(data.students)) {
+          cachedActiveStudents = data.students;
+        }
+      } catch (err) {
+        console.error('loadActiveStudents error:', err);
+      }
+    }
+
+    // Modal 1: Collect Deposit
+    async function openCollectDepositModal(preselectedStudentId = null) {
+      await loadActiveStudentsForDeposits();
+      const select = document.getElementById('colDepStudentSelect');
+      select.innerHTML = '<option value="">-- Select Active Student --</option>';
+
+      cachedActiveStudents.forEach(st => {
+        const opt = document.createElement('option');
+        opt.value = st.id;
+        const curDep = parseFloat(st.depositAmount || st.depositamount || 0);
+        opt.textContent = `${st.studentName} (${st.studentCustomId || st.phone}) • Room ${st.roomNumber || '—'} [Held: ₹${curDep.toLocaleString('en-IN')}]`;
+        opt.dataset.deposit = curDep;
+        if (preselectedStudentId && String(st.id) === String(preselectedStudentId)) {
+          opt.selected = true;
+        }
+        select.appendChild(opt);
+      });
+
+      onCollectDepositStudentChange();
+      openModal('collectDepositModal');
+    }
+
+    function onCollectDepositStudentChange() {
+      const select = document.getElementById('colDepStudentSelect');
+      const opt = select.options[select.selectedIndex];
+      const infoEl = document.getElementById('colDepStudentInfo');
+      if (opt && opt.value) {
+        infoEl.innerText = `Currently Held Deposit: ₹${Number(opt.dataset.deposit || 0).toLocaleString('en-IN')}`;
+      } else {
+        infoEl.innerText = '';
+      }
+    }
+
+    async function submitCollectDeposit(e) {
+      e.preventDefault();
+      const token = localStorage.getItem('token');
+      const studentId = document.getElementById('colDepStudentSelect').value;
+      const amount = parseFloat(document.getElementById('colDepAmount').value);
+      const category = document.getElementById('colDepCategory').value;
+      const paymentMode = document.getElementById('colDepMode').value;
+      const referenceNumber = document.getElementById('colDepRef').value;
+      const reason = document.getElementById('colDepReason').value;
+
+      const submitBtn = document.getElementById('colDepSubmitBtn');
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = 'Recording...'; }
+
+      try {
+        const res = await fetch('/api/payments/deposits/collect', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ studentId, amount, category, paymentMode, referenceNumber, reason })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(`Deposit collected successfully!\nDeposit #: ${data.depositNumber}\nUpdated Held Balance: ₹${data.newBalance.toLocaleString('en-IN')}`);
+          closeModal('collectDepositModal');
+          fetchDepositStats();
+          fetchDepositLedger();
+        } else {
+          alert(data.message || 'Failed to record deposit collection.');
+        }
+      } catch (err) {
+        alert('Server error: ' + err.message);
+      } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'Record Deposit'; }
+      }
+    }
+
+    // Modal 2: Record Deduction
+    async function openDepositDeductionModal(preselectedStudentId = null) {
+      await loadActiveStudentsForDeposits();
+      const select = document.getElementById('dedDepStudentSelect');
+      select.innerHTML = '<option value="">-- Select Student --</option>';
+
+      cachedActiveStudents.forEach(st => {
+        const opt = document.createElement('option');
+        opt.value = st.id;
+        const curDep = parseFloat(st.depositAmount || st.depositamount || 0);
+        opt.textContent = `${st.studentName} (${st.studentCustomId || st.phone}) • Room ${st.roomNumber || '—'} [Held: ₹${curDep.toLocaleString('en-IN')}]`;
+        opt.dataset.deposit = curDep;
+        if (preselectedStudentId && String(st.id) === String(preselectedStudentId)) {
+          opt.selected = true;
+        }
+        select.appendChild(opt);
+      });
+
+      onDeductionStudentChange();
+      openModal('depositDeductionModal');
+    }
+
+    function onDeductionStudentChange() {
+      const select = document.getElementById('dedDepStudentSelect');
+      const opt = select.options[select.selectedIndex];
+      const notice = document.getElementById('dedDepHeldNotice');
+      const amtInput = document.getElementById('dedDepAmount');
+      if (opt && opt.value) {
+        const held = Number(opt.dataset.deposit || 0);
+        notice.innerText = `Available Deposit Balance: ₹${held.toLocaleString('en-IN')}`;
+        amtInput.max = held;
+      } else {
+        notice.innerText = 'Available Deposit Balance: ₹0';
+        amtInput.removeAttribute('max');
+      }
+    }
+
+    async function submitDepositDeduction(e) {
+      e.preventDefault();
+      const token = localStorage.getItem('token');
+      const studentId = document.getElementById('dedDepStudentSelect').value;
+      const category = document.getElementById('dedDepCategory').value;
+      const amount = parseFloat(document.getElementById('dedDepAmount').value);
+      const reason = document.getElementById('dedDepReason').value;
+      const notes = document.getElementById('dedDepNotes').value;
+
+      const submitBtn = document.getElementById('dedDepSubmitBtn');
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = 'Applying...'; }
+
+      try {
+        const res = await fetch('/api/payments/deposits/deduct', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ studentId, category, amount, reason, notes })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(`Deposit deduction applied successfully!\nDeduction #: ${data.depositNumber}\nRemaining Held Deposit: ₹${data.remainingBalance.toLocaleString('en-IN')}`);
+          closeModal('depositDeductionModal');
+          fetchDepositStats();
+          fetchDepositLedger();
+        } else {
+          alert(data.message || 'Failed to record deduction.');
+        }
+      } catch (err) {
+        alert('Server error: ' + err.message);
+      } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'Apply Deduction'; }
+      }
+    }
+
+    // Modal 3: Process Refund
+    async function openProcessDepositRefundModal(depositId = null, studentId = null, amount = null) {
+      document.getElementById('refDepDepositId').value = depositId || '';
+      const studentGroup = document.getElementById('refDepStudentGroup');
+      const amtInput = document.getElementById('refDepAmount');
+
+      if (depositId) {
+        // Disbursing specific pending refund
+        studentGroup.style.display = 'none';
+        amtInput.value = amount || 0;
+        amtInput.readOnly = true;
+      } else {
+        studentGroup.style.display = 'block';
+        amtInput.readOnly = false;
+        await loadActiveStudentsForDeposits();
+        const select = document.getElementById('refDepStudentSelect');
+        select.innerHTML = '<option value="">-- Select Student --</option>';
+
+        cachedActiveStudents.forEach(st => {
+          const opt = document.createElement('option');
+          opt.value = st.id;
+          const curDep = parseFloat(st.depositAmount || st.depositamount || 0);
+          opt.textContent = `${st.studentName} (${st.studentCustomId || st.phone}) • Room ${st.roomNumber || '—'} [Held: ₹${curDep.toLocaleString('en-IN')}]`;
+          opt.dataset.deposit = curDep;
+          if (studentId && String(st.id) === String(studentId)) {
+            opt.selected = true;
+          }
+          select.appendChild(opt);
+        });
+        onRefundStudentChange();
+      }
+
+      openModal('processDepositRefundModal');
+    }
+
+    function onRefundStudentChange() {
+      const select = document.getElementById('refDepStudentSelect');
+      const opt = select.options[select.selectedIndex];
+      const notice = document.getElementById('refDepHeldNotice');
+      const amtInput = document.getElementById('refDepAmount');
+      if (opt && opt.value) {
+        const held = Number(opt.dataset.deposit || 0);
+        notice.innerText = `Refundable Deposit Held: ₹${held.toLocaleString('en-IN')}`;
+        amtInput.value = held;
+        amtInput.max = held;
+      } else {
+        notice.innerText = 'Refundable Deposit Held: ₹0';
+        amtInput.value = '';
+        amtInput.removeAttribute('max');
+      }
+    }
+
+    async function submitProcessDepositRefund(e) {
+      e.preventDefault();
+      const token = localStorage.getItem('token');
+      const depositId = document.getElementById('refDepDepositId').value;
+      const studentId = document.getElementById('refDepStudentSelect').value;
+      const amount = parseFloat(document.getElementById('refDepAmount').value);
+      const paymentMode = document.getElementById('refDepMode').value;
+      const referenceNumber = document.getElementById('refDepRef').value;
+      const notes = document.getElementById('refDepNotes').value;
+
+      const submitBtn = document.getElementById('refDepSubmitBtn');
+      if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = 'Disbursing...'; }
+
+      try {
+        const body = depositId ? { depositId, paymentMode, referenceNumber, notes } : { studentId, amount, paymentMode, referenceNumber, notes };
+        const res = await fetch('/api/payments/deposits/refund', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(`Deposit refund processed successfully!\n${data.message}`);
+          closeModal('processDepositRefundModal');
+          fetchDepositStats();
+          fetchDepositLedger();
+        } else {
+          alert(data.message || 'Failed to process deposit refund.');
+        }
+      } catch (err) {
+        alert('Server error: ' + err.message);
+      } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'Disburse Refund'; }
+      }
+    }
+
+    // Modal 4: Configure Deposit
+    async function openDepositConfigModal() {
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch('/api/payments/deposits/config', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success && data.config) {
+          document.getElementById('cfgDepositAmount').value = data.config.depositAmount || '3000';
+          document.getElementById('cfgDepositPolicy').value = data.config.depositRefundPolicy || '';
+        }
+        openModal('depositConfigModal');
+      } catch (err) {
+        alert('Failed to load deposit config: ' + err.message);
+      }
+    }
+
+    async function submitDepositConfig(e) {
+      e.preventDefault();
+      const token = localStorage.getItem('token');
+      const depositAmount = document.getElementById('cfgDepositAmount').value;
+      const depositRefundPolicy = document.getElementById('cfgDepositPolicy').value;
+
+      try {
+        const res = await fetch('/api/payments/deposits/config', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ depositAmount, depositRefundPolicy })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('Security deposit configuration updated successfully!');
+          closeModal('depositConfigModal');
+        } else {
+          alert(data.message || 'Failed to update deposit configuration.');
+        }
+      } catch (err) {
+        alert('Server error: ' + err.message);
+      }
+    }
+
+    // Modal 5: Student Deposit History Modal
+    async function openStudentDepositHistoryModal(studentId) {
+      const token = localStorage.getItem('token');
+      const container = document.getElementById('studentDepositHistoryContent');
+      if (!container) return;
+
+      container.innerHTML = '<div style="text-align:center; padding:30px;"><i data-lucide="loader-2" class="spin"></i> Loading deposit audit history...</div>';
+      openModal('studentDepositHistoryModal');
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+
+      try {
+        const res = await fetch(`/api/payments/deposits/student/${studentId}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          const s = data.studentSummary;
+          const txns = data.transactions || [];
+          document.getElementById('depHistoryStudentName').innerText = `${s.studentName} — Security Deposit Audit`;
+
+          container.innerHTML = `
+            <div style="background:#f8fafc; padding:14px 18px; border-radius:8px; border:1px solid #e2e8f0; margin-bottom:18px;">
+              <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap:10px; font-size:0.85rem;">
+                <div><strong>Student ID:</strong> ${s.studentCustomId}</div>
+                <div><strong>Room & Bed:</strong> Room ${s.roomNumber} (${s.bedLabel})</div>
+                <div><strong>Phone:</strong> ${s.phone}</div>
+                <div><strong>Deposit Status:</strong> <span class="status-badge ${s.depositStatus === 'HELD' ? 'active' : (s.depositStatus === 'REFUNDED' ? 'active' : 'partially')}">${s.depositStatus}</span></div>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap:12px; margin-bottom:18px;">
+              <div style="background:white; padding:12px; border:1px solid #e2e8f0; border-radius:8px; text-align:center; border-left:3px solid #10b981;">
+                <div style="font-size:0.75rem; color:var(--text-muted);">Current Deposit Held</div>
+                <div style="font-size:1.15rem; font-weight:800; color:#10b981;">₹${s.depositHeld.toLocaleString('en-IN')}</div>
+              </div>
+              <div style="background:white; padding:12px; border:1px solid #e2e8f0; border-radius:8px; text-align:center; border-left:3px solid #ef4444;">
+                <div style="font-size:0.75rem; color:var(--text-muted);">Total Deductions</div>
+                <div style="font-size:1.15rem; font-weight:800; color:#ef4444;">₹${s.totalDeductions.toLocaleString('en-IN')}</div>
+              </div>
+              <div style="background:white; padding:12px; border:1px solid #e2e8f0; border-radius:8px; text-align:center; border-left:3px solid #2563eb;">
+                <div style="font-size:0.75rem; color:var(--text-muted);">Total Refunded</div>
+                <div style="font-size:1.15rem; font-weight:800; color:#2563eb;">₹${s.totalRefunded.toLocaleString('en-IN')}</div>
+              </div>
+            </div>
+
+            <h4 style="margin:16px 0 8px 0; font-size:0.95rem; font-weight:800;">Deposit Ledger Transactions</h4>
+            <div style="max-height:220px; overflow-y:auto; border:1px solid #E5E7EB; border-radius:6px;">
+              <table class="data-table" style="width:100%; font-size:0.75rem;">
+                <thead style="background:#f8fafc;">
+                  <tr>
+                    <th style="padding:6px 8px;">Date</th>
+                    <th style="padding:6px 8px;">Deposit #</th>
+                    <th style="padding:6px 8px;">Type</th>
+                    <th style="padding:6px 8px;">Category / Reason</th>
+                    <th style="padding:6px 8px; text-align:right;">Amount</th>
+                    <th style="padding:6px 8px; text-align:right;">Balance</th>
+                    <th style="padding:6px 8px;">Mode / Ref</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${txns.length > 0 ? txns.map(t => `
+                    <tr>
+                      <td style="padding:6px 8px; white-space:nowrap;">${new Date(t.transactionDate || t.transactiondate || t.createdAt).toLocaleDateString('en-IN')}</td>
+                      <td style="padding:6px 8px; font-family:monospace; font-weight:700;">${t.depositNumber || t.depositnumber}</td>
+                      <td style="padding:6px 8px;"><span style="font-weight:700; font-size:0.7rem; color:${t.transactionType === 'COLLECTION' ? '#059669' : (t.transactionType === 'REFUND' ? '#2563eb' : '#dc2626')};">${t.transactionType || t.transactiontype}</span></td>
+                      <td style="padding:6px 8px;">${(t.category || '').replace(/_/g, ' ')}${t.reason ? ' • ' + t.reason : ''}</td>
+                      <td style="padding:6px 8px; text-align:right; font-weight:700; color:${t.transactionType === 'COLLECTION' ? '#059669' : (t.transactionType === 'REFUND' ? '#2563eb' : '#dc2626')};">₹${Number(t.amount).toLocaleString('en-IN')}</td>
+                      <td style="padding:6px 8px; text-align:right; font-weight:600;">₹${Number(t.balanceAfter || t.balanceafter || 0).toLocaleString('en-IN')}</td>
+                      <td style="padding:6px 8px;">${t.paymentMode || t.paymentmode || '—'} ${t.referenceNumber ? '(' + t.referenceNumber + ')' : ''}</td>
+                    </tr>
+                  `).join('') : '<tr><td colspan="7" style="text-align:center; padding:12px; color:var(--text-muted);">No transactions recorded.</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+
+            <div style="margin-top:16px; display:flex; gap:8px; justify-content:flex-end;">
+              <button class="btn btn-outline btn-sm" onclick="closeModal('studentDepositHistoryModal'); openCollectDepositModal(${s.id});">
+                + Collect Deposit
+              </button>
+              <button class="btn btn-outline btn-sm" style="color:#dc2626; border-color:#fca5a5;" onclick="closeModal('studentDepositHistoryModal'); openDepositDeductionModal(${s.id});">
+                - Record Deduction
+              </button>
+              <button class="btn btn-outline btn-sm" style="color:#2563eb; border-color:#93c5fd;" onclick="closeModal('studentDepositHistoryModal'); openProcessDepositRefundModal(null, ${s.id}, ${s.depositHeld});">
+                Disburse Refund
+              </button>
+            </div>
+          `;
+          if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+      } catch (err) {
+        container.innerHTML = '<div style="color:#ef4444; padding:20px; text-align:center;">Failed to load student deposit history.</div>';
+      }
+    }
 </script>
 </body>
 </html>

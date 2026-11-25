@@ -610,6 +610,54 @@
           </table>
         </div>
       </div>
+
+      <!-- Phase 4: Student Security Deposit Escrow Card -->
+      <div class="card-container" style="margin-top:28px; border-left: 5px solid #10b981;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h3 style="margin:0; border:none; padding:0; font-size:1.1rem; color:var(--dark-slate);">🛡️ Security Deposit Escrow</h3>
+            <p style="margin:4px 0 0 0; font-size:0.8rem; color:var(--text-muted);">Your security deposit is held safely in escrow and is refundable upon room clearance during checkout.</p>
+          </div>
+          <div>
+            <span id="studentDepositStatusBadge" class="status-badge active" style="font-size:0.75rem;">HELD</span>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:16px; margin-bottom:18px;">
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px;">
+            <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">Deposit Held Balance</div>
+            <div style="font-size:1.35rem; font-weight:800; color:#10b981;" id="studentDepositHeldDisplay">₹0</div>
+          </div>
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px;">
+            <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">Approved Deductions</div>
+            <div style="font-size:1.35rem; font-weight:800; color:#ef4444;" id="studentDepositDeductionsDisplay">₹0</div>
+          </div>
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 14px;">
+            <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase;">Total Refunded</div>
+            <div style="font-size:1.35rem; font-weight:800; color:#2563eb;" id="studentDepositRefundedDisplay">₹0</div>
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table" id="studentDepositTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Deposit Ref #</th>
+                <th>Type</th>
+                <th>Category / Notes</th>
+                <th style="text-align:right;">Amount</th>
+                <th style="text-align:right;">Balance</th>
+                <th>Mode</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="8" style="text-align:center; padding:18px; color:var(--text-muted);">Loading deposit transactions...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
     <!-- PAYMENT CONFIRMATION MODAL -->
@@ -1812,6 +1860,54 @@ Thank you for staying with us!
                   </td>
                 `;
                 tableBody.appendChild(row);
+              });
+            }
+          }
+
+          // Render Phase 4 Security Deposit Escrow & Table
+          const info = data.studentInfo || {};
+          const depHeld = parseFloat(info.depositAmount || 0);
+          const depDed = parseFloat(info.depositDeductionsAmount || 0);
+          const depRef = parseFloat(info.depositRefundedAmount || 0);
+          const depStatus = info.depositStatus || 'HELD';
+
+          const depHeldEl = document.getElementById('studentDepositHeldDisplay');
+          const depDedEl = document.getElementById('studentDepositDeductionsDisplay');
+          const depRefEl = document.getElementById('studentDepositRefundedDisplay');
+          const depBadgeEl = document.getElementById('studentDepositStatusBadge');
+
+          if (depHeldEl) depHeldEl.innerText = `₹${depHeld.toLocaleString('en-IN')}`;
+          if (depDedEl) depDedEl.innerText = `₹${depDed.toLocaleString('en-IN')}`;
+          if (depRefEl) depRefEl.innerText = `₹${depRef.toLocaleString('en-IN')}`;
+          if (depBadgeEl) {
+            depBadgeEl.innerText = depStatus;
+            depBadgeEl.className = `status-badge ${depStatus === 'HELD' ? 'active' : (depStatus === 'REFUNDED' ? 'active' : 'partially')}`;
+          }
+
+          const depTableBody = document.querySelector('#studentDepositTable tbody');
+          if (depTableBody) {
+            depTableBody.innerHTML = '';
+            const depList = data.securityDeposits || [];
+            if (depList.length === 0) {
+              depTableBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:18px; color:var(--text-muted);">No security deposit transactions on record.</td></tr>';
+            } else {
+              depList.forEach(d => {
+                const row = document.createElement('tr');
+                const dtStr = d.transactionDate || d.transactiondate || d.createdAt ? new Date(d.transactionDate || d.transactiondate || d.createdAt).toLocaleDateString('en-IN') : '—';
+                const typeColor = d.transactionType === 'COLLECTION' ? '#059669' : (d.transactionType === 'REFUND' ? '#2563eb' : '#dc2626');
+                const prefix = d.transactionType === 'COLLECTION' ? '+' : '-';
+
+                row.innerHTML = `
+                  <td style="font-size:0.8rem; white-space:nowrap;">${dtStr}</td>
+                  <td style="font-family:monospace; font-weight:700; color:var(--primary-deep); font-size:0.8rem;">${d.depositNumber || d.depositnumber}</td>
+                  <td><span style="font-weight:700; font-size:0.7rem; color:${typeColor};">${d.transactionType || d.transactiontype}</span></td>
+                  <td>${(d.category || '').replace(/_/g, ' ')}${d.reason ? ' • ' + d.reason : ''}</td>
+                  <td style="text-align:right; font-weight:700; color:${typeColor};">${prefix}₹${Number(d.amount).toLocaleString('en-IN')}</td>
+                  <td style="text-align:right; font-weight:600;">₹${Number(d.balanceAfter || d.balanceafter || 0).toLocaleString('en-IN')}</td>
+                  <td style="font-size:0.8rem;">${d.paymentMode || d.paymentmode || '—'}</td>
+                  <td><span class="status-badge ${d.status === 'COMPLETED' ? 'active' : 'partially'}" style="font-size:0.65rem;">${d.status}</span></td>
+                `;
+                depTableBody.appendChild(row);
               });
             }
           }
