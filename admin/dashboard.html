@@ -759,6 +759,11 @@
         <i data-lucide="bell"></i>
         <span>Reminders</span>
       </div>
+      <div class="menu-item" data-panel="complaintsPanel" id="complaintsMenuLink">
+        <i data-lucide="wrench"></i>
+        <span>Complaints & Maintenance</span>
+        <span id="openComplaintsBadge" style="margin-left:auto; background:#ea580c; color:white; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:10px; display:none;">0</span>
+      </div>
       <div class="menu-item" data-panel="settingsPanel">
         <i data-lucide="settings"></i>
         <span>Settings</span>
@@ -1505,6 +1510,120 @@
             <tbody id="applicationsTableBody">
               <tr>
                 <td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);">Loading applications...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- 8. COMPLAINTS & MAINTENANCE PANEL (PHASE 6) -->
+    <div class="panel-view" id="complaintsPanel">
+      <!-- Top Metrics Overview -->
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap:16px; margin-bottom: 24px;">
+        <div class="stat-widget" style="background:white; padding:18px; border-radius:12px; border:1px solid #E5E7EB; border-left:4px solid #64748b;">
+          <div style="font-size:0.75rem; color:var(--text-muted); text-transform:uppercase; font-weight:700;">Total Tickets</div>
+          <h3 style="margin:6px 0 0 0; font-size:1.6rem; font-weight:800; color:var(--primary-deep);" id="cpMetricTotal">0</h3>
+        </div>
+        <div class="stat-widget" style="background:white; padding:18px; border-radius:12px; border:1px solid #E5E7EB; border-left:4px solid #ea580c; cursor:pointer;" onclick="filterComplaintsByStatus('Open')">
+          <div style="font-size:0.75rem; color:#ea580c; text-transform:uppercase; font-weight:700;">Open (Action Needed)</div>
+          <h3 style="margin:6px 0 0 0; font-size:1.6rem; font-weight:800; color:#ea580c;" id="cpMetricOpen">0</h3>
+        </div>
+        <div class="stat-widget" style="background:white; padding:18px; border-radius:12px; border:1px solid #E5E7EB; border-left:4px solid #2563eb; cursor:pointer;" onclick="filterComplaintsByStatus('Assigned')">
+          <div style="font-size:0.75rem; color:#2563eb; text-transform:uppercase; font-weight:700;">Assigned Staff</div>
+          <h3 style="margin:6px 0 0 0; font-size:1.6rem; font-weight:800; color:#2563eb;" id="cpMetricAssigned">0</h3>
+        </div>
+        <div class="stat-widget" style="background:white; padding:18px; border-radius:12px; border:1px solid #E5E7EB; border-left:4px solid #7c3aed; cursor:pointer;" onclick="filterComplaintsByStatus('In Progress')">
+          <div style="font-size:0.75rem; color:#7c3aed; text-transform:uppercase; font-weight:700;">In Progress</div>
+          <h3 style="margin:6px 0 0 0; font-size:1.6rem; font-weight:800; color:#7c3aed;" id="cpMetricInProgress">0</h3>
+        </div>
+        <div class="stat-widget" style="background:white; padding:18px; border-radius:12px; border:1px solid #E5E7EB; border-left:4px solid #16a34a; cursor:pointer;" onclick="filterComplaintsByStatus('Resolved')">
+          <div style="font-size:0.75rem; color:#16a34a; text-transform:uppercase; font-weight:700;">Resolved</div>
+          <h3 style="margin:6px 0 0 0; font-size:1.6rem; font-weight:800; color:#16a34a;" id="cpMetricResolved">0</h3>
+        </div>
+        <div class="stat-widget" style="background:white; padding:18px; border-radius:12px; border:1px solid #E5E7EB; border-left:4px solid #059669;">
+          <div style="font-size:0.75rem; color:#059669; text-transform:uppercase; font-weight:700;">Total Repair Cost</div>
+          <h3 style="margin:6px 0 0 0; font-size:1.45rem; font-weight:800; color:#059669;" id="cpMetricRepairCost">₹0</h3>
+          <span style="font-size:0.7rem; color:var(--text-muted); display:block; margin-top:2px;" id="cpMetricCostBreakdown">Hostel: ₹0 | Student: ₹0</span>
+        </div>
+      </div>
+
+      <!-- Main Ledger Card -->
+      <div class="card glass-card" style="background:white; border-radius:12px; border:1px solid #E5E7EB; padding:24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h3 style="margin:0; font-size:1.25rem; font-weight:800; color:var(--primary-deep);">Complaints & Maintenance Log</h3>
+            <p style="margin:4px 0 0 0; font-size:0.85rem; color:var(--text-muted);">Manage resident maintenance tickets, assign technicians, monitor repair statuses, and record repair expenses.</p>
+          </div>
+          <div style="display:flex; gap:10px; align-items:center;">
+            <button class="btn btn-primary" onclick="fetchComplaintsManagement()" style="padding:8px 14px; font-size:0.85rem; display:flex; align-items:center; gap:6px;">
+              <i data-lucide="refresh-cw" style="width:14px; height:14px;"></i> Refresh Tickets
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter & Search Bar -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px; margin-bottom:18px; background:#f8fafc; padding:14px; border-radius:8px; border:1px solid #e2e8f0; align-items:center;">
+          <div>
+            <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:4px;">Search Complaints</label>
+            <input type="text" id="cpSearchInput" class="form-input" placeholder="Search ticket #, student, room, issue..." oninput="debounceFetchComplaints()" style="height:36px; font-size:0.85rem;">
+          </div>
+          <div>
+            <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:4px;">Status Filter</label>
+            <select id="cpStatusFilter" class="form-input" onchange="fetchComplaintsManagement()" style="height:36px; font-size:0.85rem;">
+              <option value="ALL">All Statuses</option>
+              <option value="Open">Open (Pending Assignment)</option>
+              <option value="Assigned">Assigned to Staff</option>
+              <option value="In Progress">In Progress (Work Ongoing)</option>
+              <option value="Resolved">Resolved</option>
+              <option value="Rejected">Rejected</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:4px;">Category Filter</label>
+            <select id="cpCategoryFilter" class="form-input" onchange="fetchComplaintsManagement()" style="height:36px; font-size:0.85rem;">
+              <option value="ALL">All Categories</option>
+              <option value="Electrical & Fans">⚡ Electrical & Fans</option>
+              <option value="Water & Plumbing">🚰 Water & Plumbing</option>
+              <option value="Cleaning & Housekeeping">🧹 Cleaning & Housekeeping</option>
+              <option value="Carpentry & Furniture">🪑 Carpentry & Furniture</option>
+              <option value="Internet & Wi-Fi">📶 Internet & Wi-Fi</option>
+              <option value="Food & Dining">🍲 Food & Dining</option>
+              <option value="Room & Appliances">🚪 Room & Appliances</option>
+              <option value="Other">📝 Other Complaints</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase; display:block; margin-bottom:4px;">Priority Filter</label>
+            <select id="cpPriorityFilter" class="form-input" onchange="fetchComplaintsManagement()" style="height:36px; font-size:0.85rem;">
+              <option value="ALL">All Priorities</option>
+              <option value="Emergency">🔴 Emergency</option>
+              <option value="High">🟠 High</option>
+              <option value="Medium">🟡 Medium</option>
+              <option value="Low">🟢 Low</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Table Responsive -->
+        <div class="table-responsive" style="max-height:620px; overflow-x:auto; overflow-y:auto; border:1px solid #E5E7EB; border-radius:8px;">
+          <table class="data-table" id="complaintsLedgerTable" style="width:100%; min-width:1100px; border-collapse:collapse;">
+            <thead>
+              <tr style="background:#f8fafc; text-align:left; font-size:0.75rem; text-transform:uppercase; color:var(--primary-deep); border-bottom:2px solid #E5E7EB;">
+                <th style="padding:12px 14px; width:120px;">Ticket #</th>
+                <th style="padding:12px 14px; width:130px;">Date & Priority</th>
+                <th style="padding:12px 14px; width:180px;">Student & Room</th>
+                <th style="padding:12px 14px; min-width:240px;">Category & Description</th>
+                <th style="padding:12px 14px; width:120px; text-align:center;">Status</th>
+                <th style="padding:12px 14px; width:160px;">Assigned Staff</th>
+                <th style="padding:12px 14px; width:130px; text-align:right;">Repair Cost</th>
+                <th style="padding:12px 14px; width:180px; text-align:right;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="complaintsTableBody">
+              <tr>
+                <td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);">Loading complaints ledger...</td>
               </tr>
             </tbody>
           </table>
@@ -2782,6 +2901,7 @@
       studentsPanel: { title: 'Students Directory', sub: 'Inspect student databases, rents, room numbers, and parent contacts.' },
       roomsPanel: { title: 'Room Setup Management', sub: 'Configure rooms, blocks, and bed coordinates.' },
       paymentsPanel: { title: 'Payments & Revenue Ledger', sub: 'Generate payment audit sheets and verify pending transactions.' },
+      complaintsPanel: { title: 'Complaints & Maintenance Desk', sub: 'Assign technicians, track repair costs, monitor workflows, and maintain maintenance history.' },
       reportsPanel: { title: 'Occupancy & Revenue Reports', sub: 'Generate financial worksheets and occupancy logs.' },
       remindersPanel: { title: 'Fee Payment Reminders', sub: 'Schedule automatic notifications and send direct WhatsApp late notices.' },
       applicationsPanel: { title: 'Admission Applications', sub: 'Review pending registration applications, approve admissions, or request corrections.' },
@@ -7481,5 +7601,213 @@
       }
     }
 </script>
+
+  <!-- ==========================================
+       PHASE 6: COMPLAINT & MAINTENANCE MODALS
+       ========================================== -->
+
+  <!-- Modal: Assign Complaint to Staff/Technician -->
+  <div class="modal-overlay" id="adminAssignComplaintModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+    <div class="modal-card glass-card" style="width:100%; max-width:500px; background:white; border-radius:12px; padding:24px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #E5E7EB; padding-bottom:10px;">
+        <h3 style="margin:0; font-size:1.15rem; font-weight:800; color:var(--primary-deep);">Assign Maintenance Staff</h3>
+        <button onclick="closeModal('adminAssignComplaintModal')" class="modal-close-btn">&times;</button>
+      </div>
+
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:4px;">
+          <span style="color:var(--text-muted);">Ticket Number:</span>
+          <strong id="assignModalTicketNum">CMP-00000</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:4px;">
+          <span style="color:var(--text-muted);">Student & Room:</span>
+          <span id="assignModalStudentRoom">--</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+          <span style="color:var(--text-muted);">Category:</span>
+          <span id="assignModalCategory" style="font-weight:600;">--</span>
+        </div>
+      </div>
+
+      <form id="adminAssignComplaintForm" onsubmit="event.preventDefault(); submitAssignComplaint();">
+        <input type="hidden" id="assignModalComplaintId">
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label" for="assignModalStaffSelect">Select Technician / Staff *</label>
+          <select id="assignModalStaffSelect" class="form-input" required onchange="handleStaffPresetChange(this.value)">
+            <option value="" disabled selected>-- Select Staff / Vendor --</option>
+            <option value="Ramesh (Electrician)" data-phone="98480 12345">⚡ Ramesh (Hostel Electrician)</option>
+            <option value="Suresh (Plumber)" data-phone="98480 23456">🚰 Suresh (Hostel Plumber)</option>
+            <option value="Ganesh (Carpenter)" data-phone="98480 34567">🪑 Ganesh (Carpenter & Furniture)</option>
+            <option value="Laxmi (Housekeeping Supervisor)" data-phone="98480 45678">🧹 Laxmi (Housekeeping Supervisor)</option>
+            <option value="ACT Broadband Support" data-phone="1800 102 4288">📶 ACT Fibernet / Wi-Fi Technician</option>
+            <option value="Murali (Hostel Warden)" data-phone="98852 97517">🏢 Murali (Hostel Warden)</option>
+            <option value="custom">✏️ Enter Custom Technician / Staff</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom:14px;" id="assignModalCustomStaffGroup">
+          <label class="form-label" for="assignModalStaffName">Technician / Staff Name *</label>
+          <input type="text" id="assignModalStaffName" class="form-input" placeholder="e.g. Raju (Appliance Tech)" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label" for="assignModalStaffPhone">Technician Contact Phone</label>
+          <input type="tel" id="assignModalStaffPhone" class="form-input" placeholder="e.g. 98852 12345">
+        </div>
+
+        <div class="form-group" style="margin-bottom:18px;">
+          <label class="form-label" for="assignModalRemarks">Admin Assignment Remarks / Instructions</label>
+          <textarea id="assignModalRemarks" class="form-input" rows="2" placeholder="e.g. Check switchboard in Room 204 by 4 PM..."></textarea>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #E5E7EB; padding-top:14px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('adminAssignComplaintModal')">Cancel</button>
+          <button type="submit" id="assignModalSubmitBtn" class="btn btn-primary" style="padding:10px 18px; font-weight:700;">Assign Technician</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Update Complaint Status & Maintenance Cost -->
+  <div class="modal-overlay" id="adminUpdateComplaintStatusModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+    <div class="modal-card glass-card" style="width:100%; max-width:540px; background:white; border-radius:12px; padding:24px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #E5E7EB; padding-bottom:10px;">
+        <h3 style="margin:0; font-size:1.15rem; font-weight:800; color:var(--primary-deep);">Update Status & Maintenance Cost</h3>
+        <button onclick="closeModal('adminUpdateComplaintStatusModal')" class="modal-close-btn">&times;</button>
+      </div>
+
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; margin-bottom:16px;">
+        <div style="display:flex; justify-content:space-between; font-size:0.85rem; margin-bottom:4px;">
+          <span style="color:var(--text-muted);">Ticket Number:</span>
+          <strong id="updateModalTicketNum">CMP-00000</strong>
+        </div>
+        <div style="display:flex; justify-content:space-between; font-size:0.85rem;">
+          <span style="color:var(--text-muted);">Issue:</span>
+          <span id="updateModalIssueTitle" style="font-weight:600;">--</span>
+        </div>
+      </div>
+
+      <form id="adminUpdateStatusForm" onsubmit="event.preventDefault(); submitUpdateComplaintStatus();">
+        <input type="hidden" id="updateModalComplaintId">
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label" for="updateModalStatusSelect">Complaint Status *</label>
+          <select id="updateModalStatusSelect" class="form-input" required>
+            <option value="Open">Open (Pending / Re-opened)</option>
+            <option value="Assigned">Assigned (Staff Assigned)</option>
+            <option value="In Progress">In Progress (Repair Underway)</option>
+            <option value="Resolved">Resolved (Work Completed)</option>
+            <option value="Rejected">Rejected (Invalid / Non-hostel)</option>
+          </select>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+          <div class="form-group">
+            <label class="form-label" for="updateModalRepairCost">Repair / Maintenance Cost (₹)</label>
+            <input type="number" id="updateModalRepairCost" class="form-input" min="0" step="1" placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="updateModalCostPaidBy">Cost Borne By</label>
+            <select id="updateModalCostPaidBy" class="form-input">
+              <option value="Hostel">Hostel (General Maintenance)</option>
+              <option value="Student">Student (Damage / Negligence)</option>
+              <option value="Shared">Shared</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label" for="updateModalInvoiceRef">Bill / Vendor Receipt Reference (Optional)</label>
+          <input type="text" id="updateModalInvoiceRef" class="form-input" placeholder="e.g. Bill #EL-982 or Cash Voucher">
+        </div>
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label" for="updateModalResolutionNotes">Resolution Notes / Action Taken</label>
+          <textarea id="updateModalResolutionNotes" class="form-input" rows="2" placeholder="e.g. Replaced capacitor, fan running smoothly at all speeds."></textarea>
+        </div>
+
+        <div class="form-group" style="margin-bottom:18px;">
+          <label class="form-label" for="updateModalAdminRemarks">Admin Remarks (Visible to Student)</label>
+          <input type="text" id="updateModalAdminRemarks" class="form-input" placeholder="e.g. Tested and verified by hostel manager.">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #E5E7EB; padding-top:14px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('adminUpdateComplaintStatusModal')">Cancel</button>
+          <button type="submit" id="updateModalSubmitBtn" class="btn btn-primary" style="padding:10px 18px; font-weight:700;">Save Status & Cost</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Full Complaint Details & Audit View -->
+  <div class="modal-overlay" id="adminViewComplaintModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+    <div class="modal-card glass-card" style="width:100%; max-width:620px; background:white; border-radius:12px; padding:28px; max-height:90vh; overflow-y:auto;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px; border-bottom:1px solid #E5E7EB; padding-bottom:12px;">
+        <div style="display:flex; align-items:center; gap:10px;">
+          <h3 style="margin:0; font-size:1.25rem; font-weight:800; color:var(--primary-deep);" id="viewModalTicketNum">CMP-00000</h3>
+          <span id="viewModalStatusBadge" class="status-badge active">Open</span>
+        </div>
+        <button onclick="closeModal('adminViewComplaintModal')" class="modal-close-btn">&times;</button>
+      </div>
+
+      <!-- Student & Stay Info -->
+      <div class="detail-section-title" style="margin-top:0;">Student & Room Assignment</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-size:0.85rem; margin-bottom:14px; background:#f8fafc; padding:12px; border-radius:8px; border:1px solid #e2e8f0;">
+        <div><span style="color:var(--text-muted);">Student Name:</span> <strong id="viewModalStudentName">--</strong></div>
+        <div><span style="color:var(--text-muted);">Mobile:</span> <span id="viewModalStudentPhone">--</span></div>
+        <div><span style="color:var(--text-muted);">Room & Floor:</span> <strong id="viewModalRoomInfo">--</strong></div>
+        <div><span style="color:var(--text-muted);">Bed Assignment:</span> <span id="viewModalBedInfo">--</span></div>
+      </div>
+
+      <!-- Complaint Details -->
+      <div class="detail-section-title">Complaint Information</div>
+      <div style="font-size:0.85rem; margin-bottom:14px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+          <span>Category: <strong id="viewModalCategory">--</strong></span>
+          <span>Priority: <span id="viewModalPriority">Medium</span></span>
+        </div>
+        <div style="margin-bottom:6px;">Subject: <strong id="viewModalTitle">--</strong></div>
+        <div style="color:var(--text-muted); font-size:0.75rem; margin-bottom:8px;" id="viewModalTimestamps">Raised: --</div>
+        <div style="background:#f1f5f9; padding:12px; border-radius:8px; font-size:0.88rem; line-height:1.5; color:#1e293b;" id="viewModalDescription">--</div>
+      </div>
+
+      <!-- Image Attachment -->
+      <div id="viewModalImageSection" style="display:none; margin-bottom:16px;">
+        <div class="detail-section-title">Attached Photo</div>
+        <a id="viewModalImageLink" href="#" target="_blank" style="display:inline-block;">
+          <img id="viewModalImage" src="" alt="Complaint attachment" style="max-width:100%; max-height:240px; border-radius:8px; border:1px solid #e2e8f0; object-fit:contain; background:#f8fafc;">
+        </a>
+      </div>
+
+      <!-- Assignment & Maintenance Cost Section -->
+      <div class="detail-section-title">Maintenance & Resolution Log</div>
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px; font-size:0.85rem; margin-bottom:16px;">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px;">
+          <div><span style="color:var(--text-muted);">Assigned To:</span> <strong id="viewModalAssignedTo">None</strong></div>
+          <div><span style="color:var(--text-muted);">Staff Phone:</span> <span id="viewModalStaffPhone">--</span></div>
+          <div><span style="color:var(--text-muted);">Assigned Time:</span> <span id="viewModalAssignedAt">--</span></div>
+          <div><span style="color:var(--text-muted);">Resolved Time:</span> <span id="viewModalResolvedAt">--</span></div>
+        </div>
+        <div style="border-top:1px dashed #cbd5e1; padding-top:8px; margin-top:8px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+          <div><span style="color:var(--text-muted);">Repair Cost:</span> <strong id="viewModalRepairCost" style="color:#059669;">₹0</strong></div>
+          <div><span style="color:var(--text-muted);">Paid By:</span> <span id="viewModalCostPaidBy">Hostel</span></div>
+          <div style="grid-column:span 2;"><span style="color:var(--text-muted);">Bill / Voucher Ref:</span> <span id="viewModalInvoiceRef">--</span></div>
+        </div>
+        <div style="border-top:1px dashed #cbd5e1; padding-top:8px; margin-top:8px;">
+          <div style="margin-bottom:4px;"><span style="color:var(--text-muted);">Resolution Notes:</span> <span id="viewModalResolutionNotes">Pending</span></div>
+          <div><span style="color:var(--text-muted);">Admin Remarks:</span> <span id="viewModalAdminRemarks">None</span></div>
+        </div>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #E5E7EB; padding-top:14px;">
+        <div style="display:flex; gap:8px;">
+          <button type="button" class="btn btn-outline btn-sm" id="viewModalActionAssignBtn" onclick="closeModal('adminViewComplaintModal'); openAssignStaffModal(activeViewingComplaintId);">Assign Staff</button>
+          <button type="button" class="btn btn-primary btn-sm" id="viewModalActionUpdateBtn" onclick="closeModal('adminViewComplaintModal'); openUpdateStatusModal(activeViewingComplaintId);">Update Status</button>
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm" onclick="closeModal('adminViewComplaintModal')">Close</button>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

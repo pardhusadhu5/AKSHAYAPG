@@ -567,6 +567,67 @@ async function initializeDatabase(db) {
   `).catch(() => {});
 
   // 11. Create Performance Indexes
+  // 15. Complaints & Maintenance Table (Phase 6)
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS complaints (
+      id SERIAL PRIMARY KEY,
+      complaintNumber VARCHAR(100) UNIQUE NOT NULL,
+      studentId INTEGER NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+      roomId INTEGER REFERENCES rooms(id) ON DELETE SET NULL,
+      bedId INTEGER REFERENCES beds(id) ON DELETE SET NULL,
+      category VARCHAR(100) NOT NULL,
+      title VARCHAR(255),
+      description TEXT NOT NULL,
+      imageUrl TEXT,
+      priority VARCHAR(50) NOT NULL DEFAULT 'Medium',
+      status VARCHAR(50) NOT NULL DEFAULT 'Open',
+      assignedTo VARCHAR(255),
+      assignedPhone VARCHAR(50),
+      assignedAt TIMESTAMP,
+      adminRemarks TEXT,
+      resolutionNotes TEXT,
+      resolvedAt TIMESTAMP,
+      repairCost NUMERIC NOT NULL DEFAULT 0,
+      costPaidBy VARCHAR(50) DEFAULT 'Hostel',
+      invoiceRef VARCHAR(255),
+      createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  await db.query(`
+    ALTER TABLE complaints DROP CONSTRAINT IF EXISTS complaints_status_check;
+    ALTER TABLE complaints
+      ADD COLUMN IF NOT EXISTS complaintNumber VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS roomId INTEGER REFERENCES rooms(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS bedId INTEGER REFERENCES beds(id) ON DELETE SET NULL,
+      ADD COLUMN IF NOT EXISTS title VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS imageUrl TEXT,
+      ADD COLUMN IF NOT EXISTS priority VARCHAR(50) NOT NULL DEFAULT 'Medium',
+      ADD COLUMN IF NOT EXISTS assignedTo VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS assignedPhone VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS assignedAt TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS adminRemarks TEXT,
+      ADD COLUMN IF NOT EXISTS resolutionNotes TEXT,
+      ADD COLUMN IF NOT EXISTS resolvedAt TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS repairCost NUMERIC NOT NULL DEFAULT 0,
+      ADD COLUMN IF NOT EXISTS costPaidBy VARCHAR(50) DEFAULT 'Hostel',
+      ADD COLUMN IF NOT EXISTS invoiceRef VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      ADD COLUMN IF NOT EXISTS updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+    UPDATE complaints 
+    SET complaintNumber = 'CMP-' || TO_CHAR(COALESCE(createdAt, CURRENT_TIMESTAMP), 'YYYY') || '-' || LPAD(id::text, 5, '0')
+    WHERE complaintNumber IS NULL;
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_complaints_number ON complaints(complaintNumber);
+    CREATE INDEX IF NOT EXISTS idx_complaints_student ON complaints(studentId);
+    CREATE INDEX IF NOT EXISTS idx_complaints_status ON complaints(status);
+    CREATE INDEX IF NOT EXISTS idx_complaints_category ON complaints(category);
+    CREATE INDEX IF NOT EXISTS idx_complaints_created ON complaints(createdAt DESC);
+  `).catch((err) => { console.error('Complaints migration notice:', err.message); });
+
+  // 16. Create Performance Indexes
   await db.query(`
     CREATE INDEX IF NOT EXISTS idx_beds_roomid ON beds(roomId);
     CREATE INDEX IF NOT EXISTS idx_beds_status ON beds(status);
