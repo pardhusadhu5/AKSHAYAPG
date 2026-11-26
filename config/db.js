@@ -627,7 +627,108 @@ async function initializeDatabase(db) {
     CREATE INDEX IF NOT EXISTS idx_complaints_created ON complaints(createdAt DESC);
   `).catch((err) => { console.error('Complaints migration notice:', err.message); });
 
-  // 16. Create Performance Indexes
+  // 16. Food & Mess Management Tables (Phase 9)
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS food_menu (
+      id SERIAL PRIMARY KEY,
+      dayOfWeek VARCHAR(20) NOT NULL,
+      mealType VARCHAR(50) NOT NULL,
+      items TEXT NOT NULL,
+      specialItem VARCHAR(255),
+      timings VARCHAR(100) NOT NULL,
+      isVegetarian BOOLEAN DEFAULT TRUE,
+      status VARCHAR(50) NOT NULL DEFAULT 'PUBLISHED',
+      updatedBy VARCHAR(255) DEFAULT 'Hostel Administration',
+      createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (dayOfWeek, mealType)
+    );
+
+    CREATE TABLE IF NOT EXISTS student_food_preferences (
+      id SERIAL PRIMARY KEY,
+      studentId INTEGER NOT NULL UNIQUE REFERENCES students(id) ON DELETE CASCADE,
+      dietaryType VARCHAR(50) NOT NULL DEFAULT 'NON_VEG',
+      isMessOpted BOOLEAN NOT NULL DEFAULT TRUE,
+      monthlyMessFee NUMERIC NOT NULL DEFAULT 0,
+      allergies TEXT,
+      specialInstructions TEXT,
+      updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_food_menu_day ON food_menu(dayOfWeek);
+    CREATE INDEX IF NOT EXISTS idx_food_menu_status ON food_menu(status);
+    CREATE INDEX IF NOT EXISTS idx_food_pref_student ON student_food_preferences(studentId);
+    CREATE INDEX IF NOT EXISTS idx_food_pref_diet ON student_food_preferences(dietaryType);
+  `).catch((err) => { console.error('Food tables creation notice:', err.message); });
+
+  // Seed default 7-day food menu if empty
+  const { rows: menuCountRows } = await db.query('SELECT COUNT(*) as count FROM food_menu');
+  if (parseInt(menuCountRows[0].count) === 0) {
+    const defaultWeeklyMenu = [
+      // Monday
+      { dayOfWeek: 'Monday', mealType: 'Breakfast', items: 'Idli, Medu Vada, Coconut Chutney & Hot Sambhar', specialItem: null, timings: '7:30 AM - 9:30 AM', isVegetarian: true },
+      { dayOfWeek: 'Monday', mealType: 'Lunch', items: 'Steamed Rice, Tomato Dal, Bhendi Fry, Rasam & Curd', specialItem: null, timings: '12:30 PM - 2:30 PM', isVegetarian: true },
+      { dayOfWeek: 'Monday', mealType: 'Dinner', items: 'Hot Chapatis, Mix Veg Kurma, Steamed Rice, Dal & Curd', specialItem: null, timings: '7:30 PM - 9:30 PM', isVegetarian: true },
+
+      // Tuesday
+      { dayOfWeek: 'Tuesday', mealType: 'Breakfast', items: 'Mysore Bonda / Puri Bhaji with Chutney', specialItem: null, timings: '7:30 AM - 9:30 AM', isVegetarian: true },
+      { dayOfWeek: 'Tuesday', mealType: 'Lunch', items: 'Steamed Rice, Dosakaya Pappu, Aloo Fry, Sambar & Curd', specialItem: null, timings: '12:30 PM - 2:30 PM', isVegetarian: true },
+      { dayOfWeek: 'Tuesday', mealType: 'Dinner', items: 'Steamed Rice, Palak Dal, Rasam, Boiled Eggs / Paneer Curry & Curd', specialItem: 'Boiled Eggs / Paneer Curry', timings: '7:30 PM - 9:30 PM', isVegetarian: false },
+
+      // Wednesday
+      { dayOfWeek: 'Wednesday', mealType: 'Breakfast', items: 'Upma / Semiya with Peanut Chutney & Tea/Coffee', specialItem: null, timings: '7:30 AM - 9:30 AM', isVegetarian: true },
+      { dayOfWeek: 'Wednesday', mealType: 'Lunch', items: 'Steamed Rice, Majjiga Pulusu, Dondakaya Fry, Dal & Curd', specialItem: null, timings: '12:30 PM - 2:30 PM', isVegetarian: true },
+      { dayOfWeek: 'Wednesday', mealType: 'Dinner', items: 'Special Chicken Curry / Paneer Butter Masala, Chapatis, Steamed Rice & Curd', specialItem: 'Special Chicken Curry / Paneer Butter Masala', timings: '7:30 PM - 9:30 PM', isVegetarian: false },
+
+      // Thursday
+      { dayOfWeek: 'Thursday', mealType: 'Breakfast', items: 'Masala Dosa, Karam Dosa with Sambhar & Chutney', specialItem: null, timings: '7:30 AM - 9:30 AM', isVegetarian: true },
+      { dayOfWeek: 'Thursday', mealType: 'Lunch', items: 'Steamed Rice, Palakura Pappu, Gobi Fry, Rasam & Curd', specialItem: null, timings: '12:30 PM - 2:30 PM', isVegetarian: true },
+      { dayOfWeek: 'Thursday', mealType: 'Dinner', items: 'Bagara Rice, Veg Korma / Egg Masala, Chapatis & Curd', specialItem: 'Bagara Rice & Egg Masala', timings: '7:30 PM - 9:30 PM', isVegetarian: true },
+
+      // Friday
+      { dayOfWeek: 'Friday', mealType: 'Breakfast', items: 'Uggani / Upma with Mirchi Bajji & Chutney', specialItem: null, timings: '7:30 AM - 9:30 AM', isVegetarian: true },
+      { dayOfWeek: 'Friday', mealType: 'Lunch', items: 'Steamed Rice, Pappu Charu, Aratikaya Fry, Papad & Curd', specialItem: null, timings: '12:30 PM - 2:30 PM', isVegetarian: true },
+      { dayOfWeek: 'Friday', mealType: 'Dinner', items: 'Chapatis, Egg Masala / Veg Kurma, Steamed Rice, Rasam & Curd', specialItem: 'Egg Masala / Veg Kurma', timings: '7:30 PM - 9:30 PM', isVegetarian: false },
+
+      // Saturday
+      { dayOfWeek: 'Saturday', mealType: 'Breakfast', items: 'Hot Poha / Chapatis with Aloo Kurma', specialItem: null, timings: '7:30 AM - 9:30 AM', isVegetarian: true },
+      { dayOfWeek: 'Saturday', mealType: 'Lunch', items: 'Steamed Rice, Mudda Pappu, Avakaya Mango Pickle, Pure Ghee, Rasam & Curd', specialItem: 'Mudda Pappu & Avakaya with Ghee', timings: '12:30 PM - 2:30 PM', isVegetarian: true },
+      { dayOfWeek: 'Saturday', mealType: 'Dinner', items: 'Steamed Rice, Sambhar, Meal Maker Curry, Papad & Curd', specialItem: null, timings: '7:30 PM - 9:30 PM', isVegetarian: true },
+
+      // Sunday
+      { dayOfWeek: 'Sunday', mealType: 'Breakfast', items: 'Onion Dosa with Hot Sambhar & Ginger Chutney', specialItem: null, timings: '7:30 AM - 9:30 AM', isVegetarian: true },
+      { dayOfWeek: 'Sunday', mealType: 'Lunch', items: 'Special Chicken Dum Biryani / Veg Paneer Biryani, Mirchi Ka Salan, Onion Raitha & Sweet', specialItem: 'Special Sunday Biryani Feast', timings: '12:30 PM - 2:30 PM', isVegetarian: false },
+      { dayOfWeek: 'Sunday', mealType: 'Dinner', items: 'Steamed Rice, Pepper Rasam, Aloo Fry & Curd', specialItem: null, timings: '7:30 PM - 9:30 PM', isVegetarian: true }
+    ];
+
+    for (const item of defaultWeeklyMenu) {
+      await db.query(`
+        INSERT INTO food_menu (dayOfWeek, mealType, items, specialItem, timings, isVegetarian, status)
+        VALUES ($1, $2, $3, $4, $5, $6, 'PUBLISHED')
+        ON CONFLICT (dayOfWeek, mealType) DO NOTHING
+      `, [item.dayOfWeek, item.mealType, item.items, item.specialItem, item.timings, item.isVegetarian]);
+    }
+    console.log('Seeded standard 7-day South Indian weekly food menu.');
+  }
+
+  // Seed default mess configuration settings
+  const defaultMessSettings = [
+    { key: 'messEnabled', value: 'true' },
+    { key: 'messIncludedInRent', value: 'true' },
+    { key: 'messMonthlyFee', value: '2500' },
+    { key: 'breakfastTimings', value: '7:30 AM - 9:30 AM' },
+    { key: 'lunchTimings', value: '12:30 PM - 2:30 PM' },
+    { key: 'dinnerTimings', value: '7:30 PM - 9:30 PM' }
+  ];
+  for (const ms of defaultMessSettings) {
+    await db.query(`
+      INSERT INTO hostelSettings (key, value)
+      VALUES ($1, $2)
+      ON CONFLICT (key) DO NOTHING
+    `, [ms.key, ms.value]).catch(() => {});
+  }
+
+  // 17. Create Performance Indexes
   await db.query(`
     CREATE INDEX IF NOT EXISTS idx_beds_roomid ON beds(roomId);
     CREATE INDEX IF NOT EXISTS idx_beds_status ON beds(status);

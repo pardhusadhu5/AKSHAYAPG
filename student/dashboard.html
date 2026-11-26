@@ -924,17 +924,34 @@
       </div>
     </div>
 
-    <!-- 5. WEEKLY FOOD MENU PANEL -->
+    <!-- 5. WEEKLY FOOD MENU & MESS MANAGEMENT PANEL (PHASE 9) -->
     <div class="panel-view" id="foodMenuPanel">
-      <div class="card-container">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+      <div class="card-container" style="margin-bottom:24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:12px;">
           <div>
-            <h3 style="margin:0; border:none; padding:0; font-size:1.3rem; color:var(--primary-deep);">Weekly Food Menu</h3>
-            <p style="margin:4px 0 0 0; font-size:0.85rem; color:var(--text-muted);">Freshly prepared 3-course South Indian meals served daily.</p>
+            <h3 style="margin:0; border:none; padding:0; font-size:1.3rem; color:var(--primary-deep);">Weekly Food Menu & Mess Schedule</h3>
+            <p style="margin:4px 0 0 0; font-size:0.85rem; color:var(--text-muted);">Freshly prepared, balanced 3-course South Indian meals served daily in the dining hall.</p>
           </div>
-          <span id="currentDayBadge" style="background:var(--primary-brand); color:white; font-size:0.8rem; font-weight:700; padding:6px 14px; border-radius:20px;">
-            Today: Monday
-          </span>
+          <div style="display:flex; align-items:center; gap:10px;">
+            <span id="currentDayBadge" style="background:var(--primary-brand); color:white; font-size:0.8rem; font-weight:700; padding:6px 14px; border-radius:20px;">
+              Today: Loading...
+            </span>
+            <button class="btn btn-outline btn-sm" onclick="fetchLiveFoodMenu()" style="padding:6px 10px; font-size:0.8rem; display:flex; align-items:center; gap:4px;">
+              <i data-lucide="refresh-cw" style="width:13px; height:13px;"></i> Refresh
+            </button>
+          </div>
+        </div>
+
+        <!-- Today's Live Meal Banner -->
+        <div id="todayLiveMealBanner" style="background:#eff6ff; border:1px solid #bfdbfe; border-left:5px solid #2563eb; border-radius:10px; padding:16px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <div>
+            <div style="font-size:0.75rem; font-weight:800; color:#1e40af; text-transform:uppercase; letter-spacing:0.5px;">Currently Serving / Up Next</div>
+            <h4 id="todayLiveMealTitle" style="margin:4px 0 2px 0; font-size:1.15rem; color:#1e3a8a; font-weight:800;">Lunch</h4>
+            <div id="todayLiveMealItems" style="font-size:0.9rem; color:#334155;">Steamed Rice, Dal, Curry, Curd</div>
+          </div>
+          <div style="text-align:right;">
+            <span id="todayLiveMealTimings" style="font-size:0.8rem; background:white; color:#1e40af; border:1px solid #93c5fd; padding:4px 10px; border-radius:6px; font-weight:700;">12:30 PM - 2:30 PM</span>
+          </div>
         </div>
 
         <!-- Days Selector Tabs -->
@@ -949,8 +966,81 @@
         </div>
 
         <!-- Meals Display Grid -->
-        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:20px;" id="foodMenuContent">
-          <!-- Populated dynamically based on selected day -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:20px;" id="foodMenuContent">
+          <!-- Populated dynamically from PostgreSQL database -->
+          <div style="grid-column: 1/-1; text-align:center; padding:30px; color:var(--text-muted);">Loading live food menu...</div>
+        </div>
+      </div>
+
+      <!-- Food Preferences & Mess Options Grid -->
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:24px; align-items:start;">
+        <!-- Dietary Preferences Card -->
+        <div class="card-container">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h3 style="margin:0;">Dietary Preferences & Mess Opt-In</h3>
+            <span style="font-size:0.75rem; background:#ecfdf5; color:#047857; font-weight:700; padding:3px 8px; border-radius:4px; border:1px solid #a7f3d0;">Preferences</span>
+          </div>
+          <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:18px;">Customize your dietary preference and report allergies so the kitchen staff can cater to your needs.</p>
+          
+          <form id="studentDietaryPrefForm" onsubmit="event.preventDefault(); saveStudentDietaryPreferences();">
+            <div class="form-group" style="margin-bottom:16px;">
+              <label class="form-label" for="dietaryTypeSelect">Dietary Type *</label>
+              <select id="dietaryTypeSelect" class="form-input" required>
+                <option value="NON_VEG">🍗 Non-Vegetarian (Vegetarian + Chicken / Egg meals)</option>
+                <option value="VEG">🥗 Pure Vegetarian (Exclusively vegetarian dishes & Paneer)</option>
+                <option value="EGGITARIAN">🥚 Eggetarian (Vegetarian + Egg dishes)</option>
+              </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom:16px;">
+              <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:0.9rem; font-weight:600; color:var(--dark-slate);">
+                <input type="checkbox" id="messOptedCheckbox" checked style="width:18px; height:18px; accent-color:var(--primary-brand);">
+                <span>Enrolled in Hostel Mess Service</span>
+              </label>
+              <span style="font-size:0.75rem; color:var(--text-muted); display:block; margin-top:4px; margin-left:28px;" id="messFeeNoticeText">
+                Hostel meal service covers 3 daily meals.
+              </span>
+            </div>
+
+            <div class="form-group" style="margin-bottom:16px;">
+              <label class="form-label" for="allergiesInput">Allergies / Dietary Restrictions (Optional)</label>
+              <input type="text" id="allergiesInput" class="form-input" placeholder="e.g. Peanut allergy, Lactose intolerant, Low spice">
+            </div>
+
+            <div class="form-group" style="margin-bottom:18px;">
+              <label class="form-label" for="specialInstructionsInput">Kitchen Special Instructions</label>
+              <textarea id="specialInstructionsInput" class="form-input" rows="2" placeholder="e.g. Please avoid oily curries if possible..."></textarea>
+            </div>
+
+            <button type="submit" id="saveDietaryPrefBtn" class="btn btn-primary" style="width:100%; padding:10px; font-weight:700;">
+              Save Dietary Preferences
+            </button>
+          </form>
+        </div>
+
+        <!-- Food-Related Complaints & Mess Feedback Card -->
+        <div class="card-container">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h3 style="margin:0;">Mess Feedback & Food Complaints</h3>
+            <span style="font-size:0.75rem; background:#fff7ed; color:#c2410c; font-weight:700; padding:3px 8px; border-radius:4px; border:1px solid #fed7aa;">Kitchen Desk</span>
+          </div>
+          <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:18px;">Have feedback on food taste, dining hall hygiene, or meal timings? Report directly to the hostel management.</p>
+          
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:14px; margin-bottom:16px;">
+            <div style="font-size:0.85rem; font-weight:700; color:var(--primary-deep); margin-bottom:4px;">🍲 Quality & Hygiene Standards</div>
+            <p style="font-size:0.8rem; color:#64748b; line-height:1.5; margin:0;">
+              Our hostel kitchen is inspected regularly. If you ever experience food quality issues, temperature concerns, or missing items, raise an immediate ticket below.
+            </p>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <button class="btn btn-secondary" onclick="quickFoodComplaint()" style="background:#ea580c; border-color:#ea580c; color:white; padding:12px; font-weight:700; display:flex; justify-content:center; align-items:center; gap:8px;">
+              <i data-lucide="message-square-warning" style="width:16px; height:16px;"></i> Raise Food / Mess Complaint
+            </button>
+            <button class="btn btn-outline" onclick="switchPanel('complaintsPanel')" style="padding:10px; font-weight:600; display:flex; justify-content:center; align-items:center; gap:6px;">
+              <i data-lucide="clipboard-list" style="width:15px; height:15px;"></i> View My Complaints & Tickets
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1346,43 +1436,10 @@
       }
     }
 
-    const foodSchedule = {
-      Monday: {
-        breakfast: 'Idli & Vada with Sambhar & Coconut Chutney',
-        lunch: 'Steamed Rice, Tomato Dal, Potato Fry, Curd & Papad',
-        dinner: 'Rice, Sambhar, Mixed Veg Curry, Curd & Pickle'
-      },
-      Tuesday: {
-        breakfast: 'Puri & Potato Bhaji with Chutney',
-        lunch: 'Steamed Rice, Sambhar, Bhendi Fry, Curd & Pickle',
-        dinner: 'Hot Chapatis, Special Chicken Curry / Paneer Curry, Steamed Rice, Curd'
-      },
-      Wednesday: {
-        breakfast: 'Crispy Dosa with Allam Chutney & Sambhar',
-        lunch: 'Steamed Rice, Leafy Veg Pappu, Brinjal Curry, Curd',
-        dinner: 'Steamed Rice, Egg Curry / Veg Curry, Pepper Rasam, Curd'
-      },
-      Thursday: {
-        breakfast: 'Mysore Bonda with Ginger Chutney',
-        lunch: 'Steamed Rice, Tomato Pappu, Beerakaya Fry, Curd',
-        dinner: 'Steamed Rice, Sambhar, Potato Kurma, Curd & Papad'
-      },
-      Friday: {
-        breakfast: 'Uggani / Upma with Chutney',
-        lunch: 'Steamed Rice, Pappu Charu, Aratikaya Fry, Curd',
-        dinner: 'Chapatis, Egg Masala / Veg Kurma, Steamed Rice, Curd'
-      },
-      Saturday: {
-        breakfast: 'Hot Poha / Chapatis with Curry',
-        lunch: 'Steamed Rice, Mudda Pappu, Avakaya Mango Pickle, Ghee & Curd',
-        dinner: 'Steamed Rice, Sambhar, Meal Maker Curry, Curd'
-      },
-      Sunday: {
-        breakfast: 'Onion Dosa with Sambhar & Chutney',
-        lunch: 'Special Chicken Biryani / Veg Paneer Biryani, Raitha & Salan',
-        dinner: 'Steamed Rice, Pepper Rasam, Aloo Fry, Curd'
-      }
-    };
+    // Live Weekly Food Menu & Mess Management (Phase 9)
+    let liveWeeklyMenuData = {};
+    let liveMessConfig = {};
+    let currentSelectedDay = 'Monday';
 
     function getCurrentISTDay() {
       try {
@@ -1393,14 +1450,73 @@
       }
     }
 
-    function initFoodMenu() {
+    async function initFoodMenu() {
       const istDay = getCurrentISTDay();
       const badge = document.getElementById('currentDayBadge');
       if (badge) badge.innerText = `Today: ${istDay}`;
-      selectFoodMenuDay(istDay);
+      currentSelectedDay = istDay;
+
+      await fetchLiveFoodMenu();
+      await fetchStudentDietaryPreferences();
+    }
+
+    async function fetchLiveFoodMenu() {
+      const container = document.getElementById('foodMenuContent');
+      try {
+        const res = await fetch('/api/food/weekly');
+        const data = await res.json();
+
+        if (data.success) {
+          liveWeeklyMenuData = data.weeklySchedule || {};
+          liveMessConfig = data.config || {};
+
+          // Update notice if mess is included or separate
+          const feeNotice = document.getElementById('messFeeNoticeText');
+          if (feeNotice) {
+            if (liveMessConfig.messIncludedInRent) {
+              feeNotice.innerText = 'Mess meals are included in your standard monthly hostel rent.';
+            } else {
+              feeNotice.innerText = `Separate mess fee: ₹${Number(liveMessConfig.messMonthlyFee || 2500).toLocaleString('en-IN')}/month.`;
+            }
+          }
+
+          // Update active meal highlight banner
+          updateTodayLiveMealBanner(data.today, data.activeMeal);
+
+          // Render selected day's meals
+          selectFoodMenuDay(currentSelectedDay || data.today || 'Monday');
+        } else {
+          if (container) container.innerHTML = '<div style="grid-column: 1/-1; color:#ef4444; padding:20px; text-align:center;">Failed to load live menu: ' + (data.message || 'Server error') + '</div>';
+        }
+      } catch (err) {
+        console.error('Fetch food menu error:', err);
+        if (container) container.innerHTML = '<div style="grid-column: 1/-1; color:#ef4444; padding:20px; text-align:center;">Error connecting to food menu server.</div>';
+      }
+    }
+
+    function updateTodayLiveMealBanner(todayDay, activeMealInfo) {
+      const titleEl = document.getElementById('todayLiveMealTitle');
+      const itemsEl = document.getElementById('todayLiveMealItems');
+      const timingsEl = document.getElementById('todayLiveMealTimings');
+      if (!titleEl || !itemsEl || !timingsEl) return;
+
+      const activeMeal = activeMealInfo ? activeMealInfo.current : 'Lunch';
+      titleEl.innerText = `${todayDay} • ${activeMeal}`;
+
+      const todaySchedule = liveWeeklyMenuData[todayDay];
+      if (todaySchedule && todaySchedule[activeMeal]) {
+        const m = todaySchedule[activeMeal];
+        itemsEl.innerText = m.items + (m.specialitem ? ` (Special: ${m.specialitem})` : '');
+        timingsEl.innerText = m.timings || 'Standard Meal Hours';
+      } else {
+        itemsEl.innerText = 'Meal preparation in dining hall.';
+        timingsEl.innerText = 'Standard Meal Hours';
+      }
     }
 
     function selectFoodMenuDay(dayName) {
+      currentSelectedDay = dayName;
+
       document.querySelectorAll('.day-tab-btn').forEach(btn => {
         btn.style.background = 'white';
         btn.style.color = 'var(--primary-brand)';
@@ -1413,29 +1529,130 @@
         activeTab.style.color = 'white';
       }
 
-      const menu = foodSchedule[dayName] || foodSchedule['Monday'];
+      const dayMeals = liveWeeklyMenuData[dayName] || {};
       const container = document.getElementById('foodMenuContent');
-      if (container) {
-        container.innerHTML = `
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:20px;">
-            <div style="font-size:0.75rem; font-weight:700; color:var(--primary-brand); text-transform:uppercase; margin-bottom:8px;">Breakfast (7:30 AM - 9:30 AM)</div>
-            <h4 style="margin:0 0 8px 0; font-size:1.1rem; color:var(--dark-slate); font-weight:800;">${menu.breakfast}</h4>
-            <p style="margin:0; font-size:0.8rem; color:var(--text-muted);">Freshly prepared hot breakfast served with tea & coffee.</p>
-          </div>
+      if (!container) return;
 
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:20px;">
-            <div style="font-size:0.75rem; font-weight:700; color:var(--primary-brand); text-transform:uppercase; margin-bottom:8px;">Lunch (12:30 PM - 2:30 PM)</div>
-            <h4 style="margin:0 0 8px 0; font-size:1.1rem; color:var(--dark-slate); font-weight:800;">${menu.lunch}</h4>
-            <p style="margin:0; font-size:0.8rem; color:var(--text-muted);">Unlimited steamed rice, dal fry, curry & fresh curd.</p>
-          </div>
+      const breakfast = dayMeals['Breakfast'];
+      const lunch = dayMeals['Lunch'];
+      const dinner = dayMeals['Dinner'];
 
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:20px;">
-            <div style="font-size:0.75rem; font-weight:700; color:var(--primary-brand); text-transform:uppercase; margin-bottom:8px;">Dinner (7:30 PM - 9:30 PM)</div>
-            <h4 style="margin:0 0 8px 0; font-size:1.1rem; color:var(--dark-slate); font-weight:800;">${menu.dinner}</h4>
-            <p style="margin:0; font-size:0.8rem; color:var(--text-muted);">Delicious dinner served hot with curd & rasam.</p>
+      function renderMealCard(type, mealData, defaultTimings, defaultNote) {
+        const items = mealData ? mealData.items : 'Menu items being updated by management.';
+        const timings = (mealData && mealData.timings) ? mealData.timings : defaultTimings;
+        const special = (mealData && mealData.specialitem) ? mealData.specialitem : null;
+        const isVeg = mealData ? mealData.isvegetarian : true;
+
+        const vegBadge = isVeg 
+          ? '<span style="font-size:0.7rem; font-weight:700; color:#059669; background:#ecfdf5; border:1px solid #a7f3d0; padding:2px 6px; border-radius:4px;">🟢 Vegetarian</span>'
+          : '<span style="font-size:0.7rem; font-weight:700; color:#dc2626; background:#fef2f2; border:1px solid #fecaca; padding:2px 6px; border-radius:4px;">🔴 Non-Veg Included</span>';
+
+        const specialBadge = special 
+          ? `<div style="margin-top:8px; background:#fff7ed; border:1px solid #fed7aa; padding:6px 10px; border-radius:6px; font-size:0.8rem; color:#9a3412; font-weight:700;">✨ Special: ${special}</div>`
+          : '';
+
+        return `
+          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:20px; display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <span style="font-size:0.75rem; font-weight:800; color:var(--primary-brand); text-transform:uppercase; letter-spacing:0.5px;">${type}</span>
+                ${vegBadge}
+              </div>
+              <h4 style="margin:0 0 8px 0; font-size:1.1rem; color:var(--dark-slate); font-weight:800; line-height:1.4;">${items}</h4>
+              ${specialBadge}
+            </div>
+            <div style="margin-top:16px; border-top:1px dashed #cbd5e1; padding-top:10px; display:flex; justify-content:space-between; align-items:center; font-size:0.75rem; color:var(--text-muted);">
+              <span>⏰ ${timings}</span>
+              <span style="color:#64748b;">${defaultNote}</span>
+            </div>
           </div>
         `;
       }
+
+      container.innerHTML = `
+        ${renderMealCard('Breakfast', breakfast, '7:30 AM - 9:30 AM', 'Served with hot tea & coffee')}
+        ${renderMealCard('Lunch', lunch, '12:30 PM - 2:30 PM', 'Unlimited rice, dal & fresh curd')}
+        ${renderMealCard('Dinner', dinner, '7:30 PM - 9:30 PM', 'Served hot with rasam & pickle')}
+      `;
+
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    async function fetchStudentDietaryPreferences() {
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch('/api/food/preferences', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success && data.preference) {
+          const p = data.preference;
+          const dietSelect = document.getElementById('dietaryTypeSelect');
+          const messOpt = document.getElementById('messOptedCheckbox');
+          const allergies = document.getElementById('allergiesInput');
+          const instructions = document.getElementById('specialInstructionsInput');
+
+          if (dietSelect) dietSelect.value = p.dietarytype || p.dietaryType || 'NON_VEG';
+          if (messOpt) messOpt.checked = (p.ismessopted !== false && p.isMessOpted !== false);
+          if (allergies) allergies.value = p.allergies || '';
+          if (instructions) instructions.value = p.specialinstructions || p.specialInstructions || '';
+        }
+      } catch (err) {
+        console.warn('Dietary preferences fetch error:', err.message);
+      }
+    }
+
+    async function saveStudentDietaryPreferences() {
+      const token = localStorage.getItem('token');
+      const submitBtn = document.getElementById('saveDietaryPrefBtn');
+      const dietaryType = document.getElementById('dietaryTypeSelect').value;
+      const isMessOpted = document.getElementById('messOptedCheckbox').checked;
+      const allergies = document.getElementById('allergiesInput').value.trim();
+      const specialInstructions = document.getElementById('specialInstructionsInput').value.trim();
+
+      try {
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.innerText = 'Saving...'; }
+
+        const res = await fetch('/api/food/preferences', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            dietaryType,
+            isMessOpted,
+            allergies,
+            specialInstructions
+          })
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          alert('Dietary preferences and mess settings saved successfully!');
+        } else {
+          alert('Failed to save preferences: ' + (data.message || 'Server error'));
+        }
+      } catch (err) {
+        alert('Error connecting to server.');
+      } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'Save Dietary Preferences'; }
+      }
+    }
+
+    function quickFoodComplaint() {
+      switchPanel('complaintsPanel');
+      setTimeout(() => {
+        const catSelect = document.getElementById('complaintCategory');
+        if (catSelect) catSelect.value = 'Food & Dining';
+        const titleInput = document.getElementById('complaintTitle');
+        if (titleInput) titleInput.value = 'Mess / Food Quality Concern';
+        const descInput = document.getElementById('complaintDesc');
+        if (descInput) {
+          descInput.placeholder = 'Please specify the meal (Breakfast/Lunch/Dinner), date, and your concern regarding taste, hygiene, or quantity...';
+          descInput.focus();
+        }
+      }, 150);
     }
 
     // Settings Profile Photo upload

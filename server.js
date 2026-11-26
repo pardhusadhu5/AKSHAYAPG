@@ -30,6 +30,7 @@ const reportRoutes = require('./routes/reportRoutes');
 const reminderRoutes = require('./routes/reminderRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const complaintRoutes = require('./routes/complaintRoutes');
+const foodRoutes = require('./routes/foodRoutes');
 
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
@@ -39,6 +40,7 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/reminders', reminderRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/complaints', complaintRoutes);
+app.use('/api/food', foodRoutes);
 
 // Catch-all 404 handler for API routes (Returns JSON, preventing HTML fallback errors!)
 app.use('/api', (req, res) => {
