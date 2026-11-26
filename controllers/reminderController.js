@@ -1,4 +1,5 @@
 const { getDb } = require('../config/db');
+const { createNotification } = require('../services/notificationService');
 
 // Send individual reminder
 async function sendIndividualReminder(req, res) {

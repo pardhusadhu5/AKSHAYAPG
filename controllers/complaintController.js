@@ -1,5 +1,6 @@
 const { getDb } = require('../config/db');
 const { syncReqFilesToCloudinary } = require('../services/uploadService');
+const { createNotification } = require('../services/notificationService');
 
 /**
  * Generate formatted complaint number: CMP-YYYY-XXXXX
@@ -114,15 +115,24 @@ async function submitComplaint(req, res) {
 
     const createdComplaint = newComplaintRows[0];
 
-    // 4. Create admin notification
-    await db.query(
-      `INSERT INTO notifications (type, message, createdAt) 
-       VALUES ($1, $2, CURRENT_TIMESTAMP)`,
-      [
-        'new_complaint',
-        `New complaint ${complaintNumber} raised by ${student.studentName} (${category}).`
-      ]
-    ).catch(() => {});
+    // 4. Create notifications for Admin and Student
+    await createNotification({
+      type: 'COMPLAINT',
+      category: 'COMPLAINT',
+      title: 'New Complaint Ticket Raised',
+      message: `New complaint ${complaintNumber} raised by ${student.studentName} (${category}).`,
+      metadata: { complaintId: createdComplaint.id, complaintNumber, category }
+    }).catch(() => {});
+
+    await createNotification({
+      studentId: student.id,
+      userId: student.userId || req.user.id,
+      type: 'COMPLAINT_UPDATE',
+      category: 'COMPLAINT',
+      title: `Complaint Ticket #${complaintNumber} Received`,
+      message: `Your complaint regarding ${category} has been logged and assigned to administration for review.`,
+      metadata: { complaintId: createdComplaint.id, complaintNumber, category }
+    }).catch(() => {});
 
     return res.status(201).json({
       success: true,
@@ -409,6 +419,23 @@ async function assignComplaint(req, res) {
         id
       ]
     );
+
+    // Dispatch in-app & email notification to student
+    createNotification({
+      studentId: current.studentid,
+      type: 'COMPLAINT_UPDATE',
+      category: 'COMPLAINT',
+      title: `Maintenance Ticket #${current.complaintnumber} Assigned`,
+      message: `Your complaint ticket #${current.complaintnumber} has been assigned to ${assignedTo.trim()}. Status: ${newStatus}.`,
+      sendEmail: true,
+      emailOptions: {
+        ticketNumber: current.complaintnumber,
+        category: current.category,
+        status: newStatus,
+        assignedTo: assignedTo.trim(),
+        adminRemarks: adminRemarks || current.adminremarks
+      }
+    }).catch(e => console.error('Notification error on assign complaint:', e.message));
 
     return res.status(200).json({
       success: true,

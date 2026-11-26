@@ -3,6 +3,7 @@ const Razorpay = require('razorpay');
 const { getDb } = require('../config/db');
 const { generateReceiptPDF } = require('../services/pdfService');
 const { sendPaymentReceiptEmail } = require('../services/emailService');
+const { createNotification } = require('../services/notificationService');
 
 // Initialize Razorpay SDK instance safely
 function getRazorpayInstance() {

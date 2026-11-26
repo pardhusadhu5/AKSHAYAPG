@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const path = require('path');
 const { addAdminClient, broadcastAdminEvent } = require('../services/realtimeService');
 const { sendWelcomeWhatsApp } = require('../services/whatsappService');
+const { createNotification } = require('../services/notificationService');
 
 async function getStats(req, res) {
   try {

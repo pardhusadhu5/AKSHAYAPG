@@ -435,11 +435,32 @@
         <p id="panelSubtitle">Manage your admissions details and current room assignment.</p>
       </div>
       
-      <div class="user-profile-badge">
-        <img src="" alt="avatar" class="upb-avatar-img" id="headerAvatar">
-        <div class="upb-info">
-          <h4 id="profileName">Loading...</h4>
-          <span id="profileRole">Student</span>
+      <div style="display:flex; align-items:center; gap:16px;">
+        <!-- Student In-App Notification Center -->
+        <div style="position:relative;">
+          <button id="studentNotiBtn" style="background:none; border:none; color:var(--dark-slate); cursor:pointer; position:relative; padding:8px; display:flex; align-items:center; justify-content:center; border-radius:8px; transition:all 0.2s;" aria-label="Notifications">
+            <i data-lucide="bell" style="width:22px; height:22px;"></i>
+            <span id="studentNotiBadge" style="position:absolute; top:-2px; right:-2px; background:#ef4444; color:white; font-size:0.65rem; font-weight:700; width:18px; height:18px; border-radius:50%; display:none; align-items:center; justify-content:center; border:2px solid white;">0</span>
+          </button>
+          
+          <!-- Student Notification Dropdown -->
+          <div id="studentNotiDropdown" style="position:absolute; right:0; top:44px; width:340px; max-width:90vw; background:white; border-radius:12px; box-shadow:0 10px 25px rgba(0,0,0,0.15); border:1px solid #e2e8f0; padding:16px; display:none; flex-direction:column; gap:10px; z-index:1000;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #f1f5f9; padding-bottom:8px;">
+              <h4 style="margin:0; font-weight:800; font-size:0.95rem; color:#0f172a;">Notifications</h4>
+              <button onclick="markAllStudentNotisRead()" style="background:none; border:none; color:#004D47; font-size:0.75rem; cursor:pointer; font-weight:700;">Mark all read</button>
+            </div>
+            <div id="studentNotiList" style="max-height:360px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
+              <div style="text-align:center; padding:16px; color:#64748B; font-size:0.85rem;">No new notifications</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="user-profile-badge">
+          <img src="" alt="avatar" class="upb-avatar-img" id="headerAvatar">
+          <div class="upb-info">
+            <h4 id="profileName">Loading...</h4>
+            <span id="profileRole">Student</span>
+          </div>
         </div>
       </div>
     </header>
@@ -710,33 +731,22 @@
     <!-- 3. ANNOUNCEMENTS PANEL -->
     <div class="panel-view" id="announcementsPanel">
       <div class="card-container">
-        <h3>Hostel Board Announcements</h3>
-        
-        <div class="activity-list" style="margin-top:20px;">
-          <div class="activity-item">
-            <div class="act-dot maintenance" style="background:#ef4444;"></div>
-            <div class="act-info">
-              <p>🍳 Sunday Special Biryani Timing Updated</p>
-              <span style="display:block; margin: 4px 0; font-size:0.85rem; color:var(--dark-slate-light);">Sunday Chicken Biryani lunch will be served from 12:30 PM to 2:30 PM. Please arrive on time in the dining block.</span>
-              <span style="font-size:0.75rem; color:var(--text-muted);">Posted: 2 days ago</span>
-            </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+          <div>
+            <h3 style="margin:0;">Hostel Board Announcements</h3>
+            <p style="margin:4px 0 0 0; font-size:0.85rem; color:var(--text-muted);">Stay updated with meal alerts, notices, and utilities maintenance.</p>
           </div>
-          <div class="activity-item">
-            <div class="act-dot payment" style="background:#3b82f6;"></div>
-            <div class="act-info">
-              <p>💧 Water Supply Pipeline Repair</p>
-              <span style="display:block; margin: 4px 0; font-size:0.85rem; color:var(--dark-slate-light);">Maintenance checks for Block B water storage are scheduled tomorrow from 10:00 AM to 11:30 AM. Kindly plan water usage accordingly.</span>
-              <span style="font-size:0.75rem; color:var(--text-muted);">Posted: 5 days ago</span>
-            </div>
+          <!-- Filter tags -->
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            <button class="ann-filter-btn" onclick="filterAnnouncements('ALL', this)" style="padding:4px 12px; font-size:0.8rem; border-radius:20px; border:1px solid #004D47; background:#004D47; color:white; cursor:pointer; font-weight:600;">All</button>
+            <button class="ann-filter-btn" onclick="filterAnnouncements('DINING', this)" style="padding:4px 12px; font-size:0.8rem; border-radius:20px; border:1px solid #cbd5e1; background:white; color:#475569; cursor:pointer; font-weight:600;">🍳 Dining</button>
+            <button class="ann-filter-btn" onclick="filterAnnouncements('MAINTENANCE', this)" style="padding:4px 12px; font-size:0.8rem; border-radius:20px; border:1px solid #cbd5e1; background:white; color:#475569; cursor:pointer; font-weight:600;">💧 Maintenance</button>
+            <button class="ann-filter-btn" onclick="filterAnnouncements('HOSTEL', this)" style="padding:4px 12px; font-size:0.8rem; border-radius:20px; border:1px solid #cbd5e1; background:white; color:#475569; cursor:pointer; font-weight:600;">🏨 Hostel</button>
           </div>
-          <div class="activity-item">
-            <div class="act-dot admission" style="background:#10b981;"></div>
-            <div class="act-info">
-              <p>📶 High-speed WiFi Upgraded</p>
-              <span style="display:block; margin: 4px 0; font-size:0.85rem; color:var(--dark-slate-light);">The local hostel broadband connection has been upgraded to a 200Mbps fiber line. Connect using the credentials printed near Block C lobbies.</span>
-              <span style="font-size:0.75rem; color:var(--text-muted);">Posted: 1 week ago</span>
-            </div>
-          </div>
+        </div>
+
+        <div id="announcementsContainer" class="activity-list" style="margin-top:20px;">
+          <div style="text-align:center; padding:24px; color:#64748B;">Loading announcements...</div>
         </div>
       </div>
     </div>

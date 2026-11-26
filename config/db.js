@@ -413,6 +413,24 @@ async function initializeDatabase(db) {
 
   await db.query(`ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check`).catch(() => {});
 
+  // Phase 10: Notifications table upgrade
+  await db.query(`
+    ALTER TABLE notifications
+      ADD COLUMN IF NOT EXISTS userId INTEGER REFERENCES users(id) ON DELETE CASCADE,
+      ADD COLUMN IF NOT EXISTS studentId INTEGER REFERENCES students(id) ON DELETE CASCADE,
+      ADD COLUMN IF NOT EXISTS title VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS category VARCHAR(100) DEFAULT 'GENERAL',
+      ADD COLUMN IF NOT EXISTS channel VARCHAR(50) DEFAULT 'IN_APP',
+      ADD COLUMN IF NOT EXISTS metadata JSONB,
+      ADD COLUMN IF NOT EXISTS readAt TIMESTAMP;
+
+    CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(userId);
+    CREATE INDEX IF NOT EXISTS idx_notifications_student ON notifications(studentId);
+    CREATE INDEX IF NOT EXISTS idx_notifications_category ON notifications(category);
+    CREATE INDEX IF NOT EXISTS idx_notifications_isread ON notifications(isRead);
+    CREATE INDEX IF NOT EXISTS idx_notifications_created ON notifications(createdAt DESC);
+  `).catch((err) => { console.error('Notifications migration notice:', err.message); });
+
   // 10. Hostel Settings Table
   await db.query(`
     CREATE TABLE IF NOT EXISTS hostelSettings (
@@ -726,6 +744,68 @@ async function initializeDatabase(db) {
       VALUES ($1, $2)
       ON CONFLICT (key) DO NOTHING
     `, [ms.key, ms.value]).catch(() => {});
+  }
+
+  // 18. Announcements Table (Phase 10)
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS announcements (
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(255) NOT NULL,
+      content TEXT NOT NULL,
+      category VARCHAR(100) NOT NULL DEFAULT 'HOSTEL',
+      priority VARCHAR(50) NOT NULL DEFAULT 'Normal',
+      targetAudience VARCHAR(50) NOT NULL DEFAULT 'ALL',
+      isActive BOOLEAN NOT NULL DEFAULT TRUE,
+      postedBy VARCHAR(255) DEFAULT 'Hostel Administration',
+      startsAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      expiresAt TIMESTAMP,
+      createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_announcements_active ON announcements(isActive);
+    CREATE INDEX IF NOT EXISTS idx_announcements_category ON announcements(category);
+    CREATE INDEX IF NOT EXISTS idx_announcements_priority ON announcements(priority);
+    CREATE INDEX IF NOT EXISTS idx_announcements_created ON announcements(createdAt DESC);
+  `).catch((err) => { console.error('Announcements migration notice:', err.message); });
+
+  // Seed default announcements if empty
+  const { rows: annCountRows } = await db.query('SELECT COUNT(*) as count FROM announcements');
+  if (parseInt(annCountRows[0].count) === 0) {
+    const defaultAnnouncements = [
+      {
+        title: '🍳 Sunday Special Biryani Timing Updated',
+        content: 'Sunday Chicken Dum Biryani & Paneer Biryani lunch will be served from 12:30 PM to 2:30 PM. Please arrive on time in the dining block.',
+        category: 'DINING',
+        priority: 'Normal',
+        targetAudience: 'ALL',
+        postedBy: 'Mess Committee'
+      },
+      {
+        title: '💧 Water Supply & Overhead Pipeline Maintenance',
+        content: 'Scheduled overhead tank cleaning and pipeline maintenance this Saturday from 10:00 AM to 1:00 PM. Kindly plan your water usage accordingly.',
+        category: 'MAINTENANCE',
+        priority: 'Important',
+        targetAudience: 'ALL',
+        postedBy: 'Hostel Maintenance'
+      },
+      {
+        title: '📶 High-Speed 300 Mbps Wi-Fi Upgraded',
+        content: 'Local hostel optical fiber broadband has been upgraded to 300 Mbps across Floor 1, Floor 2, and Penthouse. Connect with the credentials posted in the block corridors.',
+        category: 'HOSTEL',
+        priority: 'Normal',
+        targetAudience: 'ALL',
+        postedBy: 'Hostel Administration'
+      }
+    ];
+
+    for (const ann of defaultAnnouncements) {
+      await db.query(`
+        INSERT INTO announcements (title, content, category, priority, targetAudience, postedBy, isActive)
+        VALUES ($1, $2, $3, $4, $5, $6, TRUE)
+      `, [ann.title, ann.content, ann.category, ann.priority, ann.targetAudience, ann.postedBy]);
+    }
+    console.log('Seeded default hostel announcements.');
   }
 
   // 17. Create Performance Indexes
