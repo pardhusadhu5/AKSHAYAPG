@@ -287,7 +287,8 @@ async function initializeDatabase(db) {
       ADD COLUMN IF NOT EXISTS fromRoomId INTEGER REFERENCES rooms(id) ON DELETE SET NULL,
       ADD COLUMN IF NOT EXISTS fromBedId INTEGER REFERENCES beds(id) ON DELETE SET NULL,
       ADD COLUMN IF NOT EXISTS reason TEXT,
-      ADD COLUMN IF NOT EXISTS notes TEXT;
+      ADD COLUMN IF NOT EXISTS notes TEXT,
+      ADD COLUMN IF NOT EXISTS paymentMode VARCHAR(50) DEFAULT 'Cash';
     CREATE INDEX IF NOT EXISTS idx_allocations_student ON allocations(studentId);
     CREATE INDEX IF NOT EXISTS idx_allocations_room ON allocations(roomId);
     CREATE INDEX IF NOT EXISTS idx_allocations_bed ON allocations(bedId);
@@ -806,6 +807,203 @@ async function initializeDatabase(db) {
       `, [ann.title, ann.content, ann.category, ann.priority, ann.targetAudience, ann.postedBy]);
     }
     console.log('Seeded default hostel announcements.');
+  }
+
+  // 19. Expenses Table (Phase 11: Reports & Analytics)
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS expenses (
+      id SERIAL PRIMARY KEY,
+      expenseNumber VARCHAR(100),
+      category VARCHAR(100) NOT NULL,
+      title VARCHAR(255) NOT NULL,
+      amount NUMERIC NOT NULL,
+      expenseDate DATE NOT NULL DEFAULT CURRENT_DATE,
+      billingMonth VARCHAR(50),
+      paymentMode VARCHAR(50) DEFAULT 'Online / Bank',
+      paidTo VARCHAR(255),
+      invoiceRef VARCHAR(255),
+      notes TEXT,
+      recordedBy VARCHAR(255) DEFAULT 'Hostel Administration',
+      createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(expenseDate DESC);
+    CREATE INDEX IF NOT EXISTS idx_expenses_month ON expenses(billingMonth);
+    CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category);
+    ALTER TABLE expenses ADD COLUMN IF NOT EXISTS expenseNumber VARCHAR(100), ADD COLUMN IF NOT EXISTS billingMonth VARCHAR(50), ADD COLUMN IF NOT EXISTS paidTo VARCHAR(255), ADD COLUMN IF NOT EXISTS invoiceRef VARCHAR(255), ADD COLUMN IF NOT EXISTS recordedBy VARCHAR(255) DEFAULT 'Hostel Administration';
+  `).catch((err) => { console.error('Expenses table migration notice:', err.message); });
+
+  // Seed default operating expenses if empty
+  const { rows: expCountRows } = await db.query('SELECT COUNT(*) as count FROM expenses');
+  if (parseInt(expCountRows[0].count) === 0) {
+    const defaultExpenses = [
+      {
+        expenseNumber: 'EXP-2026-001',
+        category: 'Electricity & Utilities',
+        title: 'TSSPDCL Commercial Electricity Bill - Oct 2026',
+        amount: 14850,
+        expenseDate: '2026-10-10',
+        billingMonth: '2026-10',
+        paymentMode: 'NetBanking / UPI',
+        paidTo: 'Telangana Southern Power Distribution Co Ltd',
+        invoiceRef: 'TSSPDCL-OCT-8842',
+        notes: 'Monthly power consumption for Block A, B and Penthouse.'
+      },
+      {
+        expenseNumber: 'EXP-2026-002',
+        category: 'Water Supply & Tankers',
+        title: 'HMWSSB Water Tankers Refill (3 Loads)',
+        amount: 3600,
+        expenseDate: '2026-10-15',
+        billingMonth: '2026-10',
+        paymentMode: 'Cash / UPI',
+        paidTo: 'Sri Laxmi Water Tanker Services',
+        invoiceRef: 'SLW-412',
+        notes: 'Overhead tank refilling during pipeline maintenance.'
+      },
+      {
+        expenseNumber: 'EXP-2026-003',
+        category: 'Food & Provisions',
+        title: 'Wholesale Grocery & Rice Bags Supply',
+        amount: 32400,
+        expenseDate: '2026-10-02',
+        billingMonth: '2026-10',
+        paymentMode: 'Bank Transfer',
+        paidTo: 'Balaji Wholesale Kirana & General Stores',
+        invoiceRef: 'BWK-9921',
+        notes: 'Sonamasuri raw rice 5 bags, dal, edible oil tins & spices for mess.'
+      },
+      {
+        expenseNumber: 'EXP-2026-004',
+        category: 'Internet & Wi-Fi',
+        title: 'ACT Fibernet Commercial High-Speed 300 Mbps',
+        amount: 2850,
+        expenseDate: '2026-10-05',
+        billingMonth: '2026-10',
+        paymentMode: 'Auto-Debit',
+        paidTo: 'Atria Convergence Technologies Ltd',
+        invoiceRef: 'ACT-OCT-5510',
+        notes: 'Dedicated 300Mbps fiber internet connection for all resident floors.'
+      },
+      {
+        expenseNumber: 'EXP-2026-005',
+        category: 'Repairs & Maintenance',
+        title: 'Plumbing & Bathroom Fittings Repair',
+        amount: 2400,
+        expenseDate: '2026-10-18',
+        billingMonth: '2026-10',
+        paymentMode: 'UPI',
+        paidTo: 'Srinivas Sanitary Works',
+        invoiceRef: 'SAN-104',
+        notes: 'Replaced floor 2 flush valves and tap washers.'
+      },
+      {
+        expenseNumber: 'EXP-2026-006',
+        category: 'Staff Salaries & Wages',
+        title: 'Housekeeping Staff Monthly Wages',
+        amount: 18000,
+        expenseDate: '2026-10-05',
+        billingMonth: '2026-10',
+        paymentMode: 'Bank Transfer',
+        paidTo: 'Hostel Maintenance Staff',
+        invoiceRef: 'WAGE-OCT-26',
+        notes: 'Monthly cleaning, cooking assistance and floor maintenance.'
+      }
+    ];
+
+    for (const exp of defaultExpenses) {
+      await db.query(`
+        INSERT INTO expenses (expenseNumber, category, title, amount, expenseDate, billingMonth, paymentMode, paidTo, invoiceRef, notes)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      `, [exp.expenseNumber, exp.category, exp.title, exp.amount, exp.expenseDate, exp.billingMonth, exp.paymentMode, exp.paidTo, exp.invoiceRef, exp.notes]);
+    }
+    console.log('Seeded default hostel operating expenses.');
+  }
+
+  // 20. Visitors Table (Phase 11: Reports & Analytics)
+  await db.query(`
+    CREATE TABLE IF NOT EXISTS visitors (
+      id SERIAL PRIMARY KEY,
+      studentId INTEGER REFERENCES students(id) ON DELETE SET NULL,
+      visitorName VARCHAR(255) NOT NULL,
+      phone VARCHAR(50) NOT NULL,
+      relation VARCHAR(100) NOT NULL DEFAULT 'Parent',
+      purpose VARCHAR(255) NOT NULL,
+      entryTime TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      exitTime TIMESTAMP,
+      idProofType VARCHAR(100) DEFAULT 'Aadhaar',
+      idProofNumber VARCHAR(100),
+      roomNumber VARCHAR(50),
+      gatePassNumber VARCHAR(100),
+      remarks TEXT,
+      recordedBy VARCHAR(255) DEFAULT 'Main Gate Security',
+      createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_visitors_entry ON visitors(entryTime DESC);
+    CREATE INDEX IF NOT EXISTS idx_visitors_student ON visitors(studentId);
+  `).catch((err) => { console.error('Visitors table migration notice:', err.message); });
+
+  // Seed default visitor logs if empty
+  const { rows: visCountRows } = await db.query('SELECT COUNT(*) as count FROM visitors');
+  if (parseInt(visCountRows[0].count) === 0) {
+    const { rows: firstStudent } = await db.query('SELECT s.id, r.roomNumber FROM students s LEFT JOIN rooms r ON s.roomId = r.id LIMIT 1');
+    const sId = firstStudent[0]?.id || null;
+    const rNo = firstStudent[0]?.roomnumber || '101';
+
+    const defaultVisitors = [
+      {
+        studentId: sId,
+        visitorName: 'M. Venkat Reddy',
+        phone: '9848012345',
+        relation: 'Father',
+        purpose: 'Semester college fee payment & meeting ward',
+        entryTime: '2026-10-18 10:15:00',
+        exitTime: '2026-10-18 12:45:00',
+        idProofType: 'Aadhaar Card',
+        idProofNumber: 'XXXX-XXXX-4589',
+        roomNumber: rNo,
+        gatePassNumber: 'GP-2026-001',
+        remarks: 'Allowed up to visitor lounge on Ground Floor.'
+      },
+      {
+        studentId: sId,
+        visitorName: 'R. Keshava Rao',
+        phone: '9701234567',
+        relation: 'Local Guardian',
+        purpose: 'Handover medicine and winter clothing',
+        entryTime: '2026-10-22 17:30:00',
+        exitTime: '2026-10-22 18:20:00',
+        idProofType: 'Driving License',
+        idProofNumber: 'TS-08-DL-9821',
+        roomNumber: rNo,
+        gatePassNumber: 'GP-2026-002',
+        remarks: 'Items verified at security desk.'
+      },
+      {
+        studentId: sId,
+        visitorName: 'S. Tarun Kumar',
+        phone: '9123456780',
+        relation: 'Friend / Classmate',
+        purpose: 'Engineering Group Study & Project work',
+        entryTime: '2026-10-25 14:00:00',
+        exitTime: '2026-10-25 17:00:00',
+        idProofType: 'College ID Card',
+        idProofNumber: 'AURORA-24-CS-042',
+        roomNumber: rNo,
+        gatePassNumber: 'GP-2026-003',
+        remarks: 'Study allowed in Library / Visitor Zone.'
+      }
+    ];
+
+    for (const vis of defaultVisitors) {
+      await db.query(`
+        INSERT INTO visitors (studentId, visitorName, phone, relation, purpose, entryTime, exitTime, idProofType, idProofNumber, roomNumber, gatePassNumber, remarks)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      `, [vis.studentId, vis.visitorName, vis.phone, vis.relation, vis.purpose, vis.entryTime, vis.exitTime, vis.idProofType, vis.idProofNumber, vis.roomNumber, vis.gatePassNumber, vis.remarks]);
+    }
+    console.log('Seeded default visitor logs.');
   }
 
   // 17. Create Performance Indexes

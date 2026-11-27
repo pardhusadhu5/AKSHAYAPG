@@ -1328,52 +1328,148 @@
     </div>
 
     <!-- 5. REPORTS PANEL -->
+    <!-- 5. REPORTS PANEL -->
     <div class="panel-view" id="reportsPanel">
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:20px; margin-bottom:24px;">
-        <div style="background:white; padding:20px; border-radius:var(--radius-md); border:1px solid #E5E7EB; display:flex; flex-direction:column; justify-content:space-between;">
+      <style>
+        .report-tab-btn {
+          background: #f1f5f9;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 8px 14px;
+          font-size: 0.8rem;
+          font-weight: 700;
+          color: #475569;
+          cursor: pointer;
+          white-space: nowrap;
+          transition: all 0.2s ease;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+        }
+        .report-tab-btn:hover {
+          background: #e2e8f0;
+          color: #1e293b;
+        }
+        .report-tab-btn.active {
+          background: #2563EB !important;
+          color: white !important;
+          border-color: #2563EB !important;
+          box-shadow: 0 2px 4px rgba(37, 99, 235, 0.25);
+        }
+      </style>
+
+      <!-- Header & Quick Actions -->
+      <div style="background:white; border-radius:12px; border:1px solid #E5E7EB; padding:18px 22px; margin-bottom:20px; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom:16px;">
           <div>
-            <h4 style="margin-top:0; margin-bottom:8px; font-weight:800; color:var(--dark-slate);">Student Registry</h4>
-            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:16px;">Export active student accounts, parental contact info, join dates, and details to Google Sheets.</p>
+            <h3 style="margin:0; font-size:1.3rem; font-weight:800; color:var(--primary-deep);">Hostel Reports & Analytics Hub</h3>
+            <p style="margin:3px 0 0 0; font-size:0.83rem; color:var(--text-muted);">Real-time financial, occupancy, bed availability, maintenance, and security intelligence for Akshaya Deluxe PG.</p>
           </div>
-          <button class="btn btn-primary" onclick="triggerReportDownload('student')" style="width:100%; font-size:0.8rem; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
-            <i data-lucide="file-spreadsheet" style="width:15px; height:15px;"></i> Export to Google Sheets
+          <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <button class="btn btn-outline" onclick="exportReportFile('csv')" style="font-size:0.8rem; display:inline-flex; align-items:center; gap:6px;">
+              <i data-lucide="file-spreadsheet" style="width:14px; height:14px;"></i> Export Excel (CSV)
+            </button>
+            <button class="btn btn-outline" onclick="exportReportFile('pdf')" style="font-size:0.8rem; display:inline-flex; align-items:center; gap:6px; color:#DC2626; border-color:#FCA5A5;">
+              <i data-lucide="file-text" style="width:14px; height:14px;"></i> Export PDF
+            </button>
+            <button class="btn btn-outline" onclick="triggerReportDownload(currentReportType)" style="font-size:0.8rem; display:inline-flex; align-items:center; gap:6px; color:#16A34A; border-color:#86EFAC;">
+              <i data-lucide="sheet" style="width:14px; height:14px;"></i> Google Sheets
+            </button>
+            <button id="btnQuickRecordExpense" class="btn btn-primary" onclick="openRecordExpenseModal()" style="font-size:0.8rem; display:none; align-items:center; gap:6px;">
+              <i data-lucide="plus-circle" style="width:14px; height:14px;"></i> + Record Expense
+            </button>
+            <button id="btnQuickRecordVisitor" class="btn btn-primary" onclick="openRecordVisitorModal()" style="font-size:0.8rem; display:none; align-items:center; gap:6px;">
+              <i data-lucide="user-plus" style="width:14px; height:14px;"></i> + Log Visitor Entry
+            </button>
+          </div>
+        </div>
+
+        <!-- 9 Report Navigation Pills -->
+        <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; scrollbar-width:thin;" id="reportTypeTabs">
+          <button class="report-tab-btn active" data-type="students_admissions" onclick="switchReportType('students_admissions')">🎓 Students & Admissions</button>
+          <button class="report-tab-btn" data-type="room_occupancy" onclick="switchReportType('room_occupancy')">🛏️ Room Occupancy</button>
+          <button class="report-tab-btn" data-type="rent_collection" onclick="switchReportType('rent_collection')">💰 Monthly Rent Collection</button>
+          <button class="report-tab-btn" data-type="pending_dues" onclick="switchReportType('pending_dues')">⚠️ Pending & Overdue</button>
+          <button class="report-tab-btn" data-type="security_deposits" onclick="switchReportType('security_deposits')">🛡️ Security Deposits</button>
+          <button class="report-tab-btn" data-type="income_expenses" onclick="switchReportType('income_expenses')">📊 Income & Expenses</button>
+          <button class="report-tab-btn" data-type="checkin_checkout" onclick="switchReportType('checkin_checkout')">🚪 Check-in & Check-out</button>
+          <button class="report-tab-btn" data-type="complaints_maintenance" onclick="switchReportType('complaints_maintenance')">🛠️ Complaints & Maintenance</button>
+          <button class="report-tab-btn" data-type="visitors" onclick="switchReportType('visitors')">🛂 Visitor Reports</button>
+        </div>
+      </div>
+
+      <!-- Filter Controls Bar -->
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:14px 18px; margin-bottom:20px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px;">
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <label style="font-size:0.8rem; font-weight:700; color:var(--dark-slate);">Month Filter:</label>
+            <input type="month" id="reportFilterMonth" class="form-input" style="padding:6px 10px; font-size:0.82rem; width:150px;" onchange="handleReportMonthChange()">
+          </div>
+          <span style="color:#94a3b8; font-size:0.85rem;">or</span>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <label style="font-size:0.8rem; font-weight:700; color:var(--dark-slate);">Date Range:</label>
+            <input type="date" id="reportFilterStart" class="form-input" style="padding:6px 10px; font-size:0.82rem; width:140px;" onchange="handleReportDateChange()">
+            <span style="font-size:0.8rem; color:var(--text-muted);">to</span>
+            <input type="date" id="reportFilterEnd" class="form-input" style="padding:6px 10px; font-size:0.82rem; width:140px;" onchange="handleReportDateChange()">
+          </div>
+          <button class="btn btn-primary" onclick="applyReportFilter()" style="padding:6px 14px; font-size:0.82rem; font-weight:700;">
+            Apply Filter
+          </button>
+          <button class="btn btn-outline" onclick="resetReportFilter()" style="padding:6px 12px; font-size:0.82rem;">
+            Reset
           </button>
         </div>
-        <div style="background:white; padding:20px; border-radius:var(--radius-md); border:1px solid #E5E7EB; display:flex; flex-direction:column; justify-content:space-between;">
-          <div>
-            <h4 style="margin-top:0; margin-bottom:8px; font-weight:800; color:var(--dark-slate);">Rooms Setup</h4>
-            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:16px;">Export rooms directory list including capacity, pricing details, and floor mapping to Google Sheets.</p>
-          </div>
-          <button class="btn btn-primary" onclick="triggerReportDownload('room')" style="width:100%; font-size:0.8rem; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
-            <i data-lucide="file-spreadsheet" style="width:15px; height:15px;"></i> Export to Google Sheets
-          </button>
+        <div style="font-size:0.8rem; color:var(--text-muted);" id="reportFilterStatusNote">
+          Showing: All time data
         </div>
-        <div style="background:white; padding:20px; border-radius:var(--radius-md); border:1px solid #E5E7EB; display:flex; flex-direction:column; justify-content:space-between;">
-          <div>
-            <h4 style="margin-top:0; margin-bottom:8px; font-weight:800; color:var(--dark-slate);">Beds Occupancy</h4>
-            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:16px;">Export live bed occupancy status board showing occupant details and vacant slots to Google Sheets.</p>
+      </div>
+
+      <!-- Dynamic Executive KPI Metric Cards -->
+      <div id="reportKpiGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:16px; margin-bottom:24px;">
+        <!-- Injected via JavaScript -->
+      </div>
+
+      <!-- Visual Analytics & Category Breakdown -->
+      <div style="display:grid; grid-template-columns:1.8fr 1.2fr; gap:20px; margin-bottom:24px;" id="reportChartRow">
+        <div style="background:white; border-radius:12px; border:1px solid #E5E7EB; padding:20px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+            <h4 style="margin:0; font-size:0.95rem; font-weight:800; color:var(--primary-deep);" id="reportChartTitle">Visual Analytics & Distribution</h4>
+            <span style="font-size:0.75rem; color:var(--text-muted);" id="reportChartSubtitle">Dynamic Breakdown</span>
           </div>
-          <button class="btn btn-primary" onclick="triggerReportDownload('occupancy')" style="width:100%; font-size:0.8rem; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
-            <i data-lucide="file-spreadsheet" style="width:15px; height:15px;"></i> Export to Google Sheets
-          </button>
+          <div style="position:relative; height:260px; width:100%;">
+            <canvas id="reportMainChart"></canvas>
+          </div>
         </div>
-        <div style="background:white; padding:20px; border-radius:var(--radius-md); border:1px solid #E5E7EB; display:flex; flex-direction:column; justify-content:space-between;">
-          <div>
-            <h4 style="margin-top:0; margin-bottom:8px; font-weight:800; color:var(--dark-slate);">Income & Payments</h4>
-            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:16px;">Export complete financial payment collection audit history to Google Sheets.</p>
+
+        <div style="background:white; border-radius:12px; border:1px solid #E5E7EB; padding:20px; display:flex; flex-direction:column;">
+          <h4 style="margin-top:0; margin-bottom:12px; font-size:0.95rem; font-weight:800; color:var(--primary-deep);" id="reportBreakdownTitle">Summary Distribution</h4>
+          <div id="reportBreakdownList" style="flex:1; overflow-y:auto; max-height:240px; padding-right:4px;">
+            <!-- Injected via JavaScript -->
           </div>
-          <button class="btn btn-primary" onclick="triggerReportDownload('income')" style="width:100%; font-size:0.8rem; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
-            <i data-lucide="file-spreadsheet" style="width:15px; height:15px;"></i> Export to Google Sheets
-          </button>
         </div>
-        <div style="background:white; padding:20px; border-radius:var(--radius-md); border:1px solid #E5E7EB; display:flex; flex-direction:column; justify-content:space-between;">
-          <div>
-            <h4 style="margin-top:0; margin-bottom:8px; font-weight:800; color:var(--dark-slate);">Pending Fee Dues</h4>
-            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:16px;">Export list of unpaid student dues and outstanding balances to Google Sheets.</p>
+      </div>
+
+      <!-- Itemized Detailed Data Records Table -->
+      <div class="card glass-card" style="padding:20px; border-radius:12px; border:1px solid #E5E7EB; background:white;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:16px;">
+          <div style="display:flex; align-items:center; gap:10px;">
+            <h4 style="margin:0; font-size:1.05rem; font-weight:800; color:var(--primary-deep);" id="reportTableTitle">Itemized Detailed Records</h4>
+            <span id="reportRecordCountBadge" style="background:#e0e7ff; color:#3730a3; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">0 records</span>
           </div>
-          <button class="btn btn-primary" onclick="triggerReportDownload('pending')" style="width:100%; font-size:0.8rem; display:inline-flex; align-items:center; justify-content:center; gap:6px;">
-            <i data-lucide="file-spreadsheet" style="width:15px; height:15px;"></i> Export to Google Sheets
-          </button>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <input type="text" id="reportTableSearchInput" class="form-input" placeholder="Search in records..." style="padding:6px 12px; font-size:0.82rem; width:220px;" oninput="filterReportTableRecords()">
+          </div>
+        </div>
+
+        <div class="table-responsive" style="overflow-x:auto;">
+          <table class="table" id="reportDataTable" style="width:100%; border-collapse:collapse; font-size:0.84rem;">
+            <thead id="reportTableHead" style="background:#f8fafc; border-bottom:2px solid #e2e8f0;">
+              <!-- Injected via JavaScript -->
+            </thead>
+            <tbody id="reportTableBody">
+              <tr><td colspan="8" style="text-align:center; padding:30px; color:var(--text-muted);">Loading report data...</td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -8164,6 +8260,871 @@
         container.innerHTML = '<div style="color:#ef4444; padding:20px; text-align:center;">Failed to load student deposit history.</div>';
       }
     }
+
+
+    // ==========================================
+    // PHASE 11: COMPLETE HOSTEL REPORTS & ANALYTICS
+    // ==========================================
+    let currentReportType = 'students_admissions';
+    let currentReportRecords = [];
+    let reportChartInstance = null;
+    let reportFilterState = {
+      month: '',
+      startDate: '',
+      endDate: ''
+    };
+
+    function initReportsPanel() {
+      // Default dates
+      const today = new Date();
+      const curYear = today.getFullYear();
+      const curMonth = String(today.getMonth() + 1).padStart(2, '0');
+      document.getElementById('reportFilterMonth').value = `${curYear}-${curMonth}`;
+      reportFilterState.month = `${curYear}-${curMonth}`;
+
+      switchReportType(currentReportType);
+    }
+
+    function switchReportType(type) {
+      currentReportType = type;
+
+      // Update active tab button
+      document.querySelectorAll('#reportTypeTabs .report-tab-btn').forEach(btn => {
+        if (btn.getAttribute('data-type') === type) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+
+      // Show/hide contextual quick action buttons
+      const btnExp = document.getElementById('btnQuickRecordExpense');
+      const btnVis = document.getElementById('btnQuickRecordVisitor');
+      if (btnExp) btnExp.style.display = (type === 'income_expenses') ? 'inline-flex' : 'none';
+      if (btnVis) btnVis.style.display = (type === 'visitors') ? 'inline-flex' : 'none';
+
+      fetchReportAnalytics();
+    }
+
+    function handleReportMonthChange() {
+      const val = document.getElementById('reportFilterMonth').value;
+      if (val) {
+        document.getElementById('reportFilterStart').value = '';
+        document.getElementById('reportFilterEnd').value = '';
+        reportFilterState.month = val;
+        reportFilterState.startDate = '';
+        reportFilterState.endDate = '';
+      }
+    }
+
+    function handleReportDateChange() {
+      const s = document.getElementById('reportFilterStart').value;
+      const e = document.getElementById('reportFilterEnd').value;
+      if (s || e) {
+        document.getElementById('reportFilterMonth').value = '';
+        reportFilterState.month = '';
+        reportFilterState.startDate = s;
+        reportFilterState.endDate = e;
+      }
+    }
+
+    function applyReportFilter() {
+      handleReportMonthChange();
+      handleReportDateChange();
+      fetchReportAnalytics();
+    }
+
+    function resetReportFilter() {
+      document.getElementById('reportFilterMonth').value = '';
+      document.getElementById('reportFilterStart').value = '';
+      document.getElementById('reportFilterEnd').value = '';
+      reportFilterState.month = '';
+      reportFilterState.startDate = '';
+      reportFilterState.endDate = '';
+      fetchReportAnalytics();
+    }
+
+    async function fetchReportAnalytics() {
+      const token = localStorage.getItem('token');
+      const noteEl = document.getElementById('reportFilterStatusNote');
+
+      let queryParams = `type=${currentReportType}`;
+      if (reportFilterState.month) {
+        queryParams += `&month=${encodeURIComponent(reportFilterState.month)}`;
+        if (noteEl) noteEl.innerText = `Showing: Month ${reportFilterState.month}`;
+      } else if (reportFilterState.startDate || reportFilterState.endDate) {
+        if (reportFilterState.startDate) queryParams += `&startDate=${encodeURIComponent(reportFilterState.startDate)}`;
+        if (reportFilterState.endDate) queryParams += `&endDate=${encodeURIComponent(reportFilterState.endDate)}`;
+        if (noteEl) noteEl.innerText = `Showing: ${reportFilterState.startDate || 'Start'} to ${reportFilterState.endDate || 'Now'}`;
+      } else {
+        if (noteEl) noteEl.innerText = 'Showing: All time data';
+      }
+
+      const tableBody = document.getElementById('reportTableBody');
+      if (tableBody) {
+        tableBody.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:30px; color:var(--text-muted);"><i data-lucide="loader-2" class="spin"></i> Loading report analytics...</td></tr>';
+        if (window.lucide) lucide.createIcons();
+      }
+
+      try {
+        const res = await fetch(`/api/reports/analytics?${queryParams}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          currentReportRecords = data.records || [];
+          renderReportKpis(data.kpis, currentReportType);
+          renderReportChart(data.breakdown, currentReportType);
+          renderReportTable(currentReportRecords, currentReportType);
+        } else {
+          showToast(data.message || 'Failed to fetch report analytics.', 'error');
+        }
+      } catch (err) {
+        console.error('fetchReportAnalytics Error:', err);
+        showToast('Error loading report analytics: ' + err.message, 'error');
+      }
+    }
+
+    function renderReportKpis(kpis, reportType) {
+      const container = document.getElementById('reportKpiGrid');
+      if (!container || !kpis) return;
+
+      let cardsHtml = '';
+      const makeCard = (title, val, sub, icon, color) => `
+        <div style="background:white; border-radius:10px; border:1px solid #E5E7EB; padding:16px; border-left:4px solid ${color};">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <span style="font-size:0.75rem; font-weight:700; color:var(--text-muted); text-transform:uppercase;">${title}</span>
+            <i data-lucide="${icon}" style="width:16px; height:16px; color:${color};"></i>
+          </div>
+          <div style="font-size:1.4rem; font-weight:800; color:var(--dark-slate); margin-bottom:2px;">${val}</div>
+          <div style="font-size:0.75rem; color:var(--text-muted);">${sub}</div>
+        </div>
+      `;
+
+      if (reportType === 'students_admissions') {
+        cardsHtml += makeCard('Total Students', kpis.totalStudents || 0, 'Registered profiles', 'users', '#2563EB');
+        cardsHtml += makeCard('Active Residents', kpis.activeStudents || 0, 'Currently staying', 'user-check', '#16A34A');
+        cardsHtml += makeCard('Rent Potential', '₹' + (kpis.monthlyRentPotential || 0).toLocaleString('en-IN'), 'Active monthly rent', 'banknote', '#0891B2');
+        cardsHtml += makeCard('Pending Applications', kpis.pendingAdmissions || 0, 'Under review', 'clock', '#EAB308');
+        cardsHtml += makeCard('Vacated', kpis.vacatedStudents || 0, 'Alumni residents', 'log-out', '#64748B');
+
+      } else if (reportType === 'room_occupancy') {
+        cardsHtml += makeCard('Total Rooms', kpis.totalRooms || 0, 'Configured rooms', 'layout-grid', '#2563EB');
+        cardsHtml += makeCard('Total Bed Capacity', kpis.totalCapacity || 0, 'Total bed slots', 'bed', '#4F46E5');
+        cardsHtml += makeCard('Occupied Beds', kpis.occupiedBeds || 0, 'Currently allocated', 'user-check', '#16A34A');
+        cardsHtml += makeCard('Vacant Beds', kpis.vacantBeds || 0, 'Available for booking', 'check-circle-2', '#059669');
+        cardsHtml += makeCard('Occupancy Rate', kpis.occupancyRate || '0%', 'Overall utilization', 'percent', '#D97706');
+
+      } else if (reportType === 'rent_collection') {
+        cardsHtml += makeCard('Total Billed', '₹' + (kpis.totalBilled || 0).toLocaleString('en-IN'), 'Invoiced amount', 'receipt', '#2563EB');
+        cardsHtml += makeCard('Collected Amount', '₹' + (kpis.totalCollected || 0).toLocaleString('en-IN'), 'Total receipts', 'check-check', '#16A34A');
+        cardsHtml += makeCard('Outstanding Balance', '₹' + (kpis.totalPending || 0).toLocaleString('en-IN'), 'Pending collection', 'alert-circle', '#DC2626');
+        cardsHtml += makeCard('Collection Rate', kpis.collectionRate || '0%', 'Fee realization', 'percent', '#0891B2');
+        cardsHtml += makeCard('Late Fees Accrued', '₹' + (kpis.totalLateFees || 0).toLocaleString('en-IN'), 'Late fine revenue', 'clock', '#D97706');
+
+      } else if (reportType === 'pending_dues') {
+        cardsHtml += makeCard('Total Dues Outstanding', '₹' + (kpis.totalOutstanding || 0).toLocaleString('en-IN'), 'All unpaid rent & fees', 'alert-octagon', '#DC2626');
+        cardsHtml += makeCard('Overdue Accounts', kpis.overdueAccountsCount || 0, 'Students with balance', 'users', '#E11D48');
+        cardsHtml += makeCard('0 - 30 Days Dues', '₹' + (kpis.bucket0to30 || 0).toLocaleString('en-IN'), 'Recent overdue', 'clock', '#EA580C');
+        cardsHtml += makeCard('31 - 60 Days Dues', '₹' + (kpis.bucket31to60 || 0).toLocaleString('en-IN'), 'Moderate overdue', 'alert-triangle', '#D97706');
+        cardsHtml += makeCard('60+ Days Dues', '₹' + (kpis.bucket60Plus || 0).toLocaleString('en-IN'), 'Critical / high risk', 'shield-alert', '#991B1B');
+
+      } else if (reportType === 'security_deposits') {
+        cardsHtml += makeCard('Active Deposits Held', '₹' + (kpis.totalDepositsHeld || 0).toLocaleString('en-IN'), 'Held in escrow', 'shield-check', '#2563EB');
+        cardsHtml += makeCard('Total Collected', '₹' + (kpis.totalDepositsCollected || 0).toLocaleString('en-IN'), 'Cumulative receipts', 'download', '#16A34A');
+        cardsHtml += makeCard('Total Refunded', '₹' + (kpis.totalRefunded || 0).toLocaleString('en-IN'), 'Returned on checkout', 'corner-down-left', '#0891B2');
+        cardsHtml += makeCard('Approved Deductions', '₹' + (kpis.totalDeductions || 0).toLocaleString('en-IN'), 'Damages & rent offsets', 'scissors', '#DC2626');
+        cardsHtml += makeCard('Pending Refunds', kpis.pendingRefundsCount || 0, 'Awaiting settlement', 'clock', '#EAB308');
+
+      } else if (reportType === 'income_expenses') {
+        cardsHtml += makeCard('Total Income', '₹' + (kpis.totalIncome || 0).toLocaleString('en-IN'), 'Rent & collections', 'trending-up', '#16A34A');
+        cardsHtml += makeCard('Total Expenses', '₹' + (kpis.totalExpenses || 0).toLocaleString('en-IN'), 'Hostel operational costs', 'trending-down', '#DC2626');
+        cardsHtml += makeCard('Net Operating Profit', '₹' + (kpis.netProfit || 0).toLocaleString('en-IN'), 'Income minus expenses', 'dollar-sign', (kpis.netProfit >= 0 ? '#16A34A' : '#DC2626'));
+        cardsHtml += makeCard('Operating Margin', kpis.profitMargin || '0%', 'Profitability ratio', 'percent', '#2563EB');
+        cardsHtml += makeCard('Expense Entries', kpis.expenseEntriesCount || 0, 'Logged vouchers', 'receipt', '#64748B');
+
+      } else if (reportType === 'checkin_checkout') {
+        cardsHtml += makeCard('Total Stays Logged', kpis.totalStays || 0, 'Historical records', 'calendar', '#2563EB');
+        cardsHtml += makeCard('Active Stays', kpis.activeStays || 0, 'Current residents', 'user-check', '#16A34A');
+        cardsHtml += makeCard('Check-outs in Range', kpis.checkedOutCount || 0, 'Vacated records', 'log-out', '#0891B2');
+        cardsHtml += makeCard('Average Stay Duration', kpis.avgStayDays || '0 Days', 'Typical resident tenure', 'clock', '#D97706');
+
+      } else if (reportType === 'complaints_maintenance') {
+        cardsHtml += makeCard('Total Tickets', kpis.totalTickets || 0, 'Logged complaints', 'life-buoy', '#2563EB');
+        cardsHtml += makeCard('Resolved Issues', kpis.resolvedCount || 0, 'Completed tasks', 'check-circle-2', '#16A34A');
+        cardsHtml += makeCard('Resolution Rate', kpis.resolutionRate || '0%', 'Effectiveness %', 'percent', '#059669');
+        cardsHtml += makeCard('Total Repair Cost', '₹' + (kpis.totalRepairCost || 0).toLocaleString('en-IN'), 'Cumulative repairs', 'wrench', '#D97706');
+        cardsHtml += makeCard('Hostel Borne Cost', '₹' + (kpis.hostelBorneCost || 0).toLocaleString('en-IN'), 'Hostel expenses', 'building', '#DC2626');
+
+      } else if (reportType === 'visitors') {
+        cardsHtml += makeCard('Total Visitors', kpis.totalVisitors || 0, 'Entry entries', 'users', '#2563EB');
+        cardsHtml += makeCard('Currently Inside', kpis.currentlyInside || 0, 'Active visits', 'door-open', '#16A34A');
+        cardsHtml += makeCard('Checked Out', kpis.exitedCount || 0, 'Completed visits', 'log-out', '#64748B');
+      }
+
+      container.innerHTML = cardsHtml;
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function renderReportChart(breakdown, reportType) {
+      const canvas = document.getElementById('reportMainChart');
+      if (!canvas || !window.Chart) return;
+
+      const chartTitle = document.getElementById('reportChartTitle');
+      const chartSub = document.getElementById('reportChartSubtitle');
+      const breakdownList = document.getElementById('reportBreakdownList');
+
+      if (reportChartInstance) {
+        reportChartInstance.destroy();
+        reportChartInstance = null;
+      }
+
+      let chartType = 'doughnut';
+      let labels = [];
+      let dataValues = [];
+      let backgroundColors = ['#2563EB', '#16A34A', '#F59E0B', '#DC2626', '#8B5CF6', '#EC4899', '#06B6D4', '#64748B'];
+
+      let breakdownRowsHtml = '';
+
+      if (reportType === 'students_admissions') {
+        chartTitle.innerText = 'Student Admissions Status Distribution';
+        chartSub.innerText = 'Residents by admission status';
+        const stMap = breakdown?.byStatus || {};
+        labels = Object.keys(stMap);
+        dataValues = Object.values(stMap);
+
+        const colMap = breakdown?.byCollege || {};
+        breakdownRowsHtml = '<div style="font-size:0.8rem; font-weight:700; margin-bottom:8px; color:var(--dark-slate);">College Distribution:</div>';
+        Object.entries(colMap).forEach(([col, count]) => {
+          breakdownRowsHtml += `
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem; padding:6px 0; border-bottom:1px solid #f1f5f9;">
+              <span style="color:#475569;">${col}</span>
+              <strong style="color:#1e293b;">${count}</strong>
+            </div>`;
+        });
+
+      } else if (reportType === 'room_occupancy') {
+        chartTitle.innerText = 'Floor-wise Bed Occupancy Breakdown';
+        chartSub.innerText = 'Capacity vs Occupancy per floor';
+        chartType = 'bar';
+        const flMap = breakdown?.byFloor || {};
+        labels = Object.keys(flMap);
+        const occData = labels.map(fl => flMap[fl].occupied);
+        const vacData = labels.map(fl => flMap[fl].vacant);
+
+        breakdownRowsHtml = '<div style="font-size:0.8rem; font-weight:700; margin-bottom:8px; color:var(--dark-slate);">Floor Occupancy Summary:</div>';
+        labels.forEach(fl => {
+          const c = flMap[fl].capacity;
+          const o = flMap[fl].occupied;
+          const v = flMap[fl].vacant;
+          const pct = c > 0 ? Math.round((o / c) * 100) : 0;
+          breakdownRowsHtml += `
+            <div style="margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid #f1f5f9;">
+              <div style="display:flex; justify-content:space-between; font-size:0.8rem; margin-bottom:2px;">
+                <strong>${fl}</strong>
+                <span>${o} / ${c} beds (${pct}%)</span>
+              </div>
+              <div style="background:#e2e8f0; height:6px; border-radius:3px; overflow:hidden;">
+                <div style="background:#2563EB; width:${pct}%; height:100%;"></div>
+              </div>
+            </div>`;
+        });
+
+        reportChartInstance = new Chart(canvas, {
+          type: 'bar',
+          data: {
+            labels,
+            datasets: [
+              { label: 'Occupied', data: occData, backgroundColor: '#2563EB' },
+              { label: 'Vacant', data: vacData, backgroundColor: '#10B981' }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } }
+          }
+        });
+        if (breakdownList) breakdownList.innerHTML = breakdownRowsHtml;
+        return;
+
+      } else if (reportType === 'rent_collection') {
+        chartTitle.innerText = 'Payment Mode Realization (₹)';
+        chartSub.innerText = 'Collections by payment channel';
+        const modeMap = breakdown?.byPaymentMode || {};
+        labels = Object.keys(modeMap);
+        dataValues = Object.values(modeMap);
+
+        const stMap = breakdown?.byStatus || {};
+        breakdownRowsHtml = '<div style="font-size:0.8rem; font-weight:700; margin-bottom:8px; color:var(--dark-slate);">Invoice Statuses:</div>';
+        Object.entries(stMap).forEach(([st, count]) => {
+          breakdownRowsHtml += `
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem; padding:6px 0; border-bottom:1px solid #f1f5f9;">
+              <span style="text-transform:capitalize; color:#475569;">${st.replace('_', ' ')}</span>
+              <strong style="color:#1e293b;">${count}</strong>
+            </div>`;
+        });
+
+      } else if (reportType === 'pending_dues') {
+        chartTitle.innerText = 'Outstanding Dues Aging Distribution (₹)';
+        chartSub.innerText = 'Overdue aging analysis';
+        const agingMap = breakdown?.agingBuckets || {};
+        labels = Object.keys(agingMap);
+        dataValues = Object.values(agingMap);
+        backgroundColors = ['#F59E0B', '#EA580C', '#DC2626'];
+
+        breakdownRowsHtml = '<div style="font-size:0.8rem; font-weight:700; margin-bottom:8px; color:var(--dark-slate);">Aging Category Breakdown:</div>';
+        labels.forEach(k => {
+          breakdownRowsHtml += `
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem; padding:6px 0; border-bottom:1px solid #f1f5f9;">
+              <span style="color:#475569;">${k}</span>
+              <strong style="color:#DC2626;">₹${(agingMap[k] || 0).toLocaleString('en-IN')}</strong>
+            </div>`;
+        });
+
+      } else if (reportType === 'security_deposits') {
+        chartTitle.innerText = 'Security Deposit Transactions';
+        chartSub.innerText = 'Deposits vs Refunds vs Deductions';
+        const typeMap = breakdown?.byTransactionType || {};
+        labels = Object.keys(typeMap);
+        dataValues = Object.values(typeMap);
+
+        const catMap = breakdown?.byCategory || {};
+        breakdownRowsHtml = '<div style="font-size:0.8rem; font-weight:700; margin-bottom:8px; color:var(--dark-slate);">Deduction / Deposit Categories:</div>';
+        Object.entries(catMap).forEach(([cat, amt]) => {
+          breakdownRowsHtml += `
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem; padding:6px 0; border-bottom:1px solid #f1f5f9;">
+              <span style="color:#475569;">${cat}</span>
+              <strong style="color:#1e293b;">₹${amt.toLocaleString('en-IN')}</strong>
+            </div>`;
+        });
+
+      } else if (reportType === 'income_expenses') {
+        chartTitle.innerText = 'Operating Expenses by Category (₹)';
+        chartSub.innerText = 'Breakdown of hostel costs';
+        const expMap = breakdown?.expenseByCategory || {};
+        labels = Object.keys(expMap);
+        dataValues = Object.values(expMap);
+
+        const ov = breakdown?.overview || {};
+        breakdownRowsHtml = '<div style="font-size:0.8rem; font-weight:700; margin-bottom:8px; color:var(--dark-slate);">Financial Overview:</div>';
+        Object.entries(ov).forEach(([k, v]) => {
+          const isProf = k.includes('Profit') ? (v >= 0 ? '#16A34A' : '#DC2626') : '#1e293b';
+          breakdownRowsHtml += `
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem; padding:6px 0; border-bottom:1px solid #f1f5f9;">
+              <span style="color:#475569;">${k}</span>
+              <strong style="color:${isProf};">₹${v.toLocaleString('en-IN')}</strong>
+            </div>`;
+        });
+
+      } else if (reportType === 'checkin_checkout') {
+        chartTitle.innerText = 'Check-out Reason Breakdown';
+        chartSub.innerText = 'Resident exit analytics';
+        const rMap = breakdown?.byReason || {};
+        labels = Object.keys(rMap);
+        dataValues = Object.values(rMap);
+
+        const stMap = breakdown?.byStatus || {};
+        breakdownRowsHtml = '<div style="font-size:0.8rem; font-weight:700; margin-bottom:8px; color:var(--dark-slate);">Stay Status:</div>';
+        Object.entries(stMap).forEach(([k, v]) => {
+          breakdownRowsHtml += `
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem; padding:6px 0; border-bottom:1px solid #f1f5f9;">
+              <span style="text-transform:capitalize; color:#475569;">${k}</span>
+              <strong style="color:#1e293b;">${v}</strong>
+            </div>`;
+        });
+
+      } else if (reportType === 'complaints_maintenance') {
+        chartTitle.innerText = 'Complaints by Category';
+        chartSub.innerText = 'Maintenance issue distribution';
+        const catMap = breakdown?.byCategory || {};
+        labels = Object.keys(catMap);
+        dataValues = Object.values(catMap);
+
+        const stMap = breakdown?.byStatus || {};
+        breakdownRowsHtml = '<div style="font-size:0.8rem; font-weight:700; margin-bottom:8px; color:var(--dark-slate);">Ticket Status:</div>';
+        Object.entries(stMap).forEach(([k, v]) => {
+          breakdownRowsHtml += `
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem; padding:6px 0; border-bottom:1px solid #f1f5f9;">
+              <span style="text-transform:capitalize; color:#475569;">${k.replace('_', ' ')}</span>
+              <strong style="color:#1e293b;">${v}</strong>
+            </div>`;
+        });
+
+      } else if (reportType === 'visitors') {
+        chartTitle.innerText = 'Visitor Relations Breakdown';
+        chartSub.innerText = 'Relationship of visitors';
+        const relMap = breakdown?.byRelation || {};
+        labels = Object.keys(relMap);
+        dataValues = Object.values(relMap);
+
+        const pMap = breakdown?.byPurpose || {};
+        breakdownRowsHtml = '<div style="font-size:0.8rem; font-weight:700; margin-bottom:8px; color:var(--dark-slate);">Purpose of Visits:</div>';
+        Object.entries(pMap).forEach(([k, v]) => {
+          breakdownRowsHtml += `
+            <div style="display:flex; justify-content:space-between; font-size:0.8rem; padding:6px 0; border-bottom:1px solid #f1f5f9;">
+              <span style="color:#475569;">${k}</span>
+              <strong style="color:#1e293b;">${v}</strong>
+            </div>`;
+        });
+      }
+
+      if (labels.length === 0) {
+        labels = ['No Data'];
+        dataValues = [1];
+        backgroundColors = ['#E2E8F0'];
+      }
+
+      reportChartInstance = new Chart(canvas, {
+        type: chartType,
+        data: {
+          labels,
+          datasets: [{
+            data: dataValues,
+            backgroundColor: backgroundColors.slice(0, labels.length)
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+          }
+        }
+      });
+
+      if (breakdownList) {
+        breakdownList.innerHTML = breakdownRowsHtml || '<div style="color:var(--text-muted); font-size:0.8rem;">No breakdown items available.</div>';
+      }
+    }
+
+    function renderReportTable(records, reportType) {
+      const headEl = document.getElementById('reportTableHead');
+      const bodyEl = document.getElementById('reportTableBody');
+      const badgeEl = document.getElementById('reportRecordCountBadge');
+
+      if (!headEl || !bodyEl) return;
+      if (badgeEl) badgeEl.innerText = `${records.length} records`;
+
+      if (records.length === 0) {
+        bodyEl.innerHTML = '<tr><td colspan="10" style="text-align:center; padding:30px; color:var(--text-muted);">No records found matching the selected report type and filters.</td></tr>';
+        return;
+      }
+
+      let headHtml = '<tr>';
+      let rowsHtml = '';
+
+      if (reportType === 'students_admissions') {
+        headHtml += '<th style="padding:10px 14px;">ID</th><th>Student Name</th><th>Phone</th><th>Room & Bed</th><th>College</th><th>Rent (₹)</th><th>Deposit (₹)</th><th>Join Date</th><th>Status</th></tr>';
+        records.forEach(r => {
+          const st = (r.status || 'active').toLowerCase();
+          const badgeClass = st === 'active' ? 'active' : (st === 'pending' ? 'pending' : 'vacated');
+          rowsHtml += `
+            <tr style="border-bottom:1px solid #f1f5f9;">
+              <td style="padding:10px 14px; font-weight:700;">#${r.id}</td>
+              <td style="font-weight:600;">${r.studentname || r.studentName}</td>
+              <td>${r.phone || '—'}</td>
+              <td>Room ${r.roomnumber || r.roomNumber || '—'} (${r.bedlabel || r.bedLabel || '—'})</td>
+              <td>${r.collegename || r.collegeName || '—'}</td>
+              <td>₹${(r.monthlyrent || r.monthlyRent || 0).toLocaleString('en-IN')}</td>
+              <td>₹${(r.depositamount || r.depositAmount || 0).toLocaleString('en-IN')}</td>
+              <td>${r.joindate || r.joinDate || '—'}</td>
+              <td><span class="status-badge ${badgeClass}">${(r.status || 'active').toUpperCase()}</span></td>
+            </tr>`;
+        });
+
+      } else if (reportType === 'room_occupancy') {
+        headHtml += '<th style="padding:10px 14px;">Room</th><th>Floor</th><th>Block</th><th>Type</th><th>Capacity</th><th>Occupied</th><th>Vacant</th><th>Maintenance</th><th>Monthly Fee</th><th>Status</th></tr>';
+        records.forEach(r => {
+          rowsHtml += `
+            <tr style="border-bottom:1px solid #f1f5f9;">
+              <td style="padding:10px 14px; font-weight:700;">Room ${r.roomnumber || r.roomNumber}</td>
+              <td>${r.floor}</td>
+              <td>${r.block || 'Main'}</td>
+              <td>${r.roomtype || r.roomType || (r.capacity + ' Sharing')}</td>
+              <td>${r.capacity} beds</td>
+              <td style="font-weight:700; color:#16A34A;">${r.occupiedbeds || 0}</td>
+              <td style="font-weight:700; color:#059669;">${r.vacantbeds || 0}</td>
+              <td style="color:#D97706;">${r.maintenancebeds || 0}</td>
+              <td>₹${(r.monthlyfee || r.monthlyFee || 0).toLocaleString('en-IN')}</td>
+              <td><span class="status-badge active">${(r.status || 'Active').toUpperCase()}</span></td>
+            </tr>`;
+        });
+
+      } else if (reportType === 'rent_collection') {
+        headHtml += '<th style="padding:10px 14px;">Invoice</th><th>Student Name</th><th>Phone</th><th>Room</th><th>Month</th><th>Billed (₹)</th><th>Paid (₹)</th><th>Balance (₹)</th><th>Mode</th><th>Status</th></tr>';
+        records.forEach(r => {
+          const due = parseFloat(r.amountdue || r.amountDue || 0) + parseFloat(r.latefee || r.lateFee || 0);
+          const paid = parseFloat(r.amountpaid || r.amountPaid || 0);
+          const bal = Math.max(0, due - paid);
+          const st = (r.status || 'pending').toLowerCase();
+          const badgeClass = st === 'paid' ? 'active' : (st === 'overdue' ? 'vacated' : 'pending');
+
+          rowsHtml += `
+            <tr style="border-bottom:1px solid #f1f5f9;">
+              <td style="padding:10px 14px; font-weight:700;">${r.invoicenumber || r.invoiceNumber || '—'}</td>
+              <td style="font-weight:600;">${r.studentname || r.studentName}</td>
+              <td>${r.phone || '—'}</td>
+              <td>Room ${r.roomnumber || r.roomNumber || '—'}</td>
+              <td>${r.billingmonth || r.billingMonth}</td>
+              <td>₹${due.toLocaleString('en-IN')}</td>
+              <td style="font-weight:700; color:#16A34A;">₹${paid.toLocaleString('en-IN')}</td>
+              <td style="font-weight:700; color:${bal > 0 ? '#DC2626' : '#16A34A'};">₹${bal.toLocaleString('en-IN')}</td>
+              <td>${r.paymentmode || r.paymentMode || '—'}</td>
+              <td><span class="status-badge ${badgeClass}">${st.toUpperCase()}</span></td>
+            </tr>`;
+        });
+
+      } else if (reportType === 'pending_dues') {
+        headHtml += '<th style="padding:10px 14px;">Invoice</th><th>Student Name</th><th>Phone</th><th>Room</th><th>Month</th><th>Due Date</th><th>Days Overdue</th><th>Outstanding Balance</th><th>Late Fee</th><th>Status</th></tr>';
+        records.forEach(r => {
+          const bal = parseFloat(r.pendingbalance || r.pendingBalance || 0);
+          const days = Math.max(0, Math.round(r.daysoverdue || r.daysOverdue || 0));
+          const late = parseFloat(r.latefee || r.lateFee || 0);
+          const dueStr = r.duedate || r.dueDate ? String(r.duedate || r.dueDate).split('T')[0] : '—';
+
+          rowsHtml += `
+            <tr style="border-bottom:1px solid #f1f5f9;">
+              <td style="padding:10px 14px; font-weight:700;">${r.invoicenumber || r.invoiceNumber || '—'}</td>
+              <td style="font-weight:600;">${r.studentname || r.studentName}</td>
+              <td>${r.phone || '—'}</td>
+              <td>Room ${r.roomnumber || r.roomNumber || '—'}</td>
+              <td>${r.billingmonth || r.billingMonth}</td>
+              <td>${dueStr}</td>
+              <td style="font-weight:700; color:#DC2626;">${days} days</td>
+              <td style="font-weight:800; color:#DC2626;">₹${bal.toLocaleString('en-IN')}</td>
+              <td style="color:#D97706;">₹${late.toLocaleString('en-IN')}</td>
+              <td><span class="status-badge vacated">OVERDUE</span></td>
+            </tr>`;
+        });
+
+      } else if (reportType === 'security_deposits') {
+        headHtml += '<th style="padding:10px 14px;">Receipt No</th><th>Student Name</th><th>Phone</th><th>Room</th><th>Type</th><th>Category</th><th>Amount (₹)</th><th>Date</th><th>Mode</th><th>Status</th></tr>';
+        records.forEach(r => {
+          const dt = r.transactiondate || r.transactionDate ? String(r.transactiondate || r.transactionDate).split('T')[0] : '—';
+          const type = (r.transactiontype || r.transactionType || '').toUpperCase();
+          const isRefund = type.includes('REFUND');
+
+          rowsHtml += `
+            <tr style="border-bottom:1px solid #f1f5f9;">
+              <td style="padding:10px 14px; font-weight:700;">${r.depositnumber || r.depositNumber}</td>
+              <td style="font-weight:600;">${r.studentname || r.studentName}</td>
+              <td>${r.phone || '—'}</td>
+              <td>Room ${r.roomnumber || r.roomNumber || '—'}</td>
+              <td><span style="font-weight:700; color:${isRefund ? '#0891B2' : '#2563EB'};">${type}</span></td>
+              <td>${r.category || 'General'}</td>
+              <td style="font-weight:700;">₹${parseFloat(r.amount || 0).toLocaleString('en-IN')}</td>
+              <td>${dt}</td>
+              <td>${r.paymentmode || r.paymentMode || 'Cash'}</td>
+              <td><span class="status-badge active">${(r.status || 'Active').toUpperCase()}</span></td>
+            </tr>`;
+        });
+
+      } else if (reportType === 'income_expenses') {
+        headHtml += '<th style="padding:10px 14px;">Voucher</th><th>Title / Description</th><th>Category</th><th>Amount (₹)</th><th>Date</th><th>Mode</th><th>Paid To</th><th>Recorded By</th><th>Action</th></tr>';
+        records.forEach(r => {
+          const dt = r.expensedate || r.expenseDate ? String(r.expensedate || r.expenseDate).split('T')[0] : '—';
+          rowsHtml += `
+            <tr style="border-bottom:1px solid #f1f5f9;">
+              <td style="padding:10px 14px; font-weight:700;">${r.expensenumber || r.expenseNumber}</td>
+              <td style="font-weight:600;">${r.title}</td>
+              <td><span style="background:#f1f5f9; padding:2px 8px; border-radius:6px; font-size:0.75rem; font-weight:700;">${r.category}</span></td>
+              <td style="font-weight:800; color:#DC2626;">₹${parseFloat(r.amount || 0).toLocaleString('en-IN')}</td>
+              <td>${dt}</td>
+              <td>${r.paymentmode || r.paymentMode || 'Cash'}</td>
+              <td>${r.paidto || r.paidTo || '—'}</td>
+              <td>${r.recordedby || r.recordedBy || 'Admin'}</td>
+              <td>
+                <button class="btn btn-outline" onclick="deleteReportExpense(${r.id})" style="padding:4px 8px; font-size:0.75rem; color:#DC2626; border-color:#FCA5A5;">Delete</button>
+              </td>
+            </tr>`;
+        });
+
+      } else if (reportType === 'checkin_checkout') {
+        headHtml += '<th style="padding:10px 14px;">Student Name</th><th>Phone</th><th>Room & Bed</th><th>Check-in Date</th><th>Check-out Date</th><th>Reason</th><th>Pending Rent</th><th>Deposit Refunded</th><th>Status</th></tr>';
+        records.forEach(r => {
+          const ci = r.checkindate || r.checkInDate ? String(r.checkindate || r.checkInDate).split('T')[0] : '—';
+          const co = r.checkoutdate || r.checkOutDate ? String(r.checkoutdate || r.checkOutDate).split('T')[0] : '<span style="color:#16A34A; font-weight:700;">Current Stay</span>';
+          const st = (r.status || 'active').toLowerCase();
+
+          rowsHtml += `
+            <tr style="border-bottom:1px solid #f1f5f9;">
+              <td style="padding:10px 14px; font-weight:600;">${r.studentname || r.studentName}</td>
+              <td>${r.phone || '—'}</td>
+              <td>Room ${r.roomnumber || r.roomNumber || '—'} (${r.bedlabel || r.bedLabel || '—'})</td>
+              <td>${ci}</td>
+              <td>${co}</td>
+              <td>${r.checkoutreason || r.checkOutReason || '—'}</td>
+              <td>₹${parseFloat(r.pendingrent || r.pendingRent || 0).toLocaleString('en-IN')}</td>
+              <td>₹${parseFloat(r.depositrefunded || r.depositRefunded || 0).toLocaleString('en-IN')}</td>
+              <td><span class="status-badge ${st === 'active' ? 'active' : 'vacated'}">${st.toUpperCase()}</span></td>
+            </tr>`;
+        });
+
+      } else if (reportType === 'complaints_maintenance') {
+        headHtml += '<th style="padding:10px 14px;">Ticket</th><th>Issue Title</th><th>Student</th><th>Room</th><th>Category</th><th>Repair Cost</th><th>Paid By</th><th>Status</th><th>Logged Date</th></tr>';
+        records.forEach(r => {
+          const dt = r.createdat || r.createdAt ? String(r.createdat || r.createdAt).split('T')[0] : '—';
+          const cost = parseFloat(r.repaircost || r.repairCost || 0);
+          const st = (r.status || 'open').toLowerCase();
+          const badgeClass = st === 'resolved' ? 'active' : (st === 'in_progress' ? 'pending' : 'vacated');
+
+          rowsHtml += `
+            <tr style="border-bottom:1px solid #f1f5f9;">
+              <td style="padding:10px 14px; font-weight:700;">#${r.complaintnumber || r.complaintNumber || r.id}</td>
+              <td style="font-weight:600;">${r.title}</td>
+              <td>${r.studentname || r.studentName || '—'}</td>
+              <td>Room ${r.roomnumber || r.roomNumber || '—'}</td>
+              <td>${r.category}</td>
+              <td style="font-weight:700; color:${cost > 0 ? '#DC2626' : '#64748B'};">₹${cost.toLocaleString('en-IN')}</td>
+              <td>${r.costpaidby || r.costPaidBy || 'Hostel'}</td>
+              <td><span class="status-badge ${badgeClass}">${st.toUpperCase()}</span></td>
+              <td>${dt}</td>
+            </tr>`;
+        });
+
+      } else if (reportType === 'visitors') {
+        headHtml += '<th style="padding:10px 14px;">Gate Pass</th><th>Visitor Name</th><th>Mobile</th><th>Resident Student</th><th>Room</th><th>Relation</th><th>Purpose</th><th>Entry Time</th><th>Exit Time</th><th>Status</th><th>Action</th></tr>';
+        records.forEach(r => {
+          const entry = r.entrytime || r.entryTime ? new Date(r.entrytime || r.entryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—';
+          const isInside = !r.exittime && !r.exitTime;
+          const exit = isInside ? '—' : new Date(r.exittime || r.exitTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+          rowsHtml += `
+            <tr style="border-bottom:1px solid #f1f5f9;">
+              <td style="padding:10px 14px; font-weight:700;">${r.gatepassnumber || r.gatePassNumber}</td>
+              <td style="font-weight:600;">${r.visitorname || r.visitorName}</td>
+              <td>${r.phone}</td>
+              <td>${r.studentname || r.studentName || '—'}</td>
+              <td>Room ${r.roomno || r.roomNo || '—'}</td>
+              <td>${r.relation}</td>
+              <td>${r.purpose}</td>
+              <td>${entry}</td>
+              <td>${exit}</td>
+              <td>
+                <span class="status-badge ${isInside ? 'active' : 'vacated'}">${isInside ? 'INSIDE' : 'EXITED'}</span>
+              </td>
+              <td>
+                ${isInside ? `<button class="btn btn-outline" onclick="checkoutVisitorLog(${r.id})" style="padding:4px 8px; font-size:0.75rem; color:#16A34A; border-color:#86EFAC;">Exit Check-out</button>` : '—'}
+              </td>
+            </tr>`;
+        });
+      }
+
+      headEl.innerHTML = headHtml;
+      bodyEl.innerHTML = rowsHtml;
+    }
+
+    function filterReportTableRecords() {
+      const q = (document.getElementById('reportTableSearchInput')?.value || '').toLowerCase().trim();
+      if (!q) {
+        renderReportTable(currentReportRecords, currentReportType);
+        return;
+      }
+      const filtered = currentReportRecords.filter(r => {
+        return Object.values(r).some(val => val !== null && val !== undefined && String(val).toLowerCase().includes(q));
+      });
+      renderReportTable(filtered, currentReportType);
+    }
+
+    function exportReportFile(format) {
+      const token = localStorage.getItem('token');
+      let url = format === 'pdf' ? `/api/reports/pdf?type=${currentReportType}` : `/api/reports/download?type=${currentReportType}`;
+      if (reportFilterState.month) {
+        url += `&month=${encodeURIComponent(reportFilterState.month)}`;
+      } else if (reportFilterState.startDate || reportFilterState.endDate) {
+        if (reportFilterState.startDate) url += `&startDate=${encodeURIComponent(reportFilterState.startDate)}`;
+        if (reportFilterState.endDate) url += `&endDate=${encodeURIComponent(reportFilterState.endDate)}`;
+      }
+
+      // Trigger download via fetch to include JWT token
+      showToast(`Generating ${format.toUpperCase()} export...`, 'info');
+      fetch(url, { headers: { 'Authorization': `Bearer ${token}` } })
+        .then(res => {
+          if (!res.ok) throw new Error(`Export failed with status ${res.status}`);
+          return res.blob();
+        })
+        .then(blob => {
+          const downloadUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = downloadUrl;
+          a.download = `${currentReportType}_report_${new Date().toISOString().split('T')[0]}.${format === 'pdf' ? 'pdf' : 'csv'}`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          showToast(`${format.toUpperCase()} report downloaded successfully.`, 'success');
+        })
+        .catch(err => {
+          console.error('Export Error:', err);
+          showToast(`Failed to download ${format.toUpperCase()} report: ${err.message}`, 'error');
+        });
+    }
+
+    // Expense Management Functions
+    function openRecordExpenseModal() {
+      const modal = document.getElementById('recordExpenseModal');
+      if (modal) {
+        document.getElementById('expDate').value = new Date().toISOString().split('T')[0];
+        document.getElementById('recordExpenseForm')?.reset();
+        document.getElementById('expDate').value = new Date().toISOString().split('T')[0];
+        modal.style.display = 'flex';
+      }
+    }
+
+    async function submitRecordExpense() {
+      const token = localStorage.getItem('token');
+      const body = {
+        category: document.getElementById('expCategory').value,
+        amount: document.getElementById('expAmount').value,
+        title: document.getElementById('expTitle').value,
+        expenseDate: document.getElementById('expDate').value,
+        paymentMode: document.getElementById('expPaymentMode').value,
+        paidTo: document.getElementById('expPaidTo').value,
+        invoiceRef: document.getElementById('expInvoiceRef').value,
+        notes: document.getElementById('expNotes').value
+      };
+
+      try {
+        const res = await fetch('/api/reports/expenses', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Expense recorded successfully.', 'success');
+          closeModal('recordExpenseModal');
+          fetchReportAnalytics();
+        } else {
+          showToast(data.message || 'Failed to record expense.', 'error');
+        }
+      } catch (err) {
+        showToast('Error recording expense: ' + err.message, 'error');
+      }
+    }
+
+    async function deleteReportExpense(id) {
+      if (!confirm('Are you sure you want to delete this expense record?')) return;
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch(`/api/reports/expenses/${id}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Expense deleted successfully.', 'success');
+          fetchReportAnalytics();
+        } else {
+          showToast(data.message || 'Failed to delete expense.', 'error');
+        }
+      } catch (err) {
+        showToast('Error deleting expense: ' + err.message, 'error');
+      }
+    }
+
+    // Visitor Management Functions
+    function openRecordVisitorModal() {
+      const modal = document.getElementById('recordVisitorModal');
+      if (modal) {
+        document.getElementById('recordVisitorForm')?.reset();
+        populateVisitorStudentsDropdown();
+        modal.style.display = 'flex';
+      }
+    }
+
+    async function populateVisitorStudentsDropdown() {
+      const sel = document.getElementById('visStudentSelect');
+      if (!sel) return;
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch('/api/students?limit=200', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success && data.students) {
+          let opts = '<option value="">-- Select Resident / Room --</option>';
+          data.students.forEach(s => {
+            const rNo = s.roomNumber || s.roomnumber || '—';
+            opts += `<option value="${s.id}" data-room="${rNo}">${s.studentName || s.studentname} (Room ${rNo})</option>`;
+          });
+          sel.innerHTML = opts;
+        }
+      } catch (err) {
+        console.warn('Could not populate visitor student list:', err.message);
+      }
+    }
+
+    function handleVisitorStudentSelect(studentId) {
+      const sel = document.getElementById('visStudentSelect');
+      const opt = sel.options[sel.selectedIndex];
+      const roomInput = document.getElementById('visRoomNumber');
+      if (opt && roomInput) {
+        const rNo = opt.getAttribute('data-room');
+        if (rNo && rNo !== '—') roomInput.value = rNo;
+      }
+    }
+
+    async function submitRecordVisitor() {
+      const token = localStorage.getItem('token');
+      const body = {
+        studentId: document.getElementById('visStudentSelect').value || null,
+        visitorName: document.getElementById('visVisitorName').value,
+        phone: document.getElementById('visPhone').value,
+        relation: document.getElementById('visRelation').value,
+        purpose: document.getElementById('visPurpose').value,
+        idProofType: document.getElementById('visIdProofType').value,
+        idProofNumber: document.getElementById('visIdProofNumber').value,
+        roomNumber: document.getElementById('visRoomNumber').value,
+        remarks: document.getElementById('visRemarks').value
+      };
+
+      try {
+        const res = await fetch('/api/reports/visitors', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast(`Visitor logged successfully. Gate Pass: ${data.visitor?.gatePassNumber || 'Issued'}`, 'success');
+          closeModal('recordVisitorModal');
+          fetchReportAnalytics();
+        } else {
+          showToast(data.message || 'Failed to record visitor.', 'error');
+        }
+      } catch (err) {
+        showToast('Error recording visitor: ' + err.message, 'error');
+      }
+    }
+
+    async function checkoutVisitorLog(id) {
+      if (!confirm('Confirm visitor check-out and timestamp exit?')) return;
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch(`/api/reports/visitors/${id}/checkout`, {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Visitor check-out recorded successfully.', 'success');
+          fetchReportAnalytics();
+        } else {
+          showToast(data.message || 'Failed to checkout visitor.', 'error');
+        }
+      } catch (err) {
+        showToast('Error checking out visitor: ' + err.message, 'error');
+      }
+    }
+
 </script>
 
   <!-- ==========================================
@@ -8420,6 +9381,161 @@
         <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #E5E7EB; padding-top:14px;">
           <button type="button" class="btn btn-outline" onclick="closeModal('editMealModal')">Cancel</button>
           <button type="submit" id="editMealSubmitBtn" class="btn btn-primary" style="padding:10px 18px; font-weight:700;">Save Meal</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- Modal: Record Hostel Expense -->
+  <div class="modal-overlay" id="recordExpenseModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+    <div class="modal-card glass-card" style="width:100%; max-width:540px; background:white; border-radius:12px; padding:24px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #E5E7EB; padding-bottom:10px;">
+        <h3 style="margin:0; font-size:1.15rem; font-weight:800; color:var(--primary-deep);">Record Hostel Expense Entry</h3>
+        <button onclick="closeModal('recordExpenseModal')" class="modal-close-btn">&times;</button>
+      </div>
+      <form id="recordExpenseForm" onsubmit="event.preventDefault(); submitRecordExpense();">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+          <div class="form-group">
+            <label class="form-label" for="expCategory">Category *</label>
+            <select id="expCategory" class="form-input" required>
+              <option value="Electricity & Water">⚡ Electricity & Water</option>
+              <option value="Maintenance & Repairs">🛠️ Maintenance & Repairs</option>
+              <option value="Mess & Groceries">🍳 Mess & Groceries</option>
+              <option value="Staff Salaries">💼 Staff Salaries</option>
+              <option value="Internet & Wi-Fi">📶 Internet & Wi-Fi</option>
+              <option value="Hostel Supplies">🧹 Supplies & Cleaning</option>
+              <option value="Miscellaneous">📦 Miscellaneous</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="expAmount">Amount (₹) *</label>
+            <input type="number" id="expAmount" class="form-input" min="1" step="1" placeholder="e.g. 4500" required>
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:14px;">
+          <label class="form-label" for="expTitle">Expense Description / Title *</label>
+          <input type="text" id="expTitle" class="form-input" placeholder="e.g. October Water Tanker Refill (3 loads)" required>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+          <div class="form-group">
+            <label class="form-label" for="expDate">Expense Date *</label>
+            <input type="date" id="expDate" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="expPaymentMode">Payment Mode *</label>
+            <select id="expPaymentMode" class="form-input" required>
+              <option value="Cash">Cash Voucher</option>
+              <option value="UPI">UPI / PhonePe / GPay</option>
+              <option value="Bank Transfer">Bank Transfer / NEFT</option>
+              <option value="Cheque">Cheque</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+          <div class="form-group">
+            <label class="form-label" for="expPaidTo">Paid To (Vendor / Person)</label>
+            <input type="text" id="expPaidTo" class="form-input" placeholder="e.g. Balaji Water Supply">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="expInvoiceRef">Bill / Voucher Ref No.</label>
+            <input type="text" id="expInvoiceRef" class="form-input" placeholder="e.g. Bill #8492">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:18px;">
+          <label class="form-label" for="expNotes">Remarks / Notes</label>
+          <textarea id="expNotes" class="form-input" rows="2" placeholder="e.g. Emergency water purchase for 2nd & 3rd floors..."></textarea>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #E5E7EB; padding-top:14px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('recordExpenseModal')">Cancel</button>
+          <button type="submit" id="btnSubmitExpense" class="btn btn-primary" style="padding:10px 18px; font-weight:700;">Record Expense</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Log Visitor Entry -->
+  <div class="modal-overlay" id="recordVisitorModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+    <div class="modal-card glass-card" style="width:100%; max-width:560px; background:white; border-radius:12px; padding:24px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; border-bottom:1px solid #E5E7EB; padding-bottom:10px;">
+        <h3 style="margin:0; font-size:1.15rem; font-weight:800; color:var(--primary-deep);">Log Hostel Visitor Entry</h3>
+        <button onclick="closeModal('recordVisitorModal')" class="modal-close-btn">&times;</button>
+      </div>
+      <form id="recordVisitorForm" onsubmit="event.preventDefault(); submitRecordVisitor();">
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+          <div class="form-group">
+            <label class="form-label" for="visVisitorName">Visitor Full Name *</label>
+            <input type="text" id="visVisitorName" class="form-input" placeholder="e.g. Ramesh Reddy" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="visPhone">Visitor Mobile *</label>
+            <input type="tel" id="visPhone" class="form-input" placeholder="e.g. 98480 12345" required>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1.2fr 0.8fr; gap:12px; margin-bottom:14px;">
+          <div class="form-group">
+            <label class="form-label" for="visStudentSelect">Visiting Resident Student</label>
+            <select id="visStudentSelect" class="form-input" onchange="handleVisitorStudentSelect(this.value)">
+              <option value="">-- Select Resident / Room --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="visRoomNumber">Room Number</label>
+            <input type="text" id="visRoomNumber" class="form-input" placeholder="e.g. 104">
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+          <div class="form-group">
+            <label class="form-label" for="visRelation">Relation *</label>
+            <select id="visRelation" class="form-input" required>
+              <option value="Father">Father</option>
+              <option value="Mother">Mother</option>
+              <option value="Brother / Sister">Brother / Sister</option>
+              <option value="Local Guardian">Local Guardian</option>
+              <option value="Relative">Relative</option>
+              <option value="Friend / Classmate">Friend / Classmate</option>
+              <option value="Delivery / Service">Delivery / Service</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="visPurpose">Purpose of Visit *</label>
+            <input type="text" id="visPurpose" class="form-input" placeholder="e.g. Fee payment & hand over essentials" required>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+          <div class="form-group">
+            <label class="form-label" for="visIdProofType">ID Proof Presented</label>
+            <select id="visIdProofType" class="form-input">
+              <option value="Aadhaar Card">Aadhaar Card</option>
+              <option value="Driving License">Driving License</option>
+              <option value="College ID Card">College ID Card</option>
+              <option value="Voter ID">Voter ID</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="visIdProofNumber">ID Proof Number / Ref</label>
+            <input type="text" id="visIdProofNumber" class="form-input" placeholder="e.g. XXXX-XXXX-4589">
+          </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:18px;">
+          <label class="form-label" for="visRemarks">Security Remarks</label>
+          <input type="text" id="visRemarks" class="form-input" placeholder="e.g. Permitted to visitor lounge on Ground Floor.">
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:10px; border-top:1px solid #E5E7EB; padding-top:14px;">
+          <button type="button" class="btn btn-outline" onclick="closeModal('recordVisitorModal')">Cancel</button>
+          <button type="submit" id="btnSubmitVisitor" class="btn btn-primary" style="padding:10px 18px; font-weight:700;">Issue Gate Pass & Log</button>
         </div>
       </form>
     </div>
