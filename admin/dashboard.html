@@ -9042,7 +9042,7 @@
       if (!sel) return;
       const token = localStorage.getItem('token');
       try {
-        const res = await fetch('/api/students?limit=200', {
+        const res = await fetch('/api/admin/students?limit=200', {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();

@@ -124,10 +124,10 @@ async function getReportAnalytics(req, res) {
       const statusMap = {};
       const collegeMap = {};
       records.forEach(r => {
-        const st = (r.status || 'unknown').toUpperCase();
+        const st = String(r.status || 'unknown').toUpperCase();
         statusMap[st] = (statusMap[st] || 0) + 1;
 
-        const col = (r.collegename || r.collegeName || 'Other / Not Specified').trim();
+        const col = String(r.collegename || r.collegeName || 'Other / Not Specified').trim();
         collegeMap[col] = (collegeMap[col] || 0) + 1;
       });
 
@@ -251,10 +251,10 @@ async function getReportAnalytics(req, res) {
         totalLateFees += late;
         totalPending += bal;
 
-        const st = (p.status || 'pending').toLowerCase();
+        const st = String(p.status || 'pending').toLowerCase();
         statusMap[st] = (statusMap[st] || 0) + 1;
 
-        const pm = (p.paymentmode || p.paymentMode || '').toUpperCase();
+        const pm = String(p.paymentmode || p.paymentMode || '').toUpperCase();
         if (pm.includes('UPI')) modeMap.UPI += paid;
         else if (pm.includes('CASH')) modeMap.Cash += paid;
         else if (pm.includes('ONLINE')) modeMap.Online += paid;
@@ -367,8 +367,8 @@ async function getReportAnalytics(req, res) {
 
       records.forEach(d => {
         const amt = parseFloat(d.amount || 0);
-        const type = (d.transactiontype || d.transactionType || '').toUpperCase();
-        const cat = d.category || 'General';
+        const type = String(d.transactiontype || d.transactionType || '').toUpperCase();
+        const cat = String(d.category || 'General');
 
         typeMap[type] = (typeMap[type] || 0) + amt;
         categoryMap[cat] = (categoryMap[cat] || 0) + amt;
@@ -377,7 +377,7 @@ async function getReportAnalytics(req, res) {
         else if (type.includes('REFUND')) totalRefunded += amt;
         else if (type.includes('DEDUCT') || type.includes('DAMAGE')) totalDeductions += amt;
 
-        if ((d.status || '').toLowerCase() === 'pending_refund' || (d.status || '').toLowerCase() === 'pending') {
+        if (String(d.status || '').toLowerCase() === 'pending_refund' || String(d.status || '').toLowerCase() === 'pending') {
           pendingRefunds++;
         }
       });
@@ -520,7 +520,7 @@ async function getReportAnalytics(req, res) {
       const statusMap = {};
 
       records.forEach(sh => {
-        const st = (sh.status || 'active').toLowerCase();
+        const st = String(sh.status || 'active').toLowerCase();
         statusMap[st] = (statusMap[st] || 0) + 1;
 
         if (st === 'active') {
@@ -592,7 +592,7 @@ async function getReportAnalytics(req, res) {
       const statusMap = {};
 
       records.forEach(c => {
-        const st = (c.status || 'open').toLowerCase();
+        const st = String(c.status || 'open').toLowerCase();
         statusMap[st] = (statusMap[st] || 0) + 1;
 
         if (st === 'resolved') resolvedCount++;
@@ -602,7 +602,7 @@ async function getReportAnalytics(req, res) {
         const cost = parseFloat(c.repaircost || c.repairCost || 0);
         totalCost += cost;
 
-        const paidBy = (c.costpaidby || c.costPaidBy || 'hostel').toLowerCase();
+        const paidBy = String(c.costpaidby || c.costPaidBy || 'hostel').toLowerCase();
         if (paidBy === 'student') studentCost += cost;
         else hostelCost += cost;
 
@@ -943,13 +943,13 @@ async function downloadReportPdf(req, res) {
       `);
       rows = data.map(d => [
         `#${d.id}`,
-        (d.studentname || d.studentName || '').substring(0, 18),
-        d.phone || '—',
+        String(d.studentname || d.studentName || '').substring(0, 18),
+        String(d.phone || '—'),
         d.roomnumber || d.roomNumber ? `R-${d.roomnumber || d.roomNumber}` : '—',
-        (d.collegename || d.collegeName || '—').substring(0, 15),
+        String(d.collegename || d.collegeName || '—').substring(0, 15),
         `₹${d.monthlyrent || d.monthlyRent || 0}`,
         `₹${d.depositamount || d.depositAmount || 0}`,
-        (d.status || '').toUpperCase()
+        String(d.status || '').toUpperCase()
       ]);
 
     } else if (canonicalType === 'room_occupancy') {
@@ -964,13 +964,13 @@ async function downloadReportPdf(req, res) {
       `);
       rows = data.map(d => [
         `Room ${d.roomnumber || d.roomNumber}`,
-        (d.floor || '').replace('Floor ', 'F-'),
-        d.roomtype || d.roomType || `${d.capacity} Shr`,
+        String(d.floor || '').replace('Floor ', 'F-'),
+        String(d.roomtype || d.roomType || `${d.capacity} Shr`),
         `${d.capacity}`,
         `${d.occ || 0}`,
         `${d.vac || 0}`,
         `₹${d.monthlyfee || d.monthlyFee}`,
-        (d.status || 'Active').toUpperCase()
+        String(d.status || 'Active').toUpperCase()
       ]);
 
     } else if (canonicalType === 'rent_collection') {
@@ -985,14 +985,14 @@ async function downloadReportPdf(req, res) {
         const paid = parseFloat(d.amountpaid || d.amountPaid || 0);
         const bal = Math.max(0, due - paid);
         return [
-          (d.invoicenumber || d.invoiceNumber || '').substring(0, 12),
-          (d.studentname || d.studentName || '').substring(0, 16),
+          String(d.invoicenumber || d.invoiceNumber || '').substring(0, 12),
+          String(d.studentname || d.studentName || '').substring(0, 16),
           d.roomnumber || d.roomNumber ? `R-${d.roomnumber || d.roomNumber}` : '—',
-          d.billingmonth || d.billingMonth || '',
+          String(d.billingmonth || d.billingMonth || ''),
           `₹${due}`,
           `₹${paid}`,
           `₹${bal}`,
-          (d.status || '').toUpperCase()
+          String(d.status || '').toUpperCase()
         ];
       });
 
@@ -1007,14 +1007,14 @@ async function downloadReportPdf(req, res) {
         ORDER BY days DESC LIMIT 100
       `);
       rows = data.map(d => [
-        (d.invoicenumber || d.invoiceNumber || '').substring(0, 12),
-        (d.studentname || d.studentName || '').substring(0, 16),
-        d.phone || '—',
+        String(d.invoicenumber || d.invoiceNumber || '').substring(0, 12),
+        String(d.studentname || d.studentName || '').substring(0, 16),
+        String(d.phone || '—'),
         d.roomnumber || d.roomNumber ? `R-${d.roomnumber || d.roomNumber}` : '—',
-        d.billingmonth || d.billingMonth || '',
+        String(d.billingmonth || d.billingMonth || ''),
         `${Math.max(0, Math.round(d.days || 0))} d`,
         `₹${Math.round(d.bal || 0)}`,
-        (d.status || '').toUpperCase()
+        String(d.status || '').toUpperCase()
       ]);
 
     } else if (canonicalType === 'security_deposits') {
@@ -1025,14 +1025,14 @@ async function downloadReportPdf(req, res) {
         ORDER BY sd.transactionDate DESC LIMIT 100
       `);
       rows = data.map(d => [
-        (d.depositnumber || d.depositNumber || '').substring(0, 14),
-        (d.studentname || d.studentName || '').substring(0, 16),
+        String(d.depositnumber || d.depositNumber || '').substring(0, 14),
+        String(d.studentname || d.studentName || '').substring(0, 16),
         d.roomnumber || d.roomNumber ? `R-${d.roomnumber || d.roomNumber}` : '—',
-        d.transactiontype || d.transactionType || '',
-        d.category || 'General',
+        String(d.transactiontype || d.transactionType || ''),
+        String(d.category || 'General'),
         `₹${d.amount}`,
         d.transactiondate || d.transactionDate ? String(d.transactiondate || d.transactionDate).split('T')[0] : '',
-        (d.status || '').toUpperCase()
+        String(d.status || '').toUpperCase()
       ]);
 
     } else if (canonicalType === 'income_expenses') {
@@ -1041,13 +1041,13 @@ async function downloadReportPdf(req, res) {
         SELECT * FROM expenses ORDER BY expenseDate DESC LIMIT 100
       `);
       rows = data.map(d => [
-        (d.expensenumber || d.expenseNumber || '').substring(0, 12),
-        (d.title || '').substring(0, 20),
-        d.category || 'General',
+        String(d.expensenumber || d.expenseNumber || '').substring(0, 12),
+        String(d.title || '').substring(0, 20),
+        String(d.category || 'General'),
         d.expensedate || d.expenseDate ? String(d.expensedate || d.expenseDate).split('T')[0] : '',
-        d.paymentmode || d.paymentMode || 'Cash',
+        String(d.paymentmode || d.paymentMode || 'Cash'),
         `₹${d.amount}`,
-        (d.paidto || d.paidTo || '—').substring(0, 14)
+        String(d.paidto || d.paidTo || '—').substring(0, 14)
       ]);
 
     } else if (canonicalType === 'checkin_checkout') {
@@ -1059,13 +1059,13 @@ async function downloadReportPdf(req, res) {
         ORDER BY sh.id DESC LIMIT 100
       `);
       rows = data.map(d => [
-        (d.studentname || d.studentName || '').substring(0, 18),
-        d.phone || '—',
+        String(d.studentname || d.studentName || '').substring(0, 18),
+        String(d.phone || '—'),
         d.roomnumber || d.roomNumber ? `R-${d.roomnumber || d.roomNumber}` : '—',
-        d.bedlabel || d.bedLabel || '—',
+        String(d.bedlabel || d.bedLabel || '—'),
         d.checkindate || d.checkInDate ? String(d.checkindate || d.checkInDate).split('T')[0] : '',
         d.checkoutdate || d.checkOutDate ? String(d.checkoutdate || d.checkOutDate).split('T')[0] : 'Current',
-        (d.status || 'Active').toUpperCase()
+        String(d.status || 'Active').toUpperCase()
       ]);
 
     } else if (canonicalType === 'complaints_maintenance') {
@@ -1077,13 +1077,13 @@ async function downloadReportPdf(req, res) {
       `);
       rows = data.map(d => [
         `#${d.complaintnumber || d.complaintNumber || d.id}`,
-        (d.title || '').substring(0, 18),
-        (d.studentname || d.studentName || '—').substring(0, 14),
+        String(d.title || '').substring(0, 18),
+        String(d.studentname || d.studentName || '—').substring(0, 14),
         d.roomnumber || d.roomNumber ? `R-${d.roomnumber || d.roomNumber}` : '—',
-        d.category || 'General',
+        String(d.category || 'General'),
         `₹${d.repaircost || d.repairCost || 0}`,
-        (d.costpaidby || d.costPaidBy || 'Hostel'),
-        (d.status || '').toUpperCase()
+        String(d.costpaidby || d.costPaidBy || 'Hostel'),
+        String(d.status || '').toUpperCase()
       ]);
 
     } else if (canonicalType === 'visitors') {
@@ -1094,12 +1094,12 @@ async function downloadReportPdf(req, res) {
         ORDER BY v.entryTime DESC LIMIT 100
       `);
       rows = data.map(d => [
-        d.gatepassnumber || d.gatePassNumber || '',
-        (d.visitorname || d.visitorName || '').substring(0, 15),
-        d.phone || '—',
-        (d.studentname || d.studentName || '—').substring(0, 14),
+        String(d.gatepassnumber || d.gatePassNumber || ''),
+        String(d.visitorname || d.visitorName || '').substring(0, 15),
+        String(d.phone || '—'),
+        String(d.studentname || d.studentName || '—').substring(0, 14),
         d.roomno || d.roomNo ? `R-${d.roomno || d.roomNo}` : '—',
-        d.relation || 'Visitor',
+        String(d.relation || 'Visitor'),
         d.entrytime || d.entryTime ? String(d.entrytime || d.entryTime).substring(11, 16) : '',
         d.exittime || d.exitTime ? 'EXITED' : 'INSIDE'
       ]);
@@ -1156,7 +1156,11 @@ async function downloadReportPdf(req, res) {
 
   } catch (err) {
     console.error('downloadReportPdf Error:', err);
-    return res.status(500).json({ success: false, message: `Failed to compile PDF report: ${err.message}` });
+    if (typeof res.status === 'function') {
+      return res.status(500).json({ success: false, message: `Failed to compile PDF report: ${err.message}` });
+    } else if (typeof res.end === 'function') {
+      return res.end();
+    }
   }
 }
 
